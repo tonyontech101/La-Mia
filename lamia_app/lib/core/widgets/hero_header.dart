@@ -58,7 +58,7 @@ class HeroHeader extends StatelessWidget {
           Positioned(
             left: AppSpacing.screenH,
             right: AppSpacing.screenH,
-            bottom: AppSpacing.xl,
+            bottom: AppSpacing.xl + 28,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

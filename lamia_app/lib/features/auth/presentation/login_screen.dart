@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/auth_service.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
@@ -12,6 +14,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'sign_up_screen.dart';
+import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 
 /// Login screen. All auth actions are UI-only stubs in this front-end build.
@@ -23,6 +26,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _emailFocus = FocusNode();
@@ -91,29 +95,69 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _loggingIn = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    setState(() => _loggingIn = false);
-    AppSnackbar.show(
-      context,
-      message: 'Log in isn\'t wired up yet — front-end preview only.',
-    );
+    try {
+      await _authService.signInWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      // Navigation is handled by the StreamBuilder in app.dart.
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _loggingIn = false);
+    }
   }
 
   Future<void> _onGoogle() async {
     setState(() => _googleLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) return;
-    setState(() => _googleLoading = false);
-    AppSnackbar.show(context, message: 'Google sign-in coming soon.');
+    try {
+      await _authService.signInWithGoogle();
+      // Navigation is handled by the StreamBuilder in app.dart.
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   void _onGuest() {
-    AppSnackbar.show(context, message: 'Guest browsing — home screen coming soon.');
+    Navigator.of(context).pushAndRemoveUntil(
+      fadePageRoute(const HomePlaceholderScreen(isGuest: true)),
+      (_) => false,
+    );
   }
 
-  void _onForgotPassword() {
-    AppSnackbar.show(context, message: 'Password reset coming soon.');
+  Future<void> _onForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'Enter your email above, then tap Forgot password.',
+      );
+      return;
+    }
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: 'Password reset email sent. Check your inbox.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
   }
 
   void _goToSignUp() {

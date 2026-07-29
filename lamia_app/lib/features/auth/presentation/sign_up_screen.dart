@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../data/auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:math' as math;
 
@@ -14,6 +16,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
+import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 import 'widgets/password_strength_meter.dart';
 
@@ -27,6 +30,7 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen>
     with SingleTickerProviderStateMixin {
+  final _authService = AuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -169,10 +173,22 @@ class _SignUpScreenState extends State<SignUpScreen>
     }
 
     setState(() => _creating = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    setState(() => _creating = false);
-    AppSnackbar.show(context, message: 'Account created — welcome to La Mia!');
+    try {
+      await _authService.createAccountWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+        displayName: _nameController.text,
+      );
+      // Navigation is handled by the StreamBuilder in app.dart.
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
   }
 
   void _shake() {
@@ -183,14 +199,25 @@ class _SignUpScreenState extends State<SignUpScreen>
 
   Future<void> _onGoogle() async {
     setState(() => _googleLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) return;
-    setState(() => _googleLoading = false);
-    AppSnackbar.show(context, message: 'Google sign-in coming soon.');
+    try {
+      await _authService.signInWithGoogle();
+      // Navigation is handled by the StreamBuilder in app.dart.
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   void _onGuest() {
-    AppSnackbar.show(context, message: 'Guest browsing — home screen coming soon.');
+    Navigator.of(context).pushAndRemoveUntil(
+      fadePageRoute(const HomePlaceholderScreen(isGuest: true)),
+      (_) => false,
+    );
   }
 
   void _openLegal(String which) {

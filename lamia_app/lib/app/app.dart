@@ -1,13 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'theme/app_theme.dart';
 import '../features/auth/presentation/login_screen.dart';
+import '../features/home/presentation/home_placeholder_screen.dart';
 
 /// Root application widget.
 ///
-/// Front-end only: launches straight into the auth flow (Login → Sign Up).
-/// Navigation to the home/browse experience is a stub for now.
+/// Listens to Firebase Auth state and routes to the login screen or the home
+/// placeholder accordingly.
 class LaMiaApp extends StatelessWidget {
   const LaMiaApp({super.key});
 
@@ -24,7 +26,24 @@ class LaMiaApp extends StatelessWidget {
         title: 'La Mia',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const LoginScreen(),
+        home: StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, snapshot) {
+            // Show a brief loading indicator while Firebase resolves the
+            // persisted session on cold start.
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            // If user is signed in, go to home. Otherwise, show login.
+            if (snapshot.hasData) {
+              return const HomePlaceholderScreen();
+            }
+            return const LoginScreen();
+          },
+        ),
       ),
     );
   }
