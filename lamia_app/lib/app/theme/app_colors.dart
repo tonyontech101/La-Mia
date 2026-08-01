@@ -43,4 +43,26 @@ abstract final class AppColors {
 
   /// Subtle warm multiply overlay that unifies the photo with the palette.
   static const Color heroWarmOverlay = Color(0x1AC4462B); // ~0.10 alpha
+
+  // Card Gradients & Overlays
+  static const LinearGradient cookCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFC4462B),
+      Color(0xFF8C2C19),
+    ],
+  );
+
+  static const LinearGradient ulamCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1B3B8B),
+      Color(0xFF0F2356),
+    ],
+  );
+
+  static const Color glassOverlay = Color(0x26FFFFFF);
+  static const Color cardShadow = Color(0x122B211B);
 }
