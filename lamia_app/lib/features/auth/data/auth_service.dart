@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -38,6 +39,7 @@ class AuthService {
       await credential.user?.reload();
       final user = _auth.currentUser;
       if (user == null) throw Exception('Account created but user is null.');
+      await _ensureUserDocument(user);
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(_friendlyMessage(e.code));
@@ -84,9 +86,32 @@ class AuthService {
       if (user == null) {
         throw Exception('Google sign-in succeeded but user is null.');
       }
+      await _ensureUserDocument(user);
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(_friendlyMessage(e.code));
+    }
+  }
+
+  // ── User Document ─────────────────────────────────────────────────────
+
+  /// Creates a Firestore document in the `users` collection for [user] if
+  /// one doesn't already exist. Called automatically after sign-up and
+  /// first Google sign-in.
+  Future<void> _ensureUserDocument(User user) async {
+    final docRef =
+        FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      await docRef.set({
+        'displayName': user.displayName ?? 'User',
+        'bio': null,
+        'photoUrl': user.photoURL,
+        'recipeCount': 0,
+        'totalLikesReceived': 0,
+        'role': 'user',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
   }
 

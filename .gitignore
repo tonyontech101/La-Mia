@@ -1,0 +1,25 @@
+# ── Seed Script / Tools ──────────────────────────────────────────────────────
+# One-time setup tools — should not be in version control
+tools/
+
+# ── Firebase Admin SDK key (NEVER commit this) ──────────────────────────────
+**/serviceAccountKey.json
+
+# ── IDE / Editor ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ── OS Generated ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Node.js (if tools/ is accidentally kept) ────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Documents (optional — remove these lines if you want docs tracked) ──────
+# *.docx

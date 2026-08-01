@@ -41,6 +41,8 @@ dependencies:
   # Firebase
   firebase_core: ^3.12.1
   firebase_auth: ^5.5.1
+  cloud_firestore: ^5.6.5
+  firebase_storage: ^12.4.4
 
   # Google Sign-In
   google_sign_in: ^6.2.2
@@ -69,6 +71,19 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/recipes/almusal/
+    - assets/images/recipes/gulay/
+    - assets/images/recipes/inihaw/
+    - assets/images/recipes/kakanin/
+    - assets/images/recipes/kanin/
+    - assets/images/recipes/lamang_dagat/
+    - assets/images/recipes/merienda/
+    - assets/images/recipes/mga_inumin/
+    - assets/images/recipes/pancit_at_noodles/
+    - assets/images/recipes/panghimagas/
+    - assets/images/recipes/sabaw/
+    - assets/images/recipes/sawsawan/
+    - assets/images/recipes/ulam/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
