@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/constants/asset_constants.dart';
 
 /// Hero Action Cards matching the two main cards in image.png wireframe:
 /// 1. "Cook by Ingredients"
@@ -35,7 +36,7 @@ class HeroActionCards extends StatelessWidget {
           subtitle: 'Search recipes using your available ingredients!',
           icon: Icons.kitchen_outlined,
           gradient: AppColors.cookCardGradient,
-          bgImageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
+          bgImageUrl: AssetConstants.heroCookByIngredients,
           onTap: onCookByIngredientsTap,
         ),
 
@@ -47,7 +48,7 @@ class HeroActionCards extends StatelessWidget {
           subtitle: 'Decide what you want to eat today.',
           icon: Icons.auto_awesome_outlined,
           gradient: AppColors.ulamCardGradient,
-          bgImageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+          bgImageUrl: AssetConstants.heroAnoPongUlam,
           onTap: onAnoPongUlamTap,
         ),
       ],

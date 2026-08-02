@@ -1,15 +1,16 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
 import '../../recipes/data/recipe_model.dart';
-import '../../recipes/data/sample_recipes.dart';
+import '../../recipes/data/recipe_repository.dart';
 import 'widgets/categories_section.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/featured_recipes_section.dart';
-import 'widgets/greeting_section.dart';
 import 'widgets/hero_action_cards.dart';
 import 'widgets/popular_choices_section.dart';
 import 'widgets/search_bar_widget.dart';
@@ -32,6 +33,31 @@ class HomeDashboardScreen extends StatefulWidget {
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   String? _selectedCategoryId;
 
+  final RecipeRepository _recipeRepository = RecipeRepository();
+  late Future<List<RecipeModel>> _featuredFuture;
+  late Future<List<RecipeModel>> _popularFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _featuredFuture = _recipeRepository.featuredRecipes();
+    _popularFuture = _recipeRepository.popularChoices();
+  }
+
+  /// Retries loading featured recipes after an error.
+  void _retryFeatured() {
+    setState(() {
+      _featuredFuture = _recipeRepository.featuredRecipes();
+    });
+  }
+
+  /// Retries loading popular choices after an error.
+  void _retryPopular() {
+    setState(() {
+      _popularFuture = _recipeRepository.popularChoices();
+    });
+  }
+
   void _showRecipeDetailsDialog(RecipeModel recipe) {
     showModalBottomSheet(
       context: context,
@@ -51,12 +77,23 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-                    child: Image.network(
-                      recipe.imageUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: recipe.coverPhotoUrl,
                       height: 220,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
+                      placeholder: (_, _) => Container(
+                        height: 220,
+                        color: AppColors.surfaceAlt,
+                        child: const Center(
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, _, _) => Container(
                         height: 220,
                         color: AppColors.surfaceAlt,
                         child: const Icon(Icons.restaurant, size: 48, color: AppColors.textSecondary),
@@ -125,8 +162,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         children: [
                           const Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
                           const SizedBox(width: 4),
-                          Text('Prep: ${recipe.prepTime} | Cook: ${recipe.cookTime}'),
-                          const Spacer(),
+                          Expanded(
+                            child: Text(
+                              'Prep: ${recipe.prepTime} | Cook: ${recipe.cookTime}',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           const Icon(Icons.group_outlined, size: 16, color: AppColors.secondary),
                           const SizedBox(width: 4),
                           Text('${recipe.servings} Servings'),
@@ -232,12 +275,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   const SizedBox(height: 16),
 
-                  // 2. Greeting Section
-                  GreetingSection(username: displayName),
-
-                  const SizedBox(height: 20),
-
-                  // 3. Search Bar Widget
+                  // 2. Search Bar Widget
                   SearchBarWidget(
                     onTap: () {
                       // Navigate to search / cook tab
@@ -247,7 +285,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   const SizedBox(height: 24),
 
-                  // 4. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
+                  // 3. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
                   HeroActionCards(
                     onCookByIngredientsTap: () => widget.onNavigateToTab?.call(1),
                     onAnoPongUlamTap: () => widget.onNavigateToTab?.call(2),
@@ -255,16 +293,41 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   const SizedBox(height: 28),
 
-                  // 5. Featured Recipes Section
-                  FeaturedRecipesSection(
-                    recipes: SampleRecipes.featured,
-                    onViewAllTap: () => widget.onNavigateToTab?.call(1),
-                    onRecipeTap: _showRecipeDetailsDialog,
+                  // 4. Featured Recipes Section
+                  FutureBuilder<List<RecipeModel>>(
+                    future: _featuredFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const SectionLoadingSkeleton(height: 220);
+                      }
+                      if (snapshot.hasError) {
+                        return SectionErrorState(
+                          message:
+                              'Could not load featured recipes. Check your connection and try again.',
+                          onRetry: _retryFeatured,
+                        );
+                      }
+                      final recipes = snapshot.data ?? [];
+                      if (recipes.isEmpty) {
+                        return const SectionEmptyState(
+                          message: 'No featured recipes yet',
+                          subtitle:
+                              'Recipes will appear here once they are added.',
+                        );
+                      }
+                      return FeaturedRecipesSection(
+                        recipes: recipes,
+                        onViewAllTap: () =>
+                            widget.onNavigateToTab?.call(1),
+                        onRecipeTap: _showRecipeDetailsDialog,
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 28),
 
-                  // 6. Recipe Categories Section
+                  // 5. Recipe Categories Section
                   CategoriesSection(
                     categories: RecipeCategoryModel.defaultCategories,
                     selectedCategoryId: _selectedCategoryId,
@@ -278,10 +341,37 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   const SizedBox(height: 28),
 
-                  // 7. Popular Choices Section
-                  PopularChoicesSection(
-                    recipes: SampleRecipes.popularChoices,
-                    onRecipeTap: _showRecipeDetailsDialog,
+                  // 6. Popular Choices Section
+                  FutureBuilder<List<RecipeModel>>(
+                    future: _popularFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const SectionLoadingSkeleton(
+                          height: 360,
+                          isHorizontal: false,
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return SectionErrorState(
+                          message:
+                              'Could not load popular choices. Check your connection and try again.',
+                          onRetry: _retryPopular,
+                        );
+                      }
+                      final recipes = snapshot.data ?? [];
+                      if (recipes.isEmpty) {
+                        return const SectionEmptyState(
+                          message: 'No popular choices yet',
+                          subtitle:
+                              'Popular recipes will appear here as more people cook.',
+                        );
+                      }
+                      return PopularChoicesSection(
+                        recipes: recipes,
+                        onRecipeTap: _showRecipeDetailsDialog,
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 24),

@@ -1,129 +1,168 @@
-# La Mia — Setup & Developer Guide
+# La Mia — Discover, Cook, and Share Authentic Filipino Recipes 🍲
 
-Welcome to the **La Mia** repository! This project consists of the main Flutter mobile application (`lamia_app/`) and backend seed utilities (`tools/`).
+Welcome to **La Mia**, a modern Flutter application designed to showcase authentic Filipino cuisine. The project features 200+ detailed recipes, an ingredient pricing catalog, interactive search, dynamic category filtering, and real-time backend synchronization powered by Firebase.
 
-> ⚠️ **IMPORTANT SECURITY NOTE**  
-> Secret credential files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`) are excluded from Git repository via `.gitignore` to prevent sensitive credentials from leaking into source control.  
-> Follow the setup guide below to configure your local development environment.
+---
+
+> ⚠️ **SECURITY FIRST**  
+> Sensitive credential files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`) are **strictly excluded from Git** via `.gitignore` to prevent secret leaks. Please follow the instructions below to configure your local setup.
+
+---
+
+## 🏗️ Tech Stack & Architecture
+
+- **Frontend**: [Flutter](https://flutter.dev/) (Dart 3.x) with Material 3 & Custom Design Tokens
+- **Database**: [Cloud Firestore](https://firebase.google.com/docs/firestore) (Recipes & Ingredient Catalog)
+- **Storage**: [Firebase Cloud Storage](https://firebase.google.com/docs/storage) (Hosted Recipe Cover Photos)
+- **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (Email/Password & Google Sign-In)
+- **Seed Utility**: [Node.js](https://nodejs.org/) + `firebase-admin` SDK
 
 ---
 
 ## 📁 Repository Structure
 
-- `lamia_app/` — Flutter mobile application for iOS & Android.
-- `tools/` — Node.js utility scripts (e.g., seeding Firestore with initial recipe data).
+```text
+LaMia/
+├── lamia_app/                  # Core Flutter Application
+│   ├── android/                # Android native project files
+│   ├── ios/                    # iOS native project files
+│   ├── assets/                 # App icons, static images & assets
+│   ├── lib/
+│   │   ├── app/                # App router, theme tokens & design system
+│   │   ├── core/               # Shared constants, helpers & UI states
+│   │   ├── features/
+│   │   │   ├── auth/           # Login, Register & Auth Service
+│   │   │   ├── home/           # Dashboard, Banners, Search & Sections
+│   │   │   └── recipes/        # Recipe Data Models & Firestore Repository
+│   │   └── main.dart           # Application entry point
+│   └── pubspec.yaml            # Flutter dependencies & configuration
+│
+├── recipes/                    # Local Recipe Dataset (200 recipes in 13 categories)
+│   ├── almusal/
+│   ├── ulam/
+│   └── ...
+│
+└── tools/                      # Node.js Database Seeding Tools
+    ├── seed_recipes.js         # Main seeding script (Firestore + Cloud Storage)
+    ├── seed_featured.js        # Featured & Popularity initial ranking script
+    ├── package.json            # Node.js dependencies (`firebase-admin`)
+    └── serviceAccountKey.json.example  # Template for Firebase Admin key
+```
 
 ---
 
 ## 🛠️ Prerequisites
 
-Before you begin, ensure you have the following installed on your development machine:
+Before getting started, make sure your machine has the following tools installed:
 
-1. [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.x or later)
-2. [Node.js](https://nodejs.org/) (v18 or later)
-3. [Firebase CLI](https://firebase.google.com/docs/cli)
+1. **Flutter SDK** (v3.12 or later) — [Install Guide](https://docs.flutter.dev/get-started/install)
+2. **Node.js** (v18 or later) — [Install Guide](https://nodejs.org/)
+3. **Firebase CLI**:
    ```bash
    npm install -g firebase-tools
    ```
-4. [FlutterFire CLI](https://firebase.google.com/docs/cli#flutter)
+4. **FlutterFire CLI**:
    ```bash
    dart pub global activate flutterfire_cli
    ```
 
 ---
 
-## 🚀 Step-by-Step Teammate Setup Guide
+## 🚀 Step-by-Step Developer Setup
 
 ### Step 1: Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/tonyontech101/La-Mia.git
 cd LaMia
 ```
 
 ---
 
-### Step 2: Set Up the Flutter App (`lamia_app`)
+### Step 2: Install Flutter Dependencies
 
-1. Navigate to the app directory:
-   ```bash
-   cd lamia_app
-   ```
-2. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
+Navigate to the `lamia_app` directory and fetch the required packages:
+
+```bash
+cd lamia_app
+flutter pub get
+```
 
 ---
 
 ### Step 3: Firebase Client Configuration
 
-> 💡 **Note**: If you have already received access to Firebase collaboration and have been provided with the pre-configured project files (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), you can **skip Step 3**!
+> 💡 **COLLABORATOR NOTE**:  
+> If your team lead has already provided the pre-configured project credentials (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), place them in the locations listed in **Option B** and **skip Step 3**.
 
-To run the Flutter app, you must connect it to the team's Firebase project using **one of the two options below**:
+Otherwise, connect your local app to the team's Firebase project using one of the options below:
 
-#### Option A: Automatic Configuration via FlutterFire CLI (Recommended)
+#### Option A: Automatic Setup via FlutterFire CLI (Recommended)
 
-1. Log in to Firebase CLI:
+1. Log in to your Firebase account:
    ```bash
    firebase login
    ```
-2. Run FlutterFire CLI inside the `lamia_app/` directory:
+2. Run FlutterFire CLI inside `lamia_app/`:
    ```bash
    flutterfire configure
    ```
-3. Select your Firebase project and platforms (Android/iOS).  
-   *This automatically generates `lib/firebase_options.dart` and the native platform configuration files on your machine without committing them to Git.*
+3. Select your Firebase project (`la-mia-e348d`) and target platforms (Android, iOS, Web).  
+   *This automatically generates `lib/firebase_options.dart` without committing secrets to Git.*
 
 #### Option B: Manual Configuration
 
-If you do not use FlutterFire CLI, obtain the configuration files from the Firebase Console or project lead:
+Obtain the files from the Firebase Console or project lead:
 
-1. **Android**: Download `google-services.json` from Firebase Console (Project Settings → General → Android App) and place it in:
-   ```
+1. **Android**: Download `google-services.json` (Project Settings → Android) and place in:
+   ```text
    lamia_app/android/app/google-services.json
    ```
-2. **iOS**: Download `GoogleService-Info.plist` from Firebase Console (Project Settings → General → iOS App) and place it in:
-   ```
+2. **iOS**: Download `GoogleService-Info.plist` (Project Settings → iOS) and place in:
+   ```text
    lamia_app/ios/Runner/GoogleService-Info.plist
    ```
-3. **Flutter Options**: Copy the example template file:
+3. **Flutter Options**: Copy the template file:
    ```bash
    cp lib/firebase_options.dart.example lib/firebase_options.dart
    ```
-   Open `lib/firebase_options.dart` and replace the placeholder strings (`YOUR_ANDROID_API_KEY`, `YOUR_PROJECT_ID`, etc.) with your actual project keys.
+   Open `lib/firebase_options.dart` and fill in your project credentials.
 
 ---
 
-### Step 4: Set Up Database Seed Script (`tools/`)
+### Step 4: Seed Database & Storage (`tools/`)
 
-If you need to seed initial recipe data into Cloud Firestore:
+To populate Cloud Firestore and Cloud Storage with the 200 recipes and ingredient pricing catalog:
 
-1. **Obtain Firebase Admin Service Account Key**:
-   - Go to [Firebase Console](https://console.firebase.google.com/).
-   - Go to **Project Settings** ⚙️ → **Service accounts**.
+1. **Download Service Account Key**:
+   - Go to [Firebase Console](https://console.firebase.google.com/) → **Project Settings** ⚙️ → **Service accounts**.
    - Click **Generate new private key** (downloads a `.json` file).
+   - Move the file to `tools/` and rename it to `serviceAccountKey.json`.
 
-2. **Place Key in `tools/` directory**:
-   - Copy the downloaded JSON file to `tools/` and rename it to `serviceAccountKey.json`.
-   - Alternatively, copy the template:
-     ```bash
-     cp tools/serviceAccountKey.json.example tools/serviceAccountKey.json
-     ```
-     and replace its contents with your service account JSON.
-
-3. **Run the Seed Script**:
+2. **Run Seeding Scripts**:
    ```bash
    cd tools
    npm install
-   npm run seed
+
+   # Dry Run (Preview only — no writes to Firebase)
+   npm run seed:dry
+
+   # Live Seed (Uploads images to Cloud Storage & populates Firestore)
+   node seed_recipes.js
+
+   # Seed Featured & Popularity Scores
+   node seed_featured.js
    ```
+
+> ℹ️ **Seeding Behavior**:
+> - **Idempotent**: Re-running scripts will update existing Firestore documents without duplicating data.
+> - **Storage Optimization**: Images already present in Cloud Storage are reused automatically to avoid unnecessary bandwidth usage.
 
 ---
 
-### Step 5: Run the Flutter Application
+### Step 5: Run the Application
 
-Once Firebase options are configured:
+With configuration complete, launch the app on your emulator or physical device:
 
 ```bash
 cd lamia_app
@@ -132,8 +171,42 @@ flutter run
 
 ---
 
-## 🔒 Security Checklist for Developers
+## ❓ Troubleshooting & FAQs
 
-- [ ] Run `git status` before pushing changes to verify no secret files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`) are being tracked.
-- [ ] Never force-add (`git add -f`) ignored credential files.
-- [ ] If you need to share service account keys with new team members, use a secure password manager (e.g. 1Password, Bitwarden) instead of sending files over chat or email.
+<details>
+<summary><b>1. PowerShell script error on Windows: <code>npm.ps1 cannot be loaded</code></b></summary>
+<br/>
+Windows PowerShell blocks `.ps1` script execution by default. To bypass this, run node scripts directly:
+```bash
+node seed_recipes.js
+```
+or run PowerShell as Administrator and execute:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+</details>
+
+<details>
+<summary><b>2. Firebase Error: <code>Bucket name not specified or invalid</code></b></summary>
+<br/>
+The seed script automatically infers your storage bucket (`<project_id>.firebasestorage.app`) from `serviceAccountKey.json`. If using a custom bucket, set the environment variable:
+```bash
+STORAGE_BUCKET=my-custom-bucket node seed_recipes.js
+```
+</details>
+
+<details>
+<summary><b>3. Missing asset directory errors in Flutter terminal</b></summary>
+<br/>
+If you see asset path warnings, ensure `pubspec.yaml` only lists existing folders (`assets/images/`). Cover photos for recipes are loaded via network URLs (`CachedNetworkImage`).
+</details>
+
+---
+
+## 🔒 Security & Contribution Checklist
+
+Before submitting a Pull Request or pushing commits to GitHub:
+
+- [x] Verify secret files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`) are ignored by `git status`.
+- [x] Do NOT force-add (`git add -f`) any credential files.
+- [x] Run `flutter analyze` inside `lamia_app/` to ensure no syntax or lint errors.

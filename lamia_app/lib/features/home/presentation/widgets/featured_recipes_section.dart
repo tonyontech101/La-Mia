@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -105,12 +106,23 @@ class _FeaturedCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(AppRadii.card),
                   ),
-                  child: Image.network(
-                    recipe.imageUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: recipe.coverPhotoUrl,
                     height: 110,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
+                    placeholder: (_, _) => Container(
+                      height: 110,
+                      color: AppColors.surfaceAlt,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (_, _, _) => Container(
                       height: 110,
                       color: AppColors.surfaceAlt,
                       child: const Icon(Icons.restaurant, color: AppColors.textSecondary),

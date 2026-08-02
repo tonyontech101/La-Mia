@@ -35,6 +35,16 @@ abstract final class AppTypography {
         color: color,
       );
 
+  /// Prominent brand wordmark for the dashboard header.
+  /// Larger and heavier than [wordmark] to anchor the home screen.
+  static TextStyle brandWordmark({Color color = AppColors.textPrimary}) =>
+      GoogleFonts.fraunces(
+        fontSize: 36,
+        fontWeight: FontWeight.w700,
+        height: 1.0,
+        color: color,
+      );
+
   static TextStyle title({Color color = AppColors.textPrimary}) =>
       GoogleFonts.inter(
         fontSize: 18,
