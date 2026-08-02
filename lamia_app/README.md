@@ -1,17 +1,25 @@
-# lamia_app
+# La Mia — Flutter Mobile Application
 
-A new Flutter project.
+This directory contains the main Flutter mobile application code for **La Mia**.
 
-## Getting Started
+## 🚀 Setup & Firebase Configuration
 
-This project is a starting point for a Flutter application.
+Secret credentials and configuration files are excluded from Git repository to protect sensitive project keys.
 
-A few resources to get you started if this is your first Flutter project:
+Before running the application for the first time, refer to the project root documentation:
+👉 **[Root Setup Guide](../README.md)**
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+### Quick Firebase Setup (FlutterFire CLI)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+# 1. Install dependencies
+flutter pub get
+
+# 2. Configure Firebase (generates lib/firebase_options.dart locally)
+flutterfire configure
+
+# 3. Run app
+flutter run
+```
+
+Refer to `lib/firebase_options.dart.example` if manual configuration is required.

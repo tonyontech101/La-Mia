@@ -1,6 +1,6 @@
 # ── Seed Script / Tools ──────────────────────────────────────────────────────
-# One-time setup tools — should not be in version control
-tools/
+tools/node_modules/
+tools/package-lock.json
 
 # ── Firebase Admin SDK key (NEVER commit this) ──────────────────────────────
 **/serviceAccountKey.json
