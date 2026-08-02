@@ -4,7 +4,8 @@
   "description": "One-time seed script to upload La Mia recipes to Firebase",
   "type": "module",
   "scripts": {
-    "seed": "node seed_recipes.js"
+    "seed": "node seed_recipes.js",
+    "seed:dry": "node seed_recipes.js --dry-run"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0"

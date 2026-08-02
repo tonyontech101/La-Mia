@@ -111,11 +111,18 @@ If you need to seed initial recipe data into Cloud Firestore:
      and replace its contents with your service account JSON.
 
 3. **Run the Seed Script**:
-   ```bash
-   cd tools
-   npm install
-   npm run seed
-   ```
+   - Preview first (no writes, no Firebase init — works even without a key):
+     ```bash
+     cd tools
+     npm install
+     npm run seed:dry      # or: npm run seed -- --dry-run
+     ```
+   - Seed for real (writes `recipes` + `ingredientCatalog` collections and uploads cover photos to Cloud Storage):
+     ```bash
+     npm run seed
+     ```
+
+> The script seeds two Firestore collections: `recipes/{categorySlug-folderSlug}` (recipe docs, upserted by `<category>-<folder>` slug — unique per category so dishes filed under multiple categories don't collide) and `ingredientCatalog/{nameSlug}` (a pricing/package-size catalog merged by ingredient name). Cover photos are uploaded to Cloud Storage under `recipes/<category>/<recipe-folder>/<image-file>` and stored on the recipe doc as `coverPhotoUrl`. Re-runs upsert by id; images already in Storage are reused.
 
 ---
 

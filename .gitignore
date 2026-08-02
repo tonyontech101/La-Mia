@@ -1,9 +1,17 @@
-# ── Seed Script / Tools ──────────────────────────────────────────────────────
-tools/node_modules/
-tools/package-lock.json
-
-# ── Firebase Admin SDK key (NEVER commit this) ──────────────────────────────
+# ── Firebase Secrets & Configs (NEVER commit these) ─────────────────────────
 **/serviceAccountKey.json
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+.env
+.env.*
+*.env
+
+# ── Flutter Build Artifacts ──────────────────────────────────────────────────
+**/build/
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
 
 # ── IDE / Editor ────────────────────────────────────────────────────────────
 .idea/
@@ -17,9 +25,8 @@ tools/package-lock.json
 Thumbs.db
 Desktop.ini
 
-# ── Node.js (if tools/ is accidentally kept) ────────────────────────────────
+# ── Node.js / Tools ─────────────────────────────────────────────────────────
 node_modules/
+**/node_modules/
 package-lock.json
-
-# ── Documents (optional — remove these lines if you want docs tracked) ──────
-# *.docx
+**/package-lock.json

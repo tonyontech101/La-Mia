@@ -14,7 +14,7 @@ class RecipeModel {
     required this.ingredients,
     required this.instructions,
     required this.tags,
-    required this.imageUrl,
+    required this.coverPhotoUrl,
     required this.source,
     this.createdAt,
   });
@@ -29,17 +29,18 @@ class RecipeModel {
   final List<String> ingredients;
   final List<String> instructions;
   final List<String> tags;
-  final String imageUrl;
+  final String coverPhotoUrl;
   final String source;
   final DateTime? createdAt;
 
   /// Creates a [RecipeModel] from the JSON stored in recipe `.txt` files.
   ///
-  /// [imageUrl] must be supplied separately (from Firebase Storage) because
-  /// the local JSON only contains the filename (e.g. `"chicken-adobo.jpg"`).
+  /// [coverPhotoUrl] must be supplied separately (from Firebase Storage)
+  /// because the local JSON only contains the filename
+  /// (e.g. `"chicken-adobo.jpg"`).
   factory RecipeModel.fromLocalJson(
     Map<String, dynamic> json, {
-    required String imageUrl,
+    required String coverPhotoUrl,
   }) {
     return RecipeModel(
       name: json['name'] as String,
@@ -52,12 +53,15 @@ class RecipeModel {
       ingredients: List<String>.from(json['ingredients'] as List),
       instructions: List<String>.from(json['instructions'] as List),
       tags: List<String>.from(json['tags'] as List),
-      imageUrl: imageUrl,
+      coverPhotoUrl: coverPhotoUrl,
       source: json['source'] as String? ?? '',
     );
   }
 
   /// Creates a [RecipeModel] from a Firestore document snapshot.
+  ///
+  /// `ingredients` may be stored as objects ({display, ingredient_id, ...});
+  /// they are projected to their `display` string for display purposes.
   factory RecipeModel.fromFirestore(Map<String, dynamic> data) {
     return RecipeModel(
       name: data['name'] as String,
@@ -67,10 +71,15 @@ class RecipeModel {
       cookTime: data['cookTime'] as String,
       servings: data['servings'] as int,
       difficulty: data['difficulty'] as String,
-      ingredients: List<String>.from(data['ingredients'] as List),
+      ingredients: (data['ingredients'] as List<dynamic>)
+          .map((e) => e is String
+              ? e
+              : (e as Map<String, dynamic>)['display'] as String? ??
+                  e.toString())
+          .toList(),
       instructions: List<String>.from(data['instructions'] as List),
       tags: List<String>.from(data['tags'] as List),
-      imageUrl: data['imageUrl'] as String,
+      coverPhotoUrl: data['coverPhotoUrl'] as String? ?? '',
       source: data['source'] as String? ?? '',
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as dynamic).toDate() as DateTime
@@ -91,7 +100,7 @@ class RecipeModel {
       'ingredients': ingredients,
       'instructions': instructions,
       'tags': tags,
-      'imageUrl': imageUrl,
+      'coverPhotoUrl': coverPhotoUrl,
       'source': source,
       'createdAt': createdAt ?? DateTime.now(),
     };
