@@ -58,6 +58,8 @@ cd LaMia
 
 ### Step 3: Firebase Client Configuration
 
+> 💡 **Note**: If you have already received access to Firebase collaboration and have been provided with the pre-configured project files (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), you can **skip Step 3**!
+
 To run the Flutter app, you must connect it to the team's Firebase project using **one of the two options below**:
 
 #### Option A: Automatic Configuration via FlutterFire CLI (Recommended)
