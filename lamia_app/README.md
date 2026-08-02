@@ -9,6 +9,8 @@ Secret credentials and configuration files are excluded from Git repository to p
 Before running the application for the first time, refer to the project root documentation:
 👉 **[Root Setup Guide](../README.md)**
 
+> 💡 **Note**: If you have already received access to Firebase collaboration and have the project config files, you can skip step 3 (Firebase Client Configuration).
+
 ### Quick Firebase Setup (FlutterFire CLI)
 
 ```bash
