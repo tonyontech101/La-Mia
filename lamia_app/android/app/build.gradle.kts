@@ -24,6 +24,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Disable Impeller shader compilation for Windows compatibility
+        manifestPlaceholders["enableImpeller"] = "false"
     }
 
     buildTypes {
@@ -44,5 +47,3 @@ kotlin {
 flutter {
     source = "../.."
 }
-
-
