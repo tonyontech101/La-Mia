@@ -47,6 +47,9 @@ dependencies:
   # Google Sign-In
   google_sign_in: ^6.2.2
 
+  # Image loading + caching for network cover photos.
+  cached_network_image: ^3.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -71,19 +74,6 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/recipes/almusal/
-    - assets/images/recipes/gulay/
-    - assets/images/recipes/inihaw/
-    - assets/images/recipes/kakanin/
-    - assets/images/recipes/kanin/
-    - assets/images/recipes/lamang_dagat/
-    - assets/images/recipes/merienda/
-    - assets/images/recipes/mga_inumin/
-    - assets/images/recipes/pancit_at_noodles/
-    - assets/images/recipes/panghimagas/
-    - assets/images/recipes/sabaw/
-    - assets/images/recipes/sawsawan/
-    - assets/images/recipes/ulam/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

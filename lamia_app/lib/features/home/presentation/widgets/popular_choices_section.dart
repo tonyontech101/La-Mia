@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -79,12 +80,24 @@ class _PopularChoiceCard extends StatelessWidget {
             // Left: Pic of Food
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                recipe.imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: recipe.coverPhotoUrl,
                 width: 90,
                 height: 85,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
+                placeholder: (_, _) => Container(
+                  width: 90,
+                  height: 85,
+                  color: AppColors.surfaceAlt,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, _, _) => Container(
                   width: 90,
                   height: 85,
                   color: AppColors.surfaceAlt,
@@ -133,14 +146,18 @@ class _PopularChoiceCard extends StatelessWidget {
                     children: [
                       Icon(Icons.schedule, size: 13, color: AppColors.primary),
                       const SizedBox(width: 4),
-                      Text(
-                        'Prep ${recipe.prepTime} • Cook ${recipe.cookTime}',
-                        style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'Prep ${recipe.prepTime} • Cook ${recipe.cookTime}',
+                          style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
