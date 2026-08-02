@@ -93,9 +93,9 @@ flutter pub get
 ### Step 3: Firebase Client Configuration
 
 > 💡 **COLLABORATOR NOTE**:  
-> If your team lead has already provided you with the pre-configured project credentials (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), place them in their respective locations listed in **Option B** below and **SKIP STEP 3**!
+> If your team lead has already provided the pre-configured project credentials (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), place them in the locations listed in **Option B** and **skip Step 3**.
 
-Otherwise, connect your local app to Firebase using one of the options below:
+Otherwise, connect your local app to the team's Firebase project using one of the options below:
 
 #### Option A: Automatic Setup via FlutterFire CLI (Recommended)
 
