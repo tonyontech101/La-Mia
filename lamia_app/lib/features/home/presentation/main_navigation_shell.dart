@@ -9,6 +9,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../auth/data/auth_service.dart';
 import '../../auth/presentation/login_screen.dart';
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import 'home_dashboard_screen.dart';
 
 /// Navigation Shell hosting the 4 bottom tabs from image.png wireframe:
@@ -55,7 +56,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       ),
 
       // Tab 1: Cook by Ingredients
-      _CookTabPlaceholder(onNavigateHome: () => _onTabTapped(0)),
+      CookByIngredientsScreen(onNavigateHome: () => _onTabTapped(0)),
 
       // Tab 2: Suggestion (Ano Pong Ulam?)
       AnoPongUlamScreen(onNavigateHome: () => _onTabTapped(0)),
@@ -178,49 +179,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _CookTabPlaceholder extends StatelessWidget {
-  const _CookTabPlaceholder({required this.onNavigateHome});
-  final VoidCallback onNavigateHome;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Cook by Ingredients'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.kitchen_outlined, size: 72, color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Cook by Ingredients',
-                style: AppTypography.headline(),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Select ingredients in your pantry to get instant recipe matches.',
-                style: AppTypography.body(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Back to Home Dashboard',
-                onPressed: onNavigateHome,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 
 class _ProfileTab extends StatelessWidget {
