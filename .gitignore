@@ -1,32 +1,3 @@
-# ── Firebase Secrets & Configs (NEVER commit these) ─────────────────────────
-**/serviceAccountKey.json
-**/google-services.json
-**/GoogleService-Info.plist
-**/firebase_options.dart
-.env
-.env.*
-*.env
-
-# ── Flutter Build Artifacts ──────────────────────────────────────────────────
-**/build/
-**/.dart_tool/
-**/.pub-cache/
-**/.pub/
-
-# ── IDE / Editor ────────────────────────────────────────────────────────────
-.idea/
-.vscode/
-*.iml
-*.ipr
-*.iws
-
-# ── OS Generated ────────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# ── Node.js / Tools ─────────────────────────────────────────────────────────
-node_modules/
-**/node_modules/
-package-lock.json
-**/package-lock.json
+# Ignore Android Gradle build reports
+**/android/build/
+**/android/build/reports/
