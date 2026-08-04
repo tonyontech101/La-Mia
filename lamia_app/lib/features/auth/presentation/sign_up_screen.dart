@@ -20,7 +20,8 @@ import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 import 'widgets/password_strength_meter.dart';
 
-/// Sign Up screen. All auth actions are UI-only stubs in this front-end build.
+/// Sign Up screen. All auth actions go through [AuthService] which is
+/// fully wired to Firebase Auth and Google Sign-In.
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
