@@ -17,7 +17,8 @@ import 'sign_up_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 
-/// Login screen. All auth actions are UI-only stubs in this front-end build.
+/// Login screen. All auth actions go through [AuthService] which is
+/// fully wired to Firebase Auth and Google Sign-In.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
