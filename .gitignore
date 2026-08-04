@@ -7,11 +7,24 @@
 .env.*
 *.env
 
-# ── Flutter Build Artifacts ──────────────────────────────────────────────────
+# ── Android Keys & Signing Configs ──────────────────────────────────────────
+**/key.properties
+*.keystore
+*.jks
+**/local.properties
+
+# ── Flutter Build & Generated Artifacts ─────────────────────────────────────
 **/build/
 **/.dart_tool/
 **/.pub-cache/
 **/.pub/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+*.apk
+*.aab
+*.ipa
+*.xcarchive
 
 # ── IDE / Editor ────────────────────────────────────────────────────────────
 .idea/
@@ -20,13 +33,17 @@
 *.ipr
 *.iws
 
-# ── OS Generated ────────────────────────────────────────────────────────────
+# ── OS & Temporary Files ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 Desktop.ini
+*.log
+implementation_plan.md
+walkthrough.md
 
 # ── Node.js / Tools ─────────────────────────────────────────────────────────
 node_modules/
 **/node_modules/
 package-lock.json
 **/package-lock.json
+
