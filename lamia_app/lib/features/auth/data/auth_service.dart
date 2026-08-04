@@ -23,6 +23,9 @@ class AuthService {
 
   /// Creates a new account with [email] and [password], then sets the
   /// user's display name to [displayName].
+  ///
+  /// Firebase Auth automatically signs in the user after creation.
+  /// The caller is responsible for any post-creation sign-out or navigation.
   Future<User> createAccountWithEmail({
     required String email,
     required String password,

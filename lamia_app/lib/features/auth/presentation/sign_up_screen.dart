@@ -180,7 +180,26 @@ class _SignUpScreenState extends State<SignUpScreen>
         password: _passwordController.text,
         displayName: _nameController.text,
       );
-      // Navigation is handled by the StreamBuilder in app.dart.
+      if (!mounted) return;
+
+      // Sign out so the user must log in with their new credentials.
+      await _authService.signOut();
+      if (!mounted) return;
+
+      // Show a success message while still on this screen.
+      AppSnackbar.show(
+        context,
+        message: 'Account created! Please log in.',
+      );
+      // Small delay so the user can read the snackbar before navigating.
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) return;
+
+      // Navigate explicitly — clear the stack and push a fresh LoginScreen.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(
@@ -202,7 +221,11 @@ class _SignUpScreenState extends State<SignUpScreen>
     setState(() => _googleLoading = true);
     try {
       await _authService.signInWithGoogle();
-      // Navigation is handled by the StreamBuilder in app.dart.
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
+        (_) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(

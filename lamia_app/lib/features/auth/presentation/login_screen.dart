@@ -101,7 +101,13 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-      // Navigation is handled by the StreamBuilder in app.dart.
+      if (!mounted) return;
+      // Navigate explicitly — don't rely on the StreamBuilder, because
+      // this LoginScreen may not be the StreamBuilder's root route.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
+        (_) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(
@@ -117,7 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _googleLoading = true);
     try {
       await _authService.signInWithGoogle();
-      // Navigation is handled by the StreamBuilder in app.dart.
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
+        (_) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(
