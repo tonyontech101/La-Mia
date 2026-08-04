@@ -43,6 +43,20 @@ class RecipeRepository {
     return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
   }
 
+  /// Fetches the full recipe collection for offline, in-memory filtering.
+  ///
+  /// Returns up to [limit] recipes ordered by [trendingScore] descending. Used
+  /// by the "Ano Pong Ulam?" screen to load the whole dataset once and then
+  /// filter it locally in Dart, so no re-query is needed per Apply.
+  Future<List<RecipeModel>> allRecipes({int limit = 200}) async {
+    final snap = await _firestore
+        .collection('recipes')
+        .orderBy('trendingScore', descending: true)
+        .limit(limit)
+        .get();
+    return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
+  }
+
   /// Returns recipes matching [category] (case-insensitive match on the
   /// Firestore `category` field).
   ///

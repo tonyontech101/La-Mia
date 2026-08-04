@@ -25,6 +25,7 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final interactive = !isLoading && onPressed != null;
+    final labelColor = interactive ? AppColors.onPrimary : AppColors.textSecondary;
     return SizedBox(
       width: double.infinity,
       height: _height,
@@ -48,6 +49,7 @@ class PrimaryButton extends StatelessWidget {
             disabledBackgroundColor:
                 isLoading ? AppColors.primary : AppColors.primaryDisabled,
             foregroundColor: AppColors.onPrimary,
+            disabledForegroundColor: AppColors.textSecondary,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.button),
@@ -76,7 +78,7 @@ class PrimaryButton extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                   child: Text(
                     label,
-                    style: AppTypography.button(),
+                    style: AppTypography.button(color: labelColor),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

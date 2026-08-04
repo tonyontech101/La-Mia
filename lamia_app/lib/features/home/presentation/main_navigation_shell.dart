@@ -8,6 +8,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../auth/data/auth_service.dart';
 import '../../auth/presentation/login_screen.dart';
+import '../../recipes/presentation/ano_pong_ulam_screen.dart';
 import 'home_dashboard_screen.dart';
 
 /// Navigation Shell hosting the 4 bottom tabs from image.png wireframe:
@@ -57,7 +58,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       _CookTabPlaceholder(onNavigateHome: () => _onTabTapped(0)),
 
       // Tab 2: Suggestion (Ano Pong Ulam?)
-      _SuggestionTabPlaceholder(onNavigateHome: () => _onTabTapped(0)),
+      AnoPongUlamScreen(onNavigateHome: () => _onTabTapped(0)),
 
       // Tab 3: Me (Profile)
       _ProfileTab(isGuest: widget.isGuest),
@@ -221,49 +222,6 @@ class _CookTabPlaceholder extends StatelessWidget {
   }
 }
 
-class _SuggestionTabPlaceholder extends StatelessWidget {
-  const _SuggestionTabPlaceholder({required this.onNavigateHome});
-  final VoidCallback onNavigateHome;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Ano Pong Ulam?'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.auto_awesome, size: 72, color: AppColors.secondary),
-              const SizedBox(height: 16),
-              Text(
-                'Ano Pong Ulam?',
-                style: AppTypography.headline(),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'One-tap daily meal suggestion engine tailored for Filipino households.',
-                style: AppTypography.body(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Back to Home Dashboard',
-                onPressed: onNavigateHome,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab({required this.isGuest});
