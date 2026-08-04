@@ -4,6 +4,7 @@
 *.pyc
 *.swp
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
@@ -12,26 +13,41 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# Environment Variables & Secrets
+.env
+.env.*
+*.env
+
+# Android Signing Keys & Machine Config
+**/key.properties
+*.keystore
+*.jks
+**/local.properties
+
+# IntelliJ / VS Code
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
 /coverage/
+
+# Release Artifacts
+*.apk
+*.aab
+*.ipa
+*.xcarchive
 
 # Symbolication related
 app.*.symbols
@@ -52,3 +68,8 @@ macos/Runner/GoogleService-Info.plist
 
 # Firebase Admin SDK key (seed script)
 **/serviceAccountKey.json
+
+# Android Manifest
+android/app/src/main/AndroidManifest.xml
+
+

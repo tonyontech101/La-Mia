@@ -8,6 +8,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_states.dart';
 import '../data/recipe_model.dart';
 import '../data/recipe_repository.dart';
+import 'recipe_detail_screen.dart';
 
 /// Data class representing a suggested recipe item with match score & missing items.
 class SuggestedRecipeItem {
@@ -207,186 +208,11 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
   }
 
   void _showRecipeDetailsDialog(RecipeModel recipe) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-          ),
-          child: Column(
-            children: [
-              // Header Image
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-                    child: CachedNetworkImage(
-                      imageUrl: recipe.coverPhotoUrl,
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(
-                        height: 220,
-                        color: AppColors.surfaceAlt,
-                        child: const Center(
-                          child: SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (_, _, _) => Container(
-                        height: 220,
-                        color: AppColors.surfaceAlt,
-                        child: const Icon(Icons.restaurant, size: 48, color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black.withValues(alpha: 0.5),
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Details Content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.screenH),
-                  child: ListView(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(AppRadii.pill),
-                            ),
-                            child: Text(
-                              recipe.category.toUpperCase(),
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            recipe.region,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        recipe.name,
-                        style: AppTypography.headline(),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'Prep: ${recipe.prepTime} | Cook: ${recipe.cookTime}',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.group_outlined, size: 16, color: AppColors.secondary),
-                          const SizedBox(width: 4),
-                          Text('${recipe.servings} Servings'),
-                        ],
-                      ),
-                      const Divider(height: 32),
-
-                      // Ingredients
-                      Text(
-                        'Ingredients',
-                        style: AppTypography.title(),
-                      ),
-                      const SizedBox(height: 8),
-                      ...recipe.ingredients.map((ing) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.circle, size: 6, color: AppColors.primary),
-                                const SizedBox(width: 10),
-                                Expanded(child: Text(ing, style: AppTypography.body())),
-                              ],
-                            ),
-                          )),
-
-                      const SizedBox(height: 20),
-
-                      // Instructions
-                      Text(
-                        'Step-by-Step Instructions',
-                        style: AppTypography.title(),
-                      ),
-                      const SizedBox(height: 8),
-                      ...recipe.instructions.asMap().entries.map((entry) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.secondary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${entry.key + 1}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    entry.value,
-                                    style: AppTypography.body().copyWith(height: 1.4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecipeDetailScreen(recipe: recipe),
+      ),
     );
   }
 
