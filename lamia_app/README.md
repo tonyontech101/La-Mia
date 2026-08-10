@@ -1,27 +1,46 @@
-# La Mia — Flutter Mobile Application
+# La Mia — Flutter Mobile Application 🍲
 
-This directory contains the main Flutter mobile application code for **La Mia**.
+This directory contains the core Flutter mobile client for **La Mia**, an authentic Filipino recipe discovery app built with Flutter (Dart 3.x) and Firebase.
 
-## 🚀 Setup & Firebase Configuration
+---
 
-Secret credentials and configuration files are excluded from Git repository to protect sensitive project keys.
+## 📖 Application Overview & Documentation
 
-Before running the application for the first time, refer to the project root documentation:
-👉 **[Root Setup Guide](../README.md)**
+For full details on features, architecture, database seeding, and project structure, please consult the primary project documentation:
 
-> 💡 **Note**: If you have already received access to Firebase collaboration and have the project config files, you can skip step 3 (Firebase Client Configuration).
+👉 **[Complete Project Documentation & Setup Guide](../README.md)**
 
-### Quick Firebase Setup (FlutterFire CLI)
+---
 
+## ⚡ Quick Start (Flutter App)
+
+### 1. Install Dependencies
 ```bash
-# 1. Install dependencies
 flutter pub get
+```
 
-# 2. Configure Firebase (generates lib/firebase_options.dart locally)
+### 2. Configure Firebase
+Generate `lib/firebase_options.dart` using FlutterFire CLI:
+```bash
 flutterfire configure
+```
+*(If manual config is required, see `lib/firebase_options.dart.example` or refer to the [Root Setup Guide](../README.md)).*
 
-# 3. Run app
+### 3. Launch Application
+```bash
 flutter run
 ```
 
-Refer to `lib/firebase_options.dart.example` if manual configuration is required.
+---
+
+## 🧪 Testing & Code Quality
+
+Run tests and static analysis before submitting changes:
+
+```bash
+# Run unit and widget tests
+flutter test
+
+# Run static analysis
+flutter analyze
+```
