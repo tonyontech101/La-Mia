@@ -4,9 +4,9 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../profile/presentation/profile_screen.dart';
-import '../../recipes/presentation/ano_pong_ulam_screen.dart';
-import '../../recipes/presentation/cook_by_ingredients_screen.dart';
+import '../../leaderboard/presentation/leaderboard_screen.dart';
 import 'home_dashboard_screen.dart';
+import 'home_feed_screen.dart';
 
 /// Redesigned Main Navigation Shell based on wireframe.
 ///
@@ -14,7 +14,7 @@ import 'home_dashboard_screen.dart';
 /// 1. Home
 /// 2. Cook
 /// 3. Prominent Floating Center Action Button (`+`)
-/// 4. Sugg (Ano Pong Ulam?)
+/// 4. Leaderboard
 /// 5. Me (Profile Screen)
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({
@@ -136,17 +136,20 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      // 0: Home Dashboard
+      // 0: Home Feed (social-style recipe feed)
+      HomeFeedScreen(
+        isGuest: widget.isGuest,
+        onNavigateToTab: _onTabTapped,
+      ),
+
+      // 1: Cook (former Home Dashboard content)
       HomeDashboardScreen(
         isGuest: widget.isGuest,
         onNavigateToTab: _onTabTapped,
       ),
 
-      // 1: Cook by Ingredients
-      CookByIngredientsScreen(onNavigateHome: () => _onTabTapped(0)),
-
-      // 2: Suggestion (Ano Pong Ulam?)
-      AnoPongUlamScreen(onNavigateHome: () => _onTabTapped(0)),
+      // 2: Leaderboard
+      LeaderboardScreen(onNavigateHome: () => _onTabTapped(0)),
 
       // 3: Me (Profile Screen matching wireframe)
       ProfileScreen(
@@ -212,10 +215,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                     // 3. Center Space reserved for Floating '+' Action Button
                     const SizedBox(width: 48),
 
-                    // 4. Sugg (Ano Pong Ulam?)
+                    // 4. Leaderboard
                     _NavItem(
-                      icon: Icons.info_outline_rounded,
-                      label: 'Sugg',
+                      icon: Icons.leaderboard_rounded,
+                      label: 'Rank',
                       isSelected: _currentIndex == 2,
                       onTap: () => _onTabTapped(2),
                     ),
