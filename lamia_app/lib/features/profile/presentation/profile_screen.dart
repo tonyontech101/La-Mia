@@ -245,16 +245,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
 
                   // 2. Profile Header (Avatar, Badge, Bio, Stats)
+                  // Stats placeholders (`—`) until real user stats ship —
+                  // don't fabricate follower/like counts.
                   ProfileHeaderWidget(
                     displayName: displayName,
                     photoUrl: photoUrl,
                     bio: widget.isGuest
                         ? 'Browsing as guest foodie. Sign in to post family recipes!'
-                        : 'Passionate home cook & Filipino food lover 🍳🇵🇭 Sharing traditional family recipes!',
-                    ranking: '#34 ranking',
-                    recipesCount: widget.isGuest ? '0' : '24',
-                    likesCount: widget.isGuest ? '0' : '1.2k',
-                    followersCount: widget.isGuest ? '0' : '950',
+                        : 'Passionate home cook & Filipino food lover. Sharing traditional family recipes!',
+                    ranking: '— ranking',
+                    recipesCount: widget.isGuest ? '0' : '—',
+                    likesCount: widget.isGuest ? '0' : '—',
+                    followersCount: widget.isGuest ? '0' : '—',
                     isGuest: widget.isGuest,
                     onEditProfileTap: () => _showOptionsMenu(context),
                   ),

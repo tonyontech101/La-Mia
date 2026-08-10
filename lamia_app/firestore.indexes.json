@@ -1,0 +1,87 @@
+{
+  // La Mia — Firestore indexes
+  //
+  // Generated to match the compound queries issued by RecipeRepository
+  // (lib/features/recipes/data/recipe_repository.dart). Deploy with:
+  //   firebase deploy --only firestore:indexes
+  //
+  // Notes:
+  //  - featuredRecipes: filters `isFeatured == true` and sorts in-memory by
+  //    trendingScore (no compound index needed; single-field indexes are
+  //    auto-created by Firestore).
+  //  - popularChoices / allRecipes: orderBy('trendingScore', descending)
+  //    with optional limit. Single-field index.
+  //  - recipesByCategory: where('category', isEqualTo) + orderBy('createdAt',
+  //    descending). Compound index below.
+  //  - searchRecipes: where('name', isGreaterThanOrEqualTo) +
+  //    where('name', isLessThan) + orderBy('name'). Compound index below.
+  //  - When the schema gains `status`, browse queries should also gate on
+  //    `status == 'approved'`; add the triple compound index at that point.
+
+  "indexes": [
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trendingScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isFeatured", "order": "ASCENDING" },
+        { "fieldPath": "trendingScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "trendingScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+
+  "fieldOverrides": [
+    {
+      "collectionGroup": "recipes",
+      "fieldPath": "name",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "fieldPath": "trendingScore",
+      "indexes": [
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    }
+  ]
+}

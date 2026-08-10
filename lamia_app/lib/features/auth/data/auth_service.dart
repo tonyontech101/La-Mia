@@ -2,15 +2,37 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'auth_error_messages.dart';
+
 /// Wraps [FirebaseAuth] with app-specific helpers and user-friendly error
 /// messages. All auth entry points in the UI go through this service.
+///
+/// The Firebase singletons are accessed *lazily* (via getters) rather than
+/// eagerly in the constructor. This lets the service be instantiated in
+/// a widget test environment where Firebase has not yet been initialized —
+/// `LoginScreen` simply constructs `AuthService()` for declaration purposes;
+/// no Firebase call is made until an auth method is invoked.
 class AuthService {
-  AuthService({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  AuthService({
+    FirebaseAuth? auth,
+    GoogleSignIn? googleSignIn,
+    FirebaseFirestore? firestore,
+  })  : _authArg = auth,
+        _googleArg = googleSignIn,
+        _firestoreArg = firestore;
 
-  final FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
+  final FirebaseAuth? _authArg;
+  final GoogleSignIn? _googleArg;
+  final FirebaseFirestore? _firestoreArg;
+
+  /// Resolves the [FirebaseAuth] instance, preferring an injected one.
+  FirebaseAuth get _auth => _authArg ?? FirebaseAuth.instance;
+
+  /// Resolves the [GoogleSignIn] instance, preferring an injected one.
+  GoogleSignIn get _googleSignIn => _googleArg ?? GoogleSignIn();
+
+  /// Resolves the [FirebaseFirestore] instance, preferring an injected one.
+  FirebaseFirestore get _firestore => _firestoreArg ?? FirebaseFirestore.instance;
 
   /// The currently signed-in user, or `null`.
   User? get currentUser => _auth.currentUser;
@@ -45,7 +67,7 @@ class AuthService {
       await _ensureUserDocument(user);
       return user;
     } on FirebaseAuthException catch (e) {
-      throw Exception(_friendlyMessage(e.code));
+      throw Exception(AuthErrorMessages.fromCode(e.code));
     }
   }
 
@@ -63,7 +85,7 @@ class AuthService {
       if (user == null) throw Exception('Sign-in succeeded but user is null.');
       return user;
     } on FirebaseAuthException catch (e) {
-      throw Exception(_friendlyMessage(e.code));
+      throw Exception(AuthErrorMessages.fromCode(e.code));
     }
   }
 
@@ -92,7 +114,7 @@ class AuthService {
       await _ensureUserDocument(user);
       return user;
     } on FirebaseAuthException catch (e) {
-      throw Exception(_friendlyMessage(e.code));
+      throw Exception(AuthErrorMessages.fromCode(e.code));
     }
   }
 
@@ -102,8 +124,7 @@ class AuthService {
   /// one doesn't already exist. Called automatically after sign-up and
   /// first Google sign-in.
   Future<void> _ensureUserDocument(User user) async {
-    final docRef =
-        FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docRef = _firestore.collection('users').doc(user.uid);
     final snapshot = await docRef.get();
     if (!snapshot.exists) {
       await docRef.set({
@@ -135,37 +156,7 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
-      throw Exception(_friendlyMessage(e.code));
+      throw Exception(AuthErrorMessages.fromCode(e.code));
     }
-  }
-
-  // ── Error mapping ──────────────────────────────────────────────────────
-
-  /// Converts Firebase Auth error codes into user-friendly messages.
-  static String _friendlyMessage(String code) {
-    return switch (code) {
-      'email-already-in-use' =>
-        'An account with this email already exists. Try logging in instead.',
-      'invalid-email' => 'The email address is not valid.',
-      'user-disabled' =>
-        'This account has been disabled. Contact support for help.',
-      'user-not-found' =>
-        'No account found with this email. Check your spelling or sign up.',
-      'wrong-password' =>
-        'Incorrect password. Please try again or reset your password.',
-      'invalid-credential' =>
-        'Incorrect email or password. Please try again.',
-      'weak-password' =>
-        'Password is too weak. Please choose a stronger password.',
-      'operation-not-allowed' =>
-        'This sign-in method is not enabled. Contact support.',
-      'too-many-requests' =>
-        'Too many attempts. Please wait a moment and try again.',
-      'network-request-failed' =>
-        'Network error. Check your connection and try again.',
-      'account-exists-with-different-credential' =>
-        'An account already exists with a different sign-in method.',
-      _ => 'Something went wrong. Please try again. ($code)',
-    };
   }
 }

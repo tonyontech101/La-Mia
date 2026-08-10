@@ -8,24 +8,9 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_states.dart';
 import '../data/recipe_model.dart';
 import '../data/recipe_repository.dart';
+import '../domain/ingredient_matched_recipe.dart';
+import '../domain/ingredient_matcher.dart';
 import 'recipe_detail_screen.dart';
-
-/// Item model representing a recipe matched against user selected ingredients.
-class IngredientMatchedRecipe {
-  const IngredientMatchedRecipe({
-    required this.recipe,
-    required this.matchPercentage,
-    required this.matchedCount,
-    required this.totalIngredients,
-    this.missingIngredients = const [],
-  });
-
-  final RecipeModel recipe;
-  final int matchPercentage;
-  final int matchedCount;
-  final int totalIngredients;
-  final List<String> missingIngredients;
-}
 
 /// "Cook by Ingredients" screen allowing users to input/select available pantry ingredients as tags,
 /// view quick suggestion tags, find matching recipes, and see match scores with missing ingredients.
@@ -136,56 +121,6 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
         );
       }
     });
-  }
-
-  /// Match logic: calculate match score for each recipe against user tags.
-  List<IngredientMatchedRecipe> _computeMatches(List<RecipeModel> recipes) {
-    if (_selectedIngredients.isEmpty) {
-      return [];
-    }
-
-    final lowerTags = _selectedIngredients.map((e) => e.toLowerCase()).toList();
-    final List<IngredientMatchedRecipe> matches = [];
-
-    for (final recipe in recipes) {
-      int matchedCount = 0;
-      final List<String> missing = [];
-
-      for (final ing in recipe.ingredients) {
-        final ingLower = ing.toLowerCase();
-        final isMatched = lowerTags.any((tag) => ingLower.contains(tag) || tag.contains(ingLower));
-
-        if (isMatched) {
-          matchedCount++;
-        } else {
-          missing.add(ing);
-        }
-      }
-
-      if (matchedCount > 0) {
-        final totalCount = recipe.ingredients.isEmpty ? 1 : recipe.ingredients.length;
-        final int matchPct = ((matchedCount / totalCount) * 100).round().clamp(1, 100);
-
-        matches.add(
-          IngredientMatchedRecipe(
-            recipe: recipe,
-            matchPercentage: matchPct,
-            matchedCount: matchedCount,
-            totalIngredients: totalCount,
-            missingIngredients: missing,
-          ),
-        );
-      }
-    }
-
-    // Sort by highest match percentage descending
-    matches.sort((a, b) {
-      final pctComp = b.matchPercentage.compareTo(a.matchPercentage);
-      if (pctComp != 0) return pctComp;
-      return b.matchedCount.compareTo(a.matchedCount);
-    });
-
-    return matches;
   }
 
   void _navigateToDetail(RecipeModel recipe) {
@@ -515,7 +450,7 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
           );
         }
 
-        final matches = _computeMatches(_allRecipes);
+        final matches = computeIngredientMatches(_allRecipes, _selectedIngredients);
 
         if (_selectedIngredients.isEmpty) {
           return const SectionEmptyState(
