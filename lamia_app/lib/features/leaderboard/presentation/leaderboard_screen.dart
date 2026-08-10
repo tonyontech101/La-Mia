@@ -32,6 +32,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   int _activeTab = 0; // 0 = Top Contributors, 1 = Most Cooked
 
   /// Dummy leaderboard data — Filipino chef names for visual variety.
+  /// Marked clearly as demo: this is *not* real ranking data and should be
+  /// replaced by a Firestore query over `users` once stats ship.
   static const _topContributors = [
     _ChefData('Chef Maria Santos', 42),
     _ChefData('Lola Rosa Reyes', 38),
@@ -218,11 +220,43 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       children: [
                         const SizedBox(height: 8),
 
+                        // Demo-data banner — the leaderboard does not yet
+                        // read from Firestore. Make that visible so viewers
+                        // don't mistake dummy data for real rankings.
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentSoft,
+                            borderRadius: BorderRadius.circular(AppRadii.field),
+                            border: Border.all(
+                                color: AppColors.accent.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline_rounded,
+                                  size: 16, color: AppColors.accent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Demo rankings — real stats coming soon.',
+                                  style: AppTypography.caption(
+                                          color: AppColors.textPrimary)
+                                      .copyWith(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
                         // 1. Chef of the Month
                         ChefOfMonthCard(
                           chefName: data.first.name,
                           dishName: 'Chicken Adobo sa Gata',
-                          likes: 1247,
+                          likes: _mostCooked.first.count, // demo count
                           onViewProfile: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -320,11 +354,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                         const SizedBox(height: 24),
 
-                        // 6. Your Ranking card
+                        // 6. Your Ranking card — demo values until real user stats ship.
                         YourRankingCard(
-                          rank: 25,
+                          rank: 0,         // 0 = "unranked / demo"
                           title: 'Cooking Enthusiast',
-                          spotsChange: 2,
+                          spotsChange: 0,
                           onSeeFullRank: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

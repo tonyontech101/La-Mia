@@ -5,7 +5,9 @@ import 'recipe_model.dart';
 /// Reads recipe data from Cloud Firestore.
 ///
 /// Provides methods for featured, popular, category-filtered, and
-/// search-based recipe queries with cursor-based pagination support.
+/// search-based recipe queries. Each method limits its result set via
+/// Firestore `limit()`; cursor-based pagination is not yet implemented —
+/// see the build order in `La Mia - Architecture (Flutter + Firebase).md` §9.
 class RecipeRepository {
   RecipeRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -14,7 +16,10 @@ class RecipeRepository {
 
   /// Fetches recipes flagged as featured by editors/seed data.
   ///
-  /// Queries `isFeatured == true`, ordered by [trendingScore] descending.
+  /// Queries `isFeatured == true` and returns up to [limit] recipes,
+  /// sorted in-memory by `trendingScore` descending (Firestore cannot
+  /// combine an equality filter with an `orderBy` on a different field
+  /// without a composite index; we keep the query simple here).
   Future<List<RecipeModel>> featuredRecipes({int limit = 6}) async {
     final snap = await _firestore
         .collection('recipes')
@@ -31,9 +36,9 @@ class RecipeRepository {
 
   /// Fetches the most popular recipes by trending score.
   ///
-  /// Ranked by [trendingScore] descending — includes both featured and
-  /// non-featured recipes. Returns a different set than [featuredRecipes]
-  /// because it is not filtered by [isFeatured].
+  /// Ranked by [trendingScore] descending via Firestore `orderBy` —
+  /// includes both featured and non-featured recipes. Returns a different
+  /// set than [featuredRecipes] because it is not filtered by [isFeatured].
   Future<List<RecipeModel>> popularChoices({int limit = 6}) async {
     final snap = await _firestore
         .collection('recipes')
@@ -43,11 +48,13 @@ class RecipeRepository {
     return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
   }
 
-  /// Fetches the full recipe collection for offline, in-memory filtering.
+  /// Fetches a slice of the recipe collection, ordered by trending score.
   ///
-  /// Returns up to [limit] recipes ordered by [trendingScore] descending. Used
-  /// by the "Ano Pong Ulam?" screen to load the whole dataset once and then
-  /// filter it locally in Dart, so no re-query is needed per Apply.
+  /// Returns up to [limit] recipes. Used today by the "Cook by Ingredients"
+  /// and "Ano Pong Ulam?" screens to load a dataset for in-memory filtering.
+  /// Note: per architecture doc §7 this over-fetch pattern should be
+  /// replaced with cursor pagination + server-side filtering once the
+  /// matching Cloud Function ships.
   Future<List<RecipeModel>> allRecipes({int limit = 200}) async {
     final snap = await _firestore
         .collection('recipes')
@@ -57,11 +64,10 @@ class RecipeRepository {
     return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
   }
 
-  /// Returns recipes matching [category] (case-insensitive match on the
-  /// Firestore `category` field).
+  /// Returns recipes matching [category] (exact match on the Firestore
+  /// `category` field), ordered by `createdAt` descending, up to [limit].
   ///
-  /// Supports cursor-based pagination via [startAfter]. Pass the last
-  /// [DocumentSnapshot] from a previous page to fetch the next page.
+  /// Cursor pagination is not yet implemented.
   Future<List<RecipeModel>> recipesByCategory(
     String category, {
     int limit = 20,
@@ -75,11 +81,11 @@ class RecipeRepository {
     return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
   }
 
-  /// Full-text-ish search by recipe name (prefix match via `>=` + `<`).
+  /// Prefix search by recipe name via a Firestore range query on the
+  /// (lowercase-normalized) `name` field. Returns up to [limit] documents.
   ///
-  /// Firestore does not support native full-text search, so this uses
-  /// a range query on the lowercase `name` field. Results are limited
-  /// to [limit] documents.
+  /// Full-text search is deferred to Algolia/Typesense (architecture §7);
+  /// until then this prefix match is the best Firestore can do.
   Future<List<RecipeModel>> searchRecipes(
     String query, {
     int limit = 20,
@@ -87,7 +93,7 @@ class RecipeRepository {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
 
-    // Firestore range query: name >= "query" AND name < "query\uffff"
+    // Firestore range query: name >= "query" AND name < "query\uffff".
     final snap = await _firestore
         .collection('recipes')
         .where('name', isGreaterThanOrEqualTo: q)

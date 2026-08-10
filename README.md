@@ -17,6 +17,14 @@ Welcome to **La Mia**, a modern Flutter application designed to showcase authent
 - **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (Email/Password & Google Sign-In)
 - **Seed Utility**: [Node.js](https://nodejs.org/) + `firebase-admin` SDK
 
+> 📌 **Architecture status**: The full target architecture (Riverpod state
+> management, go_router declarative navigation, Cloud Functions for the
+> ingredient-matching engine, App Check, flavors, and CI) is described in
+> `La Mia - Architecture (Flutter + Firebase).md` and is **planned but not
+> yet implemented**. The current codebase uses `StatefulWidget` + imperative
+> `Navigator` and ships the UI scaffolding for the features below. See
+> `implementation_plan.md` for the build order.
+
 ---
 
 ## 📁 Repository Structure
@@ -28,13 +36,20 @@ LaMia/
 │   ├── ios/                    # iOS native project files
 │   ├── assets/                 # App icons, static images & assets
 │   ├── lib/
-│   │   ├── app/                # App router, theme tokens & design system
-│   │   ├── core/               # Shared constants, helpers & UI states
+│   │   ├── app/                # App root widget, theme tokens & design system
+│   │   ├── core/               # Shared constants, utils & reusable UI states
 │   │   ├── features/
-│   │   │   ├── auth/           # Login, Register & Auth Service
-│   │   │   ├── home/           # Dashboard, Banners, Search & Sections
-│   │   │   └── recipes/        # Recipe Data Models & Firestore Repository
+│   │   │   ├── auth/           # Login, Sign-up & AuthService (Firebase Auth)
+│   │   │   ├── home/           # Dashboard, Feed, Search & navigation shell
+│   │   │   ├── recipes/        # Recipe Model, Firestore Repository & Cook-by-Ingredients
+│   │   │   ├── profile/        # User profile screen, tab grid & header widget  (planned stats)
+│   │   │   └── leaderboard/    # Chef ranking screen  (currently demo data)
 │   │   └── main.dart           # Application entry point
+│   ├── test/                   # Unit + widget tests (Validators, AuthErrorMessages, IngredientMatcher, LoginScreen)
+│   ├── firestore.rules         # Firestore security rules (deploy with `firebase deploy --only firestore:rules`)
+│   ├── firestore.indexes.json  # Composite indexes for RecipeRepository queries
+│   ├── storage.rules           # Cloud Storage security rules
+│   ├── firebase.json           # Firebase CLI config (project + rules + indexes wiring)
 │   └── pubspec.yaml            # Flutter dependencies & configuration
 │
 ├── recipes/                    # Local Recipe Dataset (200 recipes in 13 categories)

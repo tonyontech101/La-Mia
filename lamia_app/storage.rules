@@ -1,0 +1,40 @@
+// La Mia — Cloud Storage Security Rules
+//
+// Per the architecture doc §5: "only owner writes to their paths;
+// image size/type validated."
+//
+// Reads are open to anyone (recipe cover photos are public content used
+// by CachedNetworkImage on phones + guests). Writes are owner-only and
+// restricted to image MIME types and a reasonable max size (8MB).
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Recipe cover photos seeded via tools/seed_recipes.js live under
+    // recipes/<slug>/cover.jpg. Public read; admin/tool-writer write.
+    match /recipes/{path=**} {
+      allow read: if true;
+      allow write: if request.resource.contentType.matches('image/.*')
+          && request.resource.size < 8 * 1024 * 1024
+          // No client writes to seeded recipe art today — seeds only.
+          && false;
+    }
+
+    // User-uploaded content (avatar + recipe photos) lives under a user's
+    // own folder. Owner-only writes, image-only, sized-capped.
+    match /users/{uid}/{path=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.contentType.matches('image/.*')
+          && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

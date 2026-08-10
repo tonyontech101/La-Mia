@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"la-mia-e348d","appId":"1:408494904335:android:477850a54a7e5062d7bf7a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"la-mia-e348d","configurations":{"android":"1:408494904335:android:477850a54a7e5062d7bf7a","ios":"1:408494904335:ios:06b723b81da61d08d7bf7a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "la-mia-e348d",
+          "appId": "1:408494904335:android:477850a54a7e5062d7bf7a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "la-mia-e348d",
+          "configurations": {
+            "android": "1:408494904335:android:477850a54a7e5062d7bf7a",
+            "ios": "1:408494904335:ios:06b723b81da61d08d7bf7a"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

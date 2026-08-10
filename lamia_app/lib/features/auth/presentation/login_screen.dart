@@ -113,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
       AppSnackbar.show(
         context,
         message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _loggingIn = false);
@@ -133,6 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
       AppSnackbar.show(
         context,
         message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _googleLoading = false);
@@ -167,6 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
       AppSnackbar.show(
         context,
         message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     }
   }

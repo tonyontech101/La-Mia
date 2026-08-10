@@ -1,0 +1,158 @@
+rules_version = '2';
+
+// La Mia — Firestore Security Rules
+//
+// Implements the security model described in `La Mia - Architecture
+// (Flutter + Firebase).md` §5. The current data model does not yet carry
+// every field the doc lists (status, authorId, likeCount, ratingAvg), so
+// these rules are written to:
+//   1. Forward-enable the documented model (guarded by field presence),
+//   2. Lock down writes today to signed-in users + their own data,
+//   3. Treat popularity/moderation fields as server-authoritative — clients
+//      can never directly set status, likeCount, ratingAvg, ratingCount,
+//      trendingScore, or commentCount, even when those fields exist.
+//
+// Deploy with: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Admins are stored on the user doc as `role == 'admin'`. Admin checks
+    // require reading the user document, so they cost one read per
+    // admin-gated request — acceptable for moderation paths.
+    function isAdmin() {
+      return isSignedIn()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid))
+                .data.role == 'admin';
+    }
+
+    /// `true` if the requesting user is the author of `resource`.
+    function isAuthor() {
+      return isSignedIn()
+          && resource.data.authorId == request.auth.uid;
+    }
+
+    /// `true` if this request is attempting to mutate the moderation
+    /// `status` field. Used to forbid self-approval on update.
+    function changingStatus() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status']);
+    }
+
+    /// Server-authoritative fields. Clients can never write these.
+    function isServerAuthoritativeField(key) {
+      return key in [
+        'status',
+        'approvedAt',
+        'likeCount',
+        'commentCount',
+        'favoriteCount',
+        'ratingAvg',
+        'ratingCount',
+        'trendingScore'
+      ];
+    }
+
+    /// `true` when the request writes NO server-authoritative field.
+    function notSettingServerFields() {
+      return request.resource.data.diff(resource.data)
+          .affectedKeys().hasAny([
+            'status', 'approvedAt', 'likeCount', 'commentCount',
+            'favoriteCount', 'ratingAvg', 'ratingCount', 'trendingScore'
+          ]) == false;
+    }
+
+    // ── Recipes ────────────────────────────────────────────────────────────
+
+    match /recipes/{id} {
+
+      // Read: public reads of approved recipes. Authors and admins can
+      // always read their own/pending content. Until `status` exists on
+      // every doc, fall back to public read (matches current seed data).
+      allow read: if (
+        !('status' in resource.data)
+        || resource.data.status == 'approved'
+        || isAuthor()
+        || isAdmin()
+      );
+
+      // Create: signed-in user, must own the recipe, must start as pending.
+      // Server-authoritative fields must NOT be set by the client.
+      allow create: if isSignedIn()
+          && request.resource.data.authorId == request.auth.uid
+          && (
+            !('status' in request.resource.data)
+            || request.resource.data.status == 'pending'
+          )
+          && notSettingServerFields();
+
+      // Update: author may edit non-status fields of their own recipe;
+      // admin may update anything (including status approval). Clients
+      // can never mutate the server-authoritative counters via either path.
+      allow update: if (
+        (
+          isAuthor()
+          && !changingStatus()
+          && notSettingServerFields()
+        )
+        || isAdmin()
+      );
+
+      // Delete: author or admin.
+      allow delete: if isAuthor() || isAdmin();
+    }
+
+    // ── Ratings (one per user per recipe) ───────────────────────────────────
+
+    match /recipes/{recipeId}/ratings/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isUser(userId)
+          && request.resource.data.value is number
+          && request.resource.data.value >= 1
+          && request.resource.data.value <= 5;
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────────
+
+    match /users/{uid} {
+      // Own profile readable by authenticated user; admin reads anyone.
+      // During MVP, profile data shown back to the user themselves, so
+      // self-reads + admin reads suffice for current screens.
+      allow read: if isUser(uid) || isAdmin();
+
+      // First-creation on sign-up goes through AuthService, which forces
+      // the role to 'user' and never lets clients elevate themselves.
+      allow create: if isUser(uid)
+          && request.resource.data.role == 'user';
+
+      // Update own profile — but never the role field (admin-only),
+      // and never the server-authoritative counters.
+      allow update: if (
+        (isUser(uid) && !request.resource.data.diff(resource.data)
+            .affectedKeys().hasAny(['role', 'recipeCount', 'totalLikesReceived']))
+        || isAdmin()
+      );
+
+      allow delete: if isUser(uid);
+    }
+
+    // ── Everything else: deny by default ─────────────────────────────────────
+
+    // Collections not explicitly named above are inaccessible to clients.
+    // (新时期) New collections must add a deliberate rule here.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
