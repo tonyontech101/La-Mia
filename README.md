@@ -105,8 +105,6 @@ flutter pub get
 
 ### Step 3: Firebase Configuration
 
-> 💡 **Collaborator Note**:  
-> If you have received the official environment configuration files (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`) from your project administrator, place them in their respective locations listed under **Option B** and skip to Step 4.
 
 Otherwise, set up Firebase connection using one of the options below:
 
