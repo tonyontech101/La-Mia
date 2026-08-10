@@ -12,7 +12,10 @@ import '../data/recipe_model.dart';
 /// If the instruction contains a `:` the first segment becomes the title and
 /// the rest becomes the body. Otherwise the title is `Step {index + 1}`.
 /// Pure top-level function so it can be unit-tested in isolation.
-(String title, String body) parseInstructionStep(int index, String rawInstruction) {
+(String title, String body) parseInstructionStep(
+  int index,
+  String rawInstruction,
+) {
   if (rawInstruction.contains(':')) {
     final parts = rawInstruction.split(':');
     final title = parts.first.trim();
@@ -69,10 +72,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         ),
         title: Text(
           widget.screenTitle,
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -101,9 +103,19 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.restaurant, size: 54, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.restaurant,
+                              size: 54,
+                              color: AppColors.textSecondary,
+                            ),
                             SizedBox(height: 8),
-                            Text('Dish Image', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
+                            Text(
+                              'Dish Image',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -123,7 +135,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(AppRadii.card),
-                    border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.7),
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: AppColors.cardShadow,
@@ -161,8 +175,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.star_rounded,
-                                      size: 18, color: AppColors.textSecondary),
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 18,
+                                    color: AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 2),
                                   Text(
                                     'Ratings soon',
@@ -278,11 +295,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               );
                             },
                             tooltip: 'Print recipe',
-                            icon: const Icon(Icons.print_outlined,
-                                size: 20, color: AppColors.textPrimary),
+                            icon: const Icon(
+                              Icons.print_outlined,
+                              size: 20,
+                              color: AppColors.textPrimary,
+                            ),
                             padding: EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                           IconButton(
                             onPressed: () {
@@ -292,11 +314,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               );
                             },
                             tooltip: 'Share recipe',
-                            icon: const Icon(Icons.share_outlined,
-                                size: 20, color: AppColors.textPrimary),
+                            icon: const Icon(
+                              Icons.share_outlined,
+                              size: 20,
+                              color: AppColors.textPrimary,
+                            ),
                             padding: EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                           IconButton(
                             onPressed: () {
@@ -305,19 +332,28 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               });
                               AppSnackbar.show(
                                 context,
-                                message:
-                                    _isBookmarked ? 'Recipe saved' : 'Recipe removed',
+                                message: _isBookmarked
+                                    ? 'Recipe saved'
+                                    : 'Recipe removed',
                               );
                             },
-                            tooltip: _isBookmarked ? 'Remove bookmark' : 'Save recipe',
+                            tooltip: _isBookmarked
+                                ? 'Remove bookmark'
+                                : 'Save recipe',
                             icon: Icon(
-                              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                              _isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
                               size: 20,
-                              color: _isBookmarked ? AppColors.primary : AppColors.textPrimary,
+                              color: _isBookmarked
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
                             ),
                             padding: EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                         ],
                       ),
@@ -331,7 +367,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             child: _buildMetricBox(
                               icon: Icons.access_time,
                               label: 'Prep',
-                              value: recipe.prepTime.replaceAll(RegExp(r'mins?'), 'm').trim(),
+                              value: recipe.prepTime
+                                  .replaceAll(RegExp(r'mins?'), 'm')
+                                  .trim(),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -339,7 +377,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             child: _buildMetricBox(
                               icon: Icons.soup_kitchen_outlined,
                               label: 'Cook',
-                              value: recipe.cookTime.replaceAll(RegExp(r'mins?'), 'm').trim(),
+                              value: recipe.cookTime
+                                  .replaceAll(RegExp(r'mins?'), 'm')
+                                  .trim(),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -365,7 +405,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.8),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -374,7 +416,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       decoration: const BoxDecoration(
                         color: Color(0xFFEBE6E0),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(19)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(19),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -495,7 +539,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         return Column(
           children: recipe.instructions.asMap().entries.map((entry) {
             final idx = entry.key;
-            final (stepTitle, stepBody) = parseInstructionStep(idx, entry.value);
+            final (stepTitle, stepBody) = parseInstructionStep(
+              idx,
+              entry.value,
+            );
 
             return Container(
               margin: const EdgeInsets.only(bottom: 14),
@@ -567,7 +614,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text(
+                      '• ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         tip,

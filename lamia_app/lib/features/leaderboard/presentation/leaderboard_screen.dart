@@ -17,10 +17,7 @@ import 'widgets/your_ranking_card.dart';
 /// 5. "TRENDING COOKS" section with compact rows
 /// 6. "Your Ranking" bottom card
 class LeaderboardScreen extends StatefulWidget {
-  const LeaderboardScreen({
-    super.key,
-    this.onNavigateHome,
-  });
+  const LeaderboardScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
@@ -80,44 +77,51 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Leaderboard Options',
-                  style:
-                      AppTypography.title(color: AppColors.textPrimary)
-                          .copyWith(fontWeight: FontWeight.w700),
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.filter_list_rounded,
-                      color: AppColors.primary),
+                  leading: const Icon(
+                    Icons.filter_list_rounded,
+                    color: AppColors.primary,
+                  ),
                   title: const Text('Filter by Category'),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Category filter coming soon!')),
+                        content: Text('Category filter coming soon!'),
+                      ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.calendar_month_rounded,
-                      color: AppColors.secondary),
+                  leading: const Icon(
+                    Icons.calendar_month_rounded,
+                    color: AppColors.secondary,
+                  ),
                   title: const Text('View Past Rankings'),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Past rankings coming soon!')),
+                        content: Text('Past rankings coming soon!'),
+                      ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.share_rounded,
-                      color: AppColors.textSecondary),
+                  leading: const Icon(
+                    Icons.share_rounded,
+                    color: AppColors.textSecondary,
+                  ),
                   title: const Text('Share Leaderboard'),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Sharing coming soon!')),
+                      const SnackBar(content: Text('Sharing coming soon!')),
                     );
                   },
                 ),
@@ -140,8 +144,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
             child: Column(
               children: [
                 // ── App Bar ──
@@ -181,11 +186,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       Text(
                         'Leaderboard',
                         style: AppTypography.title(
-                                color: AppColors.textPrimary)
-                            .copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 18),
                       ),
 
                       // Hamburger menu
@@ -226,24 +228,30 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.accentSoft,
                             borderRadius: BorderRadius.circular(AppRadii.field),
                             border: Border.all(
-                                color: AppColors.accent.withValues(alpha: 0.4)),
+                              color: AppColors.accent.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline_rounded,
-                                  size: 16, color: AppColors.accent),
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 16,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Demo rankings — real stats coming soon.',
                                   style: AppTypography.caption(
-                                          color: AppColors.textPrimary)
-                                      .copyWith(fontSize: 11),
+                                    color: AppColors.textPrimary,
+                                  ).copyWith(fontSize: 11),
                                 ),
                               ),
                             ],
@@ -260,8 +268,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           onViewProfile: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(
-                                      'Viewing ${data.first.name}\'s profile...')),
+                                content: Text(
+                                  'Viewing ${data.first.name}\'s profile...',
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -287,8 +297,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text(
-                                        'Viewing ${top3[i].name}\'s profile...')),
+                                  content: Text(
+                                    'Viewing ${top3[i].name}\'s profile...',
+                                  ),
+                                ),
                               );
                             },
                           ),
@@ -301,40 +313,41 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           children: [
                             Text(
                               'TRENDING COOKS',
-                              style: AppTypography.caption(
-                                      color: AppColors.textSecondary)
-                                  .copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11,
-                                letterSpacing: 0.8,
-                              ),
+                              style:
+                                  AppTypography.caption(
+                                    color: AppColors.textSecondary,
+                                  ).copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                    letterSpacing: 0.8,
+                                  ),
                             ),
                             GestureDetector(
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text(
-                                          'Full trending list coming soon!')),
+                                    content: Text(
+                                      'Full trending list coming soon!',
+                                    ),
+                                  ),
                                 );
                               },
                               child: Text(
                                 'See All',
-                                style: AppTypography.caption(
-                                        color: AppColors.secondary)
-                                    .copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 11,
-                                ),
+                                style:
+                                    AppTypography.caption(
+                                      color: AppColors.secondary,
+                                    ).copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
                               ),
                             ),
                           ],
                         ),
 
                         // Divider
-                        const Divider(
-                          height: 16,
-                          color: AppColors.border,
-                        ),
+                        const Divider(height: 16, color: AppColors.border),
 
                         // 5. Trending Cooks rows (4, 5, 6...)
                         for (int i = 0; i < trending.length; i++)
@@ -346,8 +359,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text(
-                                        'Viewing ${trending[i].name}\'s profile...')),
+                                  content: Text(
+                                    'Viewing ${trending[i].name}\'s profile...',
+                                  ),
+                                ),
                               );
                             },
                           ),
@@ -356,14 +371,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                         // 6. Your Ranking card — demo values until real user stats ship.
                         YourRankingCard(
-                          rank: 0,         // 0 = "unranked / demo"
+                          rank: 0, // 0 = "unranked / demo"
                           title: 'Cooking Enthusiast',
                           spotsChange: 0,
                           onSeeFullRank: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content:
-                                      Text('Full ranking view coming soon!')),
+                                content: Text('Full ranking view coming soon!'),
+                              ),
                             );
                           },
                         ),
@@ -457,14 +472,15 @@ class _TabPill extends StatelessWidget {
         child: Center(
           child: Text(
             label,
-            style: AppTypography.caption(
-              color: isActive
-                  ? AppColors.textPrimary
-                  : AppColors.textSecondary,
-            ).copyWith(
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 12,
-            ),
+            style:
+                AppTypography.caption(
+                  color: isActive
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                ).copyWith(
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                ),
           ),
         ),
       ),

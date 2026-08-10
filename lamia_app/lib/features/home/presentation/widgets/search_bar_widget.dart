@@ -6,11 +6,7 @@ import '../../../../app/theme/app_typography.dart';
 /// Search input bar matching the wireframe:
 /// [ Search for different foods... ]
 class SearchBarWidget extends StatelessWidget {
-  const SearchBarWidget({
-    super.key,
-    this.onTap,
-    this.onChanged,
-  });
+  const SearchBarWidget({super.key, this.onTap, this.onChanged});
 
   final VoidCallback? onTap;
   final ValueChanged<String>? onChanged;

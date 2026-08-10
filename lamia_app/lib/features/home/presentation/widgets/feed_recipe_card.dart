@@ -52,16 +52,16 @@ class FeedRecipeCard extends StatelessWidget {
           children: [
             // Recipe cover photo
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
               child: AspectRatio(
                 aspectRatio: 16 / 10,
                 child: recipe.coverPhotoUrl.isNotEmpty
                     ? Image.network(
                         recipe.coverPhotoUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            _buildPhotoPlaceholder(),
+                        errorBuilder: (_, _, _) => _buildPhotoPlaceholder(),
                       )
                     : _buildPhotoPlaceholder(),
               ),
@@ -102,11 +102,8 @@ class FeedRecipeCard extends StatelessWidget {
                       Text(
                         '@ $dummyUsername',
                         style: AppTypography.caption(
-                                color: AppColors.textSecondary)
-                            .copyWith(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
+                          color: AppColors.textSecondary,
+                        ).copyWith(fontWeight: FontWeight.w500, fontSize: 12),
                       ),
                       const Spacer(),
                       // Tag pills: cook time + category
@@ -127,11 +124,9 @@ class FeedRecipeCard extends StatelessWidget {
                   // Dish Name
                   Text(
                     recipe.name,
-                    style: AppTypography.title(color: AppColors.textPrimary)
-                        .copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+                    style: AppTypography.title(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 16),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -141,9 +136,9 @@ class FeedRecipeCard extends StatelessWidget {
                   // Description — derived from ingredients/tags as a brief summary
                   Text(
                     _buildDescription(),
-                    style:
-                        AppTypography.body(color: AppColors.textSecondary)
-                            .copyWith(fontSize: 13),
+                    style: AppTypography.body(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 13),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -194,10 +189,7 @@ class FeedRecipeCard extends StatelessWidget {
 
 /// Small rounded tag pill used for cook time and category.
 class _TagPill extends StatelessWidget {
-  const _TagPill({
-    required this.label,
-    required this.color,
-  });
+  const _TagPill({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -212,10 +204,9 @@ class _TagPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTypography.caption(color: color).copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 10,
-        ),
+        style: AppTypography.caption(
+          color: color,
+        ).copyWith(fontWeight: FontWeight.w600, fontSize: 10),
       ),
     );
   }

@@ -46,45 +46,52 @@ class FeedAppBar extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Options',
-                  style: AppTypography.title(color: AppColors.textPrimary)
-                      .copyWith(fontWeight: FontWeight.w700),
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.person_outline_rounded,
-                      color: AppColors.primary),
+                  leading: const Icon(
+                    Icons.person_outline_rounded,
+                    color: AppColors.primary,
+                  ),
                   title: const Text('Edit Profile'),
-                  subtitle: Text(
-                      isGuest ? 'Guest user' : (user?.email ?? '')),
+                  subtitle: Text(isGuest ? 'Guest user' : (user?.email ?? '')),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Edit profile coming soon!')),
+                        content: Text('Edit profile coming soon!'),
+                      ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.notifications_outlined,
-                      color: AppColors.secondary),
+                  leading: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.secondary,
+                  ),
                   title: const Text('Notifications'),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Notifications coming soon!')),
+                        content: Text('Notifications coming soon!'),
+                      ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.settings_outlined,
-                      color: AppColors.textSecondary),
+                  leading: const Icon(
+                    Icons.settings_outlined,
+                    color: AppColors.textSecondary,
+                  ),
                   title: const Text('Preferences & Dietary Settings'),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Preferences coming soon!')),
+                      const SnackBar(content: Text('Preferences coming soon!')),
                     );
                   },
                 ),
@@ -97,7 +104,9 @@ class FeedAppBar extends StatelessWidget {
                   title: Text(
                     isGuest ? 'Sign In / Register' : 'Sign Out',
                     style: const TextStyle(
-                        color: AppColors.error, fontWeight: FontWeight.w700),
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   onTap: () async {
                     Navigator.pop(context);
@@ -119,8 +128,7 @@ class FeedAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -157,19 +165,19 @@ class FeedAppBar extends StatelessWidget {
               children: [
                 Text(
                   'La Mia',
-                  style: AppTypography.wordmark(color: AppColors.textPrimary)
-                      .copyWith(fontSize: 22),
+                  style: AppTypography.wordmark(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 22),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Filipino Recipe & Meal Assistant',
-                  style:
-                      AppTypography.caption(color: AppColors.textSecondary)
-                          .copyWith(
-                    fontSize: 9,
-                    letterSpacing: 0.4,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: AppTypography.caption(color: AppColors.textSecondary)
+                      .copyWith(
+                        fontSize: 9,
+                        letterSpacing: 0.4,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ],
             ),

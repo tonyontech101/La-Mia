@@ -201,7 +201,10 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icons.mail_outline,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.username, AutofillHints.email],
+              autofillHints: const [
+                AutofillHints.username,
+                AutofillHints.email,
+              ],
               enabled: !_busy,
               errorText: _emailError,
               onChanged: (_) => _validateEmail(),

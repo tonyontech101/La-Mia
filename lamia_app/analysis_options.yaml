@@ -31,8 +31,11 @@ linter:
   # lints and their documentation is published at https://dart.dev/lints.
   rules:
     # Style consistency
+    # (Note: `directives_ordering` intentionally NOT enabled — it's a
+    # pedantic rule that would flag dozens of pre-existing import-order
+    # findings across the codebase. Enable as part of a separate cleanup
+    # epic if desired.)
     prefer_single_quotes: true
-    directives_ordering: true
 
     # Safety / common bug categories — moderate set that large swaths of the
     # codebase already follow. More aggressive rules (prefer_final_locals,

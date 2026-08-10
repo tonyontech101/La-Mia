@@ -15,15 +15,13 @@ import 'recipe_detail_screen.dart';
 /// "Cook by Ingredients" screen allowing users to input/select available pantry ingredients as tags,
 /// view quick suggestion tags, find matching recipes, and see match scores with missing ingredients.
 class CookByIngredientsScreen extends StatefulWidget {
-  const CookByIngredientsScreen({
-    super.key,
-    this.onNavigateHome,
-  });
+  const CookByIngredientsScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
   @override
-  State<CookByIngredientsScreen> createState() => _CookByIngredientsScreenState();
+  State<CookByIngredientsScreen> createState() =>
+      _CookByIngredientsScreenState();
 }
 
 class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
@@ -83,12 +81,18 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
     if (text.isEmpty) return;
 
     // Handle comma-separated input
-    final items = text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    final items = text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty);
 
     setState(() {
       for (final item in items) {
-        final capitalized = item[0].toUpperCase() + item.substring(1).toLowerCase();
-        if (!_selectedIngredients.any((e) => e.toLowerCase() == capitalized.toLowerCase())) {
+        final capitalized =
+            item[0].toUpperCase() + item.substring(1).toLowerCase();
+        if (!_selectedIngredients.any(
+          (e) => e.toLowerCase() == capitalized.toLowerCase(),
+        )) {
           _selectedIngredients.add(capitalized);
         }
       }
@@ -98,7 +102,9 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
 
   void _removeIngredientTag(String tag) {
     setState(() {
-      _selectedIngredients.removeWhere((e) => e.toLowerCase() == tag.toLowerCase());
+      _selectedIngredients.removeWhere(
+        (e) => e.toLowerCase() == tag.toLowerCase(),
+      );
     });
   }
 
@@ -144,20 +150,26 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
         scrolledUnderElevation: 1,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : widget.onNavigateHome != null
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                    onPressed: widget.onNavigateHome,
-                  )
-                : null,
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
+                onPressed: widget.onNavigateHome,
+              )
+            : null,
         title: Text(
           'Cook by Ingredients',
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         centerTitle: false,
       ),
@@ -170,7 +182,9 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.contentMaxWidth,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -205,11 +219,12 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
           children: [
             Text(
               'Cook by Ingredients',
-              style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
+              style: AppTypography.headline(color: AppColors.textPrimary)
+                  .copyWith(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
             const SizedBox(width: 8),
             Container(
@@ -221,14 +236,17 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.kitchen_outlined, size: 13, color: AppColors.primary),
+                  const Icon(
+                    Icons.kitchen_outlined,
+                    size: 13,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Pantry Solver',
-                    style: AppTypography.caption(color: AppColors.primary).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                    ),
+                    style: AppTypography.caption(
+                      color: AppColors.primary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 10),
                   ),
                 ],
               ),
@@ -238,9 +256,9 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
         const SizedBox(height: 4),
         Text(
           'Add what you have in your fridge or kitchen, and discover dishes you can cook right now!',
-          style: AppTypography.body(color: AppColors.textSecondary).copyWith(
-            fontSize: 13,
-          ),
+          style: AppTypography.body(
+            color: AppColors.textSecondary,
+          ).copyWith(fontSize: 13),
         ),
       ],
     );
@@ -249,7 +267,11 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
   /// Main "Add Ingredients" Card styled matching the provided wireframe screenshot
   Widget _buildAddIngredientsCard() {
     final availableSuggestions = _popularSuggestions
-        .where((s) => !_selectedIngredients.any((tag) => tag.toLowerCase() == s.toLowerCase()))
+        .where(
+          (s) => !_selectedIngredients.any(
+            (tag) => tag.toLowerCase() == s.toLowerCase(),
+          ),
+        )
         .toList();
 
     return Container(
@@ -276,20 +298,20 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
             children: [
               Text(
                 'Add Ingredients',
-                style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                ),
+                style: AppTypography.title(
+                  color: AppColors.textPrimary,
+                ).copyWith(fontWeight: FontWeight.w700, fontSize: 18),
               ),
               if (_selectedIngredients.isNotEmpty)
                 GestureDetector(
                   onTap: _clearAllTags,
                   child: Text(
                     'Clear all',
-                    style: AppTypography.caption(color: AppColors.primary).copyWith(
-                      fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
-                    ),
+                    style: AppTypography.caption(color: AppColors.primary)
+                        .copyWith(
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
                   ),
                 ),
             ],
@@ -316,7 +338,12 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
                     runSpacing: 8,
                     children: _selectedIngredients.map((tag) {
                       return Container(
-                        padding: const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
+                        padding: const EdgeInsets.only(
+                          left: 12,
+                          right: 6,
+                          top: 6,
+                          bottom: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceAlt,
                           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -327,9 +354,9 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
                           children: [
                             Text(
                               tag,
-                              style: AppTypography.bodyStrong(color: AppColors.textPrimary).copyWith(
-                                fontSize: 13,
-                              ),
+                              style: AppTypography.bodyStrong(
+                                color: AppColors.textPrimary,
+                              ).copyWith(fontSize: 13),
                             ),
                             const SizedBox(width: 4),
                             InkWell(
@@ -361,16 +388,20 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
                     hintText: _selectedIngredients.isEmpty
                         ? 'Input your ingredients here (e.g., Eggs, Garlic, Rice)...'
                         : 'Add more ingredients...',
-                    hintStyle: AppTypography.body(color: AppColors.textSecondary).copyWith(
-                      fontSize: 13,
-                    ),
+                    hintStyle: AppTypography.body(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 13),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     border: InputBorder.none,
                     suffixIcon: _ingredientController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.add_circle, color: AppColors.primary),
-                            onPressed: () => _addIngredientTag(_ingredientController.text),
+                            icon: const Icon(
+                              Icons.add_circle,
+                              color: AppColors.primary,
+                            ),
+                            onPressed: () =>
+                                _addIngredientTag(_ingredientController.text),
                           )
                         : null,
                   ),
@@ -403,13 +434,17 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.add, size: 14, color: AppColors.textPrimary),
+                          const Icon(
+                            Icons.add,
+                            size: 14,
+                            color: AppColors.textPrimary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             suggestion,
-                            style: AppTypography.bodyStrong(color: AppColors.textPrimary).copyWith(
-                              fontSize: 13,
-                            ),
+                            style: AppTypography.bodyStrong(
+                              color: AppColors.textPrimary,
+                            ).copyWith(fontSize: 13),
                           ),
                         ],
                       ),
@@ -427,7 +462,9 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
             width: double.infinity,
             child: PrimaryButton(
               label: 'Find Recipes',
-              onPressed: _selectedIngredients.isEmpty ? null : _onFindRecipesPressed,
+              onPressed: _selectedIngredients.isEmpty
+                  ? null
+                  : _onFindRecipesPressed,
             ),
           ),
         ],
@@ -445,17 +482,22 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
         }
         if (snapshot.hasError) {
           return SectionErrorState(
-            message: 'Unable to load recipes. Please check your internet connection.',
+            message:
+                'Unable to load recipes. Please check your internet connection.',
             onRetry: _retry,
           );
         }
 
-        final matches = computeIngredientMatches(_allRecipes, _selectedIngredients);
+        final matches = computeIngredientMatches(
+          _allRecipes,
+          _selectedIngredients,
+        );
 
         if (_selectedIngredients.isEmpty) {
           return const SectionEmptyState(
             message: 'What ingredients do you have today?',
-            subtitle: 'Add ingredients in the card above or tap quick suggestions to see recipes you can make.',
+            subtitle:
+                'Add ingredients in the card above or tap quick suggestions to see recipes you can make.',
           );
         }
 
@@ -465,15 +507,15 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
             children: [
               Text(
                 'Matched Recipes',
-                style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTypography.headline(
+                  color: AppColors.textPrimary,
+                ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               const SectionEmptyState(
                 message: 'No matching recipes found',
-                subtitle: 'Try adding more common ingredients like Garlic, Onion, Pork, or Rice.',
+                subtitle:
+                    'Try adding more common ingredients like Garlic, Onion, Pork, or Rice.',
               ),
             ],
           );
@@ -487,23 +529,24 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
               children: [
                 Text(
                   'Matching Recipes',
-                  style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.headline(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppRadii.pill),
                   ),
                   child: Text(
                     '${matches.length} found',
-                    style: AppTypography.caption(color: AppColors.primary).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
+                    style: AppTypography.caption(
+                      color: AppColors.primary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
                   ),
                 ),
               ],
@@ -529,10 +572,7 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
 
 /// Card component to display a matched recipe with match badge, missing items, and details.
 class _CookMatchedRecipeCard extends StatelessWidget {
-  const _CookMatchedRecipeCard({
-    required this.matchItem,
-    required this.onTap,
-  });
+  const _CookMatchedRecipeCard({required this.matchItem, required this.onTap});
 
   final IngredientMatchedRecipe matchItem;
   final VoidCallback onTap;
@@ -594,9 +634,9 @@ class _CookMatchedRecipeCard extends StatelessWidget {
                         child: Center(
                           child: Text(
                             recipe.name,
-                            style: AppTypography.headline(color: AppColors.textSecondary).copyWith(
-                              fontSize: 18,
-                            ),
+                            style: AppTypography.headline(
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontSize: 18),
                           ),
                         ),
                       ),
@@ -609,7 +649,10 @@ class _CookMatchedRecipeCard extends StatelessWidget {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface.withValues(alpha: 0.94),
                       borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -634,10 +677,9 @@ class _CookMatchedRecipeCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${matchItem.matchPercentage}% Match',
-                          style: AppTypography.caption(color: badgeColor).copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
+                          style: AppTypography.caption(
+                            color: badgeColor,
+                          ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
                         ),
                       ],
                     ),
@@ -654,33 +696,47 @@ class _CookMatchedRecipeCard extends StatelessWidget {
                 children: [
                   Text(
                     recipe.name,
-                    style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.headline(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.timer_outlined, size: 14, color: AppColors.textSecondary),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${recipe.prepTime} prep • ${recipe.cookTime} cook',
-                        style: AppTypography.caption(color: AppColors.textSecondary),
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(Icons.restaurant_outlined, size: 14, color: AppColors.textSecondary),
+                      const Icon(
+                        Icons.restaurant_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         recipe.difficulty,
-                        style: AppTypography.caption(color: AppColors.textSecondary),
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                   if (matchItem.missingIngredients.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadii.field),
@@ -696,9 +752,9 @@ class _CookMatchedRecipeCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               'Missing: ${matchItem.missingIngredients.take(3).join(", ")}${matchItem.missingIngredients.length > 3 ? "..." : ""}',
-                              style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                                fontSize: 11,
-                              ),
+                              style: AppTypography.caption(
+                                color: AppColors.textSecondary,
+                              ).copyWith(fontSize: 11),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

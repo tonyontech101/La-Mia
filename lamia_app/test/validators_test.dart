@@ -141,14 +141,8 @@ void main() {
         Validators.confirmPassword('abc', 'abd'),
         "Passwords don't match.",
       );
-      expect(
-        Validators.confirmPassword('abc', ''),
-        "Passwords don't match.",
-      );
-      expect(
-        Validators.confirmPassword(null, 'abc'),
-        "Passwords don't match.",
-      );
+      expect(Validators.confirmPassword('abc', ''), "Passwords don't match.");
+      expect(Validators.confirmPassword(null, 'abc'), "Passwords don't match.");
     });
   });
 
@@ -164,33 +158,18 @@ void main() {
     });
 
     test('>=8 letters+numbers without symbol/uppercase is okay', () {
-      expect(
-        estimatePasswordStrength('abcdef12'),
-        PasswordStrength.okay,
-      );
-      expect(
-        estimatePasswordStrength('password1'),
-        PasswordStrength.okay,
-      );
+      expect(estimatePasswordStrength('abcdef12'), PasswordStrength.okay);
+      expect(estimatePasswordStrength('password1'), PasswordStrength.okay);
     });
 
     test('>=10 chars with symbol OR uppercase is strong', () {
-      expect(
-        estimatePasswordStrength('Password12!'),
-        PasswordStrength.strong,
-      );
-      expect(
-        estimatePasswordStrength('aaaabbbb123!'),
-        PasswordStrength.strong,
-      );
+      expect(estimatePasswordStrength('Password12!'), PasswordStrength.strong);
+      expect(estimatePasswordStrength('aaaabbbb123!'), PasswordStrength.strong);
     });
 
     test('exactly 8 chars with symbol still okay (needs >=10)', () {
       // 8 chars < 10, so even with a symbol this lands at "okay".
-      expect(
-        estimatePasswordStrength('aabbcc12!'),
-        PasswordStrength.okay,
-      );
+      expect(estimatePasswordStrength('aabbcc12!'), PasswordStrength.okay);
     });
   });
 

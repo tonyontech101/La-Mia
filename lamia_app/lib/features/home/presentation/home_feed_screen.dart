@@ -14,11 +14,7 @@ import 'widgets/search_bar_widget.dart';
 /// New Home Feed Screen — social-style recipe feed with
 /// "Following" / "For You" tabs, matching the wireframe.
 class HomeFeedScreen extends StatefulWidget {
-  const HomeFeedScreen({
-    super.key,
-    this.isGuest = false,
-    this.onNavigateToTab,
-  });
+  const HomeFeedScreen({super.key, this.isGuest = false, this.onNavigateToTab});
 
   final bool isGuest;
   final ValueChanged<int>? onNavigateToTab;
@@ -85,8 +81,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
     if (_recipes.isEmpty) return [];
     if (_activeTab == 0) {
       // "Following" — show a subset (simulate followed users' posts)
-      return _recipes.where((r) => r.tags.contains('Comfort Food') ||
-          r.tags.contains('Traditional')).toList();
+      return _recipes
+          .where(
+            (r) =>
+                r.tags.contains('Comfort Food') ||
+                r.tags.contains('Traditional'),
+          )
+          .toList();
     }
     // "For You" — show all recipes
     return _recipes;
@@ -119,8 +120,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
             child: Column(
               children: [
                 // Fixed header section
@@ -151,8 +153,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                       // 3. Following / For You tab switcher
                       _FeedTabSwitcher(
                         activeTab: _activeTab,
-                        onTabChanged: (tab) =>
-                            setState(() => _activeTab = tab),
+                        onTabChanged: (tab) => setState(() => _activeTab = tab),
                       ),
 
                       const SizedBox(height: 8),
@@ -165,29 +166,28 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                   child: _isLoading
                       ? _buildLoadingSkeleton()
                       : _hasError
-                          ? _buildErrorState()
-                          : tabRecipes.isEmpty
-                              ? _buildEmptyState()
-                              : RefreshIndicator(
-                                  color: AppColors.primary,
-                                  onRefresh: _loadRecipes,
-                                  child: ListView.builder(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.screenH,
-                                      vertical: 8,
-                                    ),
-                                    itemCount: tabRecipes.length,
-                                    itemBuilder: (context, index) {
-                                      final recipe = tabRecipes[index];
-                                      return FeedRecipeCard(
-                                        recipe: recipe,
-                                        dummyUsername:
-                                            _getDummyUsername(index),
-                                        onTap: () => _onRecipeTap(recipe),
-                                      );
-                                    },
-                                  ),
-                                ),
+                      ? _buildErrorState()
+                      : tabRecipes.isEmpty
+                      ? _buildEmptyState()
+                      : RefreshIndicator(
+                          color: AppColors.primary,
+                          onRefresh: _loadRecipes,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.screenH,
+                              vertical: 8,
+                            ),
+                            itemCount: tabRecipes.length,
+                            itemBuilder: (context, index) {
+                              final recipe = tabRecipes[index];
+                              return FeedRecipeCard(
+                                recipe: recipe,
+                                dummyUsername: _getDummyUsername(index),
+                                onTap: () => _onRecipeTap(recipe),
+                              );
+                            },
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -252,9 +252,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
               onPressed: _loadRecipes,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ],
         ),
@@ -301,10 +299,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 ///
 /// Centered text with an underline on the active tab.
 class _FeedTabSwitcher extends StatelessWidget {
-  const _FeedTabSwitcher({
-    required this.activeTab,
-    required this.onTabChanged,
-  });
+  const _FeedTabSwitcher({required this.activeTab, required this.onTabChanged});
 
   final int activeTab;
   final ValueChanged<int> onTabChanged;
@@ -358,14 +353,15 @@ class _TabItem extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTypography.bodyStrong(
-            color: isActive
-                ? AppColors.textPrimary
-                : AppColors.textSecondary,
-          ).copyWith(
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 15,
-          ),
+          style:
+              AppTypography.bodyStrong(
+                color: isActive
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+              ).copyWith(
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 15,
+              ),
         ),
       ),
     );

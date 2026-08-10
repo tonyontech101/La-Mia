@@ -21,7 +21,8 @@ void main() {
       'wrong-password':
           'Incorrect password. Please try again or reset your password.',
       'invalid-credential': 'Incorrect email or password. Please try again.',
-      'weak-password': 'Password is too weak. Please choose a stronger password.',
+      'weak-password':
+          'Password is too weak. Please choose a stronger password.',
       'operation-not-allowed':
           'This sign-in method is not enabled. Contact support.',
       'too-many-requests':
@@ -32,16 +33,18 @@ void main() {
           'An account already exists with a different sign-in method.',
     };
 
-    test('maps every documented Firebase Auth code to its expected message',
-        () {
-      for (final entry in mapped.entries) {
-        expect(
-          AuthErrorMessages.fromCode(entry.key),
-          entry.value,
-          reason: '${entry.key} should map to the documented message',
-        );
-      }
-    });
+    test(
+      'maps every documented Firebase Auth code to its expected message',
+      () {
+        for (final entry in mapped.entries) {
+          expect(
+            AuthErrorMessages.fromCode(entry.key),
+            entry.value,
+            reason: '${entry.key} should map to the documented message',
+          );
+        }
+      },
+    );
 
     test('includes the raw code in the default branch for diagnostics', () {
       final result = AuthErrorMessages.fromCode('some-unmapped-firebase-code');

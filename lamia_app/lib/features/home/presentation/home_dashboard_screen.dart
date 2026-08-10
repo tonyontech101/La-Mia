@@ -79,7 +79,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.screenH,
@@ -108,7 +110,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   // 3. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
                   HeroActionCards(
-                    onCookByIngredientsTap: () => widget.onNavigateToTab?.call(1),
+                    onCookByIngredientsTap: () =>
+                        widget.onNavigateToTab?.call(1),
                     onAnoPongUlamTap: () => widget.onNavigateToTab?.call(2),
                   ),
 
@@ -118,8 +121,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   FutureBuilder<List<RecipeModel>>(
                     future: _featuredFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
                         return const SectionLoadingSkeleton(height: 220);
                       }
                       if (snapshot.hasError) {
@@ -139,8 +141,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       }
                       return FeaturedRecipesSection(
                         recipes: recipes,
-                        onViewAllTap: () =>
-                            widget.onNavigateToTab?.call(1),
+                        onViewAllTap: () => widget.onNavigateToTab?.call(1),
                         onRecipeTap: _showRecipeDetailsDialog,
                       );
                     },
@@ -154,8 +155,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     selectedCategoryId: _selectedCategoryId,
                     onCategoryTap: (cat) {
                       setState(() {
-                        _selectedCategoryId =
-                            _selectedCategoryId == cat.id ? null : cat.id;
+                        _selectedCategoryId = _selectedCategoryId == cat.id
+                            ? null
+                            : cat.id;
                       });
                     },
                   ),
@@ -166,8 +168,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   FutureBuilder<List<RecipeModel>>(
                     future: _popularFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
                         return const SectionLoadingSkeleton(
                           height: 360,
                           isHorizontal: false,

@@ -66,7 +66,8 @@ class ProfileHeaderWidget extends StatelessWidget {
                         placeholder: (context, url) => const Center(
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        errorWidget: (context, url, error) => _buildAvatarFallback(),
+                        errorWidget: (context, url, error) =>
+                            _buildAvatarFallback(),
                       )
                     : _buildAvatarFallback(),
               ),
@@ -123,10 +124,9 @@ class ProfileHeaderWidget extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 ranking,
-                style: AppTypography.caption(color: AppColors.textPrimary).copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
+                style: AppTypography.caption(
+                  color: AppColors.textPrimary,
+                ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
               ),
             ],
           ),
@@ -137,20 +137,22 @@ class ProfileHeaderWidget extends StatelessWidget {
         // 3. Display Name & Bio
         Text(
           displayName,
-          style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: AppTypography.headline(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            bio ?? (isGuest ? 'Browsing as guest foodie' : 'Bio of user contains here.'),
-            style: AppTypography.body(color: AppColors.textSecondary).copyWith(
-              fontSize: 13,
-            ),
+            bio ??
+                (isGuest
+                    ? 'Browsing as guest foodie'
+                    : 'Bio of user contains here.'),
+            style: AppTypography.body(
+              color: AppColors.textSecondary,
+            ).copyWith(fontSize: 13),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -206,19 +208,12 @@ class ProfileHeaderWidget extends StatelessWidget {
   }
 
   Widget _buildDivider() {
-    return Container(
-      height: 28,
-      width: 1,
-      color: AppColors.border,
-    );
+    return Container(height: 28, width: 1, color: AppColors.border);
   }
 }
 
 class _StatItem extends StatelessWidget {
-  const _StatItem({
-    required this.count,
-    required this.label,
-  });
+  const _StatItem({required this.count, required this.label});
 
   final String count;
   final String label;
@@ -230,18 +225,16 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           count,
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTypography.caption(
+            color: AppColors.textSecondary,
+          ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ],
     );

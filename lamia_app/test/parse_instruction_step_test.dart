@@ -10,14 +10,19 @@ import 'package:lamia_app/features/recipes/presentation/recipe_detail_screen.dar
 void main() {
   group('parseInstructionStep', () {
     test('splits "Title: body" into a (title, body) record', () {
-      final (title, body) = parseInstructionStep(0, 'Marinate: Mix all ingredients');
+      final (title, body) = parseInstructionStep(
+        0,
+        'Marinate: Mix all ingredients',
+      );
       expect(title, 'Marinate');
       expect(body, 'Mix all ingredients');
     });
 
     test('title and body are trimmed', () {
-      final (title, body) =
-          parseInstructionStep(0, '   Marinate  :   Mix all ingredients  ');
+      final (title, body) = parseInstructionStep(
+        0,
+        '   Marinate  :   Mix all ingredients  ',
+      );
       expect(title, 'Marinate');
       expect(body, 'Mix all ingredients');
     });

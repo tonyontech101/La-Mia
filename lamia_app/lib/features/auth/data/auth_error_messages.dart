@@ -20,8 +20,7 @@ abstract final class AuthErrorMessages {
         'No account found with this email. Check your spelling or sign up.',
       'wrong-password' =>
         'Incorrect password. Please try again or reset your password.',
-      'invalid-credential' =>
-        'Incorrect email or password. Please try again.',
+      'invalid-credential' => 'Incorrect email or password. Please try again.',
       'weak-password' =>
         'Password is too weak. Please choose a stronger password.',
       'operation-not-allowed' =>
