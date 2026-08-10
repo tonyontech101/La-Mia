@@ -88,18 +88,18 @@ class RankedChefTile extends StatelessWidget {
                 children: [
                   Text(
                     chefName,
-                    style:
-                        AppTypography.bodyStrong(color: AppColors.textPrimary)
-                            .copyWith(fontSize: 14),
+                    style: AppTypography.bodyStrong(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 14),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'no. of Recipes Shared',
-                    style:
-                        AppTypography.caption(color: AppColors.textSecondary)
-                            .copyWith(fontSize: 11),
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 11),
                   ),
                 ],
               ),
@@ -130,8 +130,9 @@ class RankedChefTile extends StatelessWidget {
               width: 24,
               child: Text(
                 '$rank',
-                style: AppTypography.bodyStrong(color: AppColors.textSecondary)
-                    .copyWith(fontSize: 14),
+                style: AppTypography.bodyStrong(
+                  color: AppColors.textSecondary,
+                ).copyWith(fontSize: 14),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -162,11 +163,9 @@ class RankedChefTile extends StatelessWidget {
             Expanded(
               child: Text(
                 chefName,
-                style: AppTypography.body(color: AppColors.textPrimary)
-                    .copyWith(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
+                style: AppTypography.body(
+                  color: AppColors.textPrimary,
+                ).copyWith(fontWeight: FontWeight.w500, fontSize: 14),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -175,8 +174,9 @@ class RankedChefTile extends StatelessWidget {
             // Recipes count
             Text(
               'no. of Recipes Shared',
-              style: AppTypography.caption(color: AppColors.textSecondary)
-                  .copyWith(fontSize: 11),
+              style: AppTypography.caption(
+                color: AppColors.textSecondary,
+              ).copyWith(fontSize: 11),
             ),
           ],
         ),
@@ -230,10 +230,7 @@ class _RankBadge extends StatelessWidget {
     return Container(
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       child: Center(
         child: Text(
           '$rank',

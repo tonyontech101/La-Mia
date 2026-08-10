@@ -43,8 +43,7 @@ class ChefOfMonthCard extends StatelessWidget {
         children: [
           // Dish image area with crown overlay
           ClipRRect(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Stack(
               children: [
                 AspectRatio(
@@ -53,8 +52,7 @@ class ChefOfMonthCard extends StatelessWidget {
                       ? Image.network(
                           imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              _buildImagePlaceholder(),
+                          errorBuilder: (_, _, _) => _buildImagePlaceholder(),
                         )
                       : _buildImagePlaceholder(),
                 ),
@@ -105,8 +103,10 @@ class ChefOfMonthCard extends StatelessWidget {
               children: [
                 // "CHEF OF THE MONTH" badge
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.textPrimary,
                     borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -115,10 +115,10 @@ class ChefOfMonthCard extends StatelessWidget {
                     'CHEF OF THE MONTH',
                     style: AppTypography.caption(color: AppColors.onPrimary)
                         .copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 9,
-                      letterSpacing: 0.8,
-                    ),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 9,
+                          letterSpacing: 0.8,
+                        ),
                   ),
                 ),
 
@@ -134,22 +134,24 @@ class ChefOfMonthCard extends StatelessWidget {
                         children: [
                           Text(
                             'Featured Chef\'s Name',
-                            style: AppTypography.caption(
-                                    color: AppColors.textSecondary)
-                                .copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style:
+                                AppTypography.caption(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             chefName,
-                            style: AppTypography.title(
-                                    color: AppColors.textPrimary)
-                                .copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
+                            style:
+                                AppTypography.title(
+                                  color: AppColors.textPrimary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -157,8 +159,8 @@ class ChefOfMonthCard extends StatelessWidget {
                           Text(
                             dishName,
                             style: AppTypography.body(
-                                    color: AppColors.textSecondary)
-                                .copyWith(fontSize: 13),
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontSize: 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -174,8 +176,8 @@ class ChefOfMonthCard extends StatelessWidget {
                               Text(
                                 '$likes Likes',
                                 style: AppTypography.caption(
-                                        color: AppColors.textSecondary)
-                                    .copyWith(fontSize: 11),
+                                  color: AppColors.textSecondary,
+                                ).copyWith(fontSize: 11),
                               ),
                             ],
                           ),
@@ -188,19 +190,18 @@ class ChefOfMonthCard extends StatelessWidget {
                       onTap: onViewProfile,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.textPrimary,
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                         ),
                         child: Text(
                           'View Profile',
-                          style:
-                              AppTypography.caption(color: AppColors.onPrimary)
-                                  .copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
+                          style: AppTypography.caption(
+                            color: AppColors.onPrimary,
+                          ).copyWith(fontWeight: FontWeight.w600, fontSize: 11),
                         ),
                       ),
                     ),
@@ -230,8 +231,9 @@ class ChefOfMonthCard extends StatelessWidget {
             Text(
               'Dish Image with\nOverlay',
               textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textSecondary)
-                  .copyWith(fontSize: 13),
+              style: AppTypography.body(
+                color: AppColors.textSecondary,
+              ).copyWith(fontSize: 13),
             ),
           ],
         ),

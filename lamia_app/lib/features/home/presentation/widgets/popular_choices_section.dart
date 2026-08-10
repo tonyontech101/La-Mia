@@ -25,9 +25,9 @@ class PopularChoicesSection extends StatelessWidget {
       children: [
         Text(
           'Popular Choices',
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         ListView.separated(
@@ -49,10 +49,7 @@ class PopularChoicesSection extends StatelessWidget {
 }
 
 class _PopularChoiceCard extends StatelessWidget {
-  const _PopularChoiceCard({
-    required this.recipe,
-    this.onTap,
-  });
+  const _PopularChoiceCard({required this.recipe, this.onTap});
 
   final RecipeModel recipe;
   final VoidCallback? onTap;
@@ -101,7 +98,10 @@ class _PopularChoiceCard extends StatelessWidget {
                   width: 90,
                   height: 85,
                   color: AppColors.surfaceAlt,
-                  child: const Icon(Icons.fastfood, color: AppColors.textSecondary),
+                  child: const Icon(
+                    Icons.fastfood,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -118,9 +118,9 @@ class _PopularChoiceCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           recipe.name,
-                          style: AppTypography.bodyStrong(color: AppColors.textPrimary).copyWith(
-                            fontSize: 16,
-                          ),
+                          style: AppTypography.bodyStrong(
+                            color: AppColors.textPrimary,
+                          ).copyWith(fontSize: 16),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -137,7 +137,9 @@ class _PopularChoiceCard extends StatelessWidget {
                     recipe.instructions.isNotEmpty
                         ? recipe.instructions.first
                         : recipe.ingredients.join(', '),
-                    style: AppTypography.caption(color: AppColors.textSecondary),
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -149,17 +151,19 @@ class _PopularChoiceCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Prep ${recipe.prepTime} • Cook ${recipe.cookTime}',
-                          style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontSize: 10, fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.secondary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),

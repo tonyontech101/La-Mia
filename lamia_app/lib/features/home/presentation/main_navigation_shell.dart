@@ -70,9 +70,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                 const SizedBox(height: 18),
                 Text(
                   'Quick Culinary Actions',
-                  style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
@@ -82,14 +82,24 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                       color: AppColors.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.add_a_photo_rounded, color: AppColors.primary),
+                    child: const Icon(
+                      Icons.add_a_photo_rounded,
+                      color: AppColors.primary,
+                    ),
                   ),
-                  title: const Text('Post New Dish / Recipe', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Share your homemade dish & recipe step-by-step'),
+                  title: const Text(
+                    'Post New Dish / Recipe',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Share your homemade dish & recipe step-by-step',
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Recipe creation feature opening...')),
+                      const SnackBar(
+                        content: Text('Recipe creation feature opening...'),
+                      ),
                     );
                   },
                 ),
@@ -100,10 +110,18 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                       color: AppColors.secondary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.soup_kitchen_rounded, color: AppColors.secondary),
+                    child: const Icon(
+                      Icons.soup_kitchen_rounded,
+                      color: AppColors.secondary,
+                    ),
                   ),
-                  title: const Text('Cook by Ingredients', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Find what to cook with available pantry items'),
+                  title: const Text(
+                    'Cook by Ingredients',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Find what to cook with available pantry items',
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _onTabTapped(1);
@@ -116,10 +134,18 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                       color: AppColors.accent.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.casino_rounded, color: AppColors.primaryDark),
+                    child: const Icon(
+                      Icons.casino_rounded,
+                      color: AppColors.primaryDark,
+                    ),
                   ),
-                  title: const Text('Ano Pong Ulam? Randomizer', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Get instant meal suggestions for breakfast, lunch, or dinner'),
+                  title: const Text(
+                    'Ano Pong Ulam? Randomizer',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Get instant meal suggestions for breakfast, lunch, or dinner',
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _onTabTapped(2);
@@ -137,10 +163,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   Widget build(BuildContext context) {
     final screens = [
       // 0: Home Feed (social-style recipe feed)
-      HomeFeedScreen(
-        isGuest: widget.isGuest,
-        onNavigateToTab: _onTabTapped,
-      ),
+      HomeFeedScreen(isGuest: widget.isGuest, onNavigateToTab: _onTabTapped),
 
       // 1: Cook (former Home Dashboard content)
       HomeDashboardScreen(
@@ -166,10 +189,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: getMappedScreenIndex(),
-        children: screens,
-      ),
+      body: IndexedStack(index: getMappedScreenIndex(), children: screens),
       bottomNavigationBar: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -301,11 +321,7 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 22,
-            ),
+            Icon(icon, color: color, size: 22),
             const SizedBox(height: 2),
             Text(
               label,

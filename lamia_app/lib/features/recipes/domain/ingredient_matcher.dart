@@ -46,12 +46,15 @@ List<IngredientMatchedRecipe> computeIngredientMatches(
     }
 
     if (matchedCount > 0) {
-      final totalCount =
-          recipe.ingredients.isEmpty ? 1 : recipe.ingredients.length;
+      final totalCount = recipe.ingredients.isEmpty
+          ? 1
+          : recipe.ingredients.length;
       // Limits the match range to [1, 100] so partial matches don't show 0%
       // (matching nothing is filtered out above) or > 100% by arithmetic.
-      final matchPct =
-          ((matchedCount / totalCount) * 100).round().clamp(1, 100);
+      final matchPct = ((matchedCount / totalCount) * 100).round().clamp(
+        1,
+        100,
+      );
 
       matches.add(
         IngredientMatchedRecipe(

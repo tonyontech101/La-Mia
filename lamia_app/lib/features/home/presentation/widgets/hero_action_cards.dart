@@ -24,9 +24,9 @@ class HeroActionCards extends StatelessWidget {
       children: [
         Text(
           "What's your next ulam for today?",
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 14),
 
@@ -99,7 +99,8 @@ class _HeroCard extends StatelessWidget {
                 child: Image.network(
                   bgImageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(color: gradient.colors.first),
+                  errorBuilder: (_, _, _) =>
+                      Container(color: gradient.colors.first),
                 ),
               ),
 
@@ -159,10 +160,9 @@ class _HeroCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: AppTypography.headline(color: Colors.white).copyWith(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: AppTypography.headline(
+                            color: Colors.white,
+                          ).copyWith(fontSize: 22, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 2),
                         Text(

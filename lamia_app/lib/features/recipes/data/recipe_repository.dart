@@ -10,7 +10,7 @@ import 'recipe_model.dart';
 /// see the build order in `La Mia - Architecture (Flutter + Firebase).md` §9.
 class RecipeRepository {
   RecipeRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
@@ -31,7 +31,10 @@ class RecipeRepository {
       final bScore = (b.data()['trendingScore'] as num?)?.toInt() ?? 0;
       return bScore.compareTo(aScore);
     });
-    return docs.take(limit).map((d) => RecipeModel.fromFirestore(d.data())).toList();
+    return docs
+        .take(limit)
+        .map((d) => RecipeModel.fromFirestore(d.data()))
+        .toList();
   }
 
   /// Fetches the most popular recipes by trending score.

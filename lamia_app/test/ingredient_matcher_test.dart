@@ -34,7 +34,9 @@ RecipeModel _recipe({
 void main() {
   group('computeIngredientMatches', () {
     test('returns empty for an empty tag list', () {
-      final recipes = [_recipe(name: 'Adobo', ingredients: ['chicken'])];
+      final recipes = [
+        _recipe(name: 'Adobo', ingredients: ['chicken']),
+      ];
       expect(computeIngredientMatches(recipes, []), isEmpty);
     });
 
@@ -47,7 +49,10 @@ void main() {
 
     test('matches when an ingredient token exactly equals the tag', () {
       final recipes = [
-        _recipe(name: 'Adobo', ingredients: ['chicken', 'vinegar', 'soy sauce']),
+        _recipe(
+          name: 'Adobo',
+          ingredients: ['chicken', 'vinegar', 'soy sauce'],
+        ),
       ];
       final result = computeIngredientMatches(recipes, ['chicken']);
       expect(result, hasLength(1));
@@ -57,30 +62,32 @@ void main() {
       expect(result.first.matchPercentage, 33);
     });
 
-    test('does NOT match single-token tags against *unrelated* substrings (regression)',
-        () {
-      // The old substring-contains matcher returned true for:
-      //   "rice" .contains("rice")  -> rice flour,
-      //   "price" .contains("rice") -> price.
-      // The token-based matcher still matches "rice" against "rice flour"
-      // (the recipe DOES use rice, just with flour), but it must NOT match
-      // "price" — "price" is a single unrelated token, not "rice".
-      final recipes = [
-        _recipe(name: 'Rice Flour Cake', ingredients: ['rice flour']),
-        _recipe(name: 'Pricey Dish', ingredients: ['price']),
-        _recipe(name: 'Real Rice', ingredients: ['rice']),
-      ];
+    test(
+      'does NOT match single-token tags against *unrelated* substrings (regression)',
+      () {
+        // The old substring-contains matcher returned true for:
+        //   "rice" .contains("rice")  -> rice flour,
+        //   "price" .contains("rice") -> price.
+        // The token-based matcher still matches "rice" against "rice flour"
+        // (the recipe DOES use rice, just with flour), but it must NOT match
+        // "price" — "price" is a single unrelated token, not "rice".
+        final recipes = [
+          _recipe(name: 'Rice Flour Cake', ingredients: ['rice flour']),
+          _recipe(name: 'Pricey Dish', ingredients: ['price']),
+          _recipe(name: 'Real Rice', ingredients: ['rice']),
+        ];
 
-      final result = computeIngredientMatches(recipes, ['rice']);
+        final result = computeIngredientMatches(recipes, ['rice']);
 
-      // Both "rice flour" and "rice" contain the "rice" token — they
-      // legitimately match. "Pricey Dish" must NOT match.
-      expect(result, hasLength(2));
-      final names = result.map((m) => m.recipe.name).toSet();
-      expect(names, contains('Real Rice'));
-      expect(names, contains('Rice Flour Cake'));
-      expect(names, isNot(contains('Pricey Dish')));
-    });
+        // Both "rice flour" and "rice" contain the "rice" token — they
+        // legitimately match. "Pricey Dish" must NOT match.
+        expect(result, hasLength(2));
+        final names = result.map((m) => m.recipe.name).toSet();
+        expect(names, contains('Real Rice'));
+        expect(names, contains('Rice Flour Cake'));
+        expect(names, isNot(contains('Pricey Dish')));
+      },
+    );
 
     test('does NOT match "egg" against "eggplant" (regression)', () {
       final recipes = [
@@ -119,17 +126,17 @@ void main() {
       expect(result.first.missingIngredients, ['vinegar', 'soy sauce']);
     });
 
-    test('sorts results by match percentage descending, then matchedCount',
-        () {
+    test('sorts results by match percentage descending, then matchedCount', () {
       final recipes = [
         _recipe(
-            name: 'Three-match',
-            ingredients: ['chicken', 'garlic', 'rice', 'extra']),
+          name: 'Three-match',
+          ingredients: ['chicken', 'garlic', 'rice', 'extra'],
+        ),
+        _recipe(name: 'Two-match', ingredients: ['chicken', 'garlic', 'extra']),
         _recipe(
-            name: 'Two-match', ingredients: ['chicken', 'garlic', 'extra']),
-        _recipe(
-            name: 'Two-match-other',
-            ingredients: ['chicken', 'garlic', 'extra']),
+          name: 'Two-match-other',
+          ingredients: ['chicken', 'garlic', 'extra'],
+        ),
       ];
       final result = computeIngredientMatches(recipes, ['chicken', 'garlic']);
       // Two recipes both match 2 of 3 -> 67%. The other matches 2 of 4 -> 50%.
@@ -146,14 +153,8 @@ void main() {
       final recipes = [
         _recipe(name: 'Rice', ingredients: ['rice']),
       ];
-      expect(
-        computeIngredientMatches(recipes, ['RICE']).first.matchedCount,
-        1,
-      );
-      expect(
-        computeIngredientMatches(recipes, ['Rice']).first.matchedCount,
-        1,
-      );
+      expect(computeIngredientMatches(recipes, ['RICE']).first.matchedCount, 1);
+      expect(computeIngredientMatches(recipes, ['Rice']).first.matchedCount, 1);
     });
 
     test('trims and splits a tag with internal punctuation', () {

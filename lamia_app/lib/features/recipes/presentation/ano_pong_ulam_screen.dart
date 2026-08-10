@@ -26,10 +26,7 @@ class SuggestedRecipeItem {
 /// "Ano Pong Ulam?" daily meal suggestion screen designed strictly according to
 /// the wireframe and La Mia visual design system.
 class AnoPongUlamScreen extends StatefulWidget {
-  const AnoPongUlamScreen({
-    super.key,
-    this.onNavigateHome,
-  });
+  const AnoPongUlamScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
@@ -164,14 +161,16 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
         continue;
       }
       if (_selectedDifficulty != _defaultDifficulty &&
-          recipe.difficulty.toLowerCase() != _selectedDifficulty.toLowerCase()) {
+          recipe.difficulty.toLowerCase() !=
+              _selectedDifficulty.toLowerCase()) {
         continue;
       }
       if (_cookingTimeMinutes.round() != _defaultCookingTime &&
           parsedCookTime > _cookingTimeMinutes) {
         continue;
       }
-      if (_selectedServings != _defaultServings && recipe.servings > _selectedServings) {
+      if (_selectedServings != _defaultServings &&
+          recipe.servings > _selectedServings) {
         continue;
       }
 
@@ -181,10 +180,12 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
       // Budget placeholder proxy (kept from previous behavior): ingredient
       // count standing in for cost. Graded, not a hard gate.
-      if (_selectedBudget == 'Budget friendly' && recipe.ingredients.length > 8) {
+      if (_selectedBudget == 'Budget friendly' &&
+          recipe.ingredients.length > 8) {
         match -= 15;
         missing.add('Special Spices');
-      } else if (_selectedBudget == 'Special' && recipe.ingredients.length <= 5) {
+      } else if (_selectedBudget == 'Special' &&
+          recipe.ingredients.length <= 5) {
         match -= 10;
       }
 
@@ -234,14 +235,16 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
             return Align(
               alignment: Alignment.bottomCenter,
               child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
                 child: Container(
                   height: MediaQuery.of(context).size.height * 0.85,
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(AppRadii.card),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -256,8 +259,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                       ),
                       const SizedBox(height: 12),
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.screenH,
+                        ),
                         child: Row(
                           children: [
                             Text(
@@ -274,17 +278,22 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadii.pill,
+                                  ),
                                 ),
                                 child: Text(
                                   '$_pendingCount pending',
-                                  style: AppTypography.caption(
-                                    color: AppColors.primary,
-                                  ).copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
-                                  ),
+                                  style:
+                                      AppTypography.caption(
+                                        color: AppColors.primary,
+                                      ).copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
+                                      ),
                                 ),
                               ),
                             const SizedBox(width: 8),
@@ -306,7 +315,11 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Divider(height: 1, thickness: 1, color: AppColors.border),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppColors.border,
+                      ),
                       Expanded(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(
@@ -323,15 +336,17 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: _mealTypes
-                                      .map((type) => _FilterChip(
-                                            label: type,
-                                            isSelected: _pendingMealType == type,
-                                            onTap: () {
-                                              setSheetState(() {
-                                                _pendingMealType = type;
-                                              });
-                                            },
-                                          ))
+                                      .map(
+                                        (type) => _FilterChip(
+                                          label: type,
+                                          isSelected: _pendingMealType == type,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingMealType = type;
+                                            });
+                                          },
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               ),
@@ -344,15 +359,17 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: _budgetOptions
-                                      .map((budget) => _FilterChip(
-                                            label: budget,
-                                            isSelected: _pendingBudget == budget,
-                                            onTap: () {
-                                              setSheetState(() {
-                                                _pendingBudget = budget;
-                                              });
-                                            },
-                                          ))
+                                      .map(
+                                        (budget) => _FilterChip(
+                                          label: budget,
+                                          isSelected: _pendingBudget == budget,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingBudget = budget;
+                                            });
+                                          },
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               ),
@@ -369,23 +386,28 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                       children: [
                                         Text(
                                           '4m',
-                                          style: AppTypography.caption(
-                                            color: AppColors.textSecondary,
-                                          ).copyWith(fontWeight: FontWeight.w600),
+                                          style:
+                                              AppTypography.caption(
+                                                color: AppColors.textSecondary,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                         Expanded(
                                           child: SliderTheme(
                                             data: SliderThemeData(
-                                              activeTrackColor: AppColors.primary,
-                                              inactiveTrackColor: AppColors.border,
+                                              activeTrackColor:
+                                                  AppColors.primary,
+                                              inactiveTrackColor:
+                                                  AppColors.border,
                                               thumbColor: AppColors.surface,
                                               overlayColor: AppColors.primary
                                                   .withValues(alpha: 0.2),
                                               thumbShape:
                                                   const RoundSliderThumbShape(
-                                                enabledThumbRadius: 10,
-                                                elevation: 3,
-                                              ),
+                                                    enabledThumbRadius: 10,
+                                                    elevation: 3,
+                                                  ),
                                               trackHeight: 4,
                                             ),
                                             child: Slider(
@@ -395,7 +417,8 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                               max: 45.0,
                                               onChanged: (val) {
                                                 setSheetState(() {
-                                                  _pendingCookingTimeMinutes = val;
+                                                  _pendingCookingTimeMinutes =
+                                                      val;
                                                 });
                                               },
                                             ),
@@ -403,9 +426,12 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                         ),
                                         Text(
                                           '${_pendingCookingTimeMinutes.round()}m',
-                                          style: AppTypography.caption(
-                                            color: AppColors.primary,
-                                          ).copyWith(fontWeight: FontWeight.w700),
+                                          style:
+                                              AppTypography.caption(
+                                                color: AppColors.primary,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -422,8 +448,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                                   !_pendingIsCustomTime;
                                             });
                                           },
-                                          borderRadius:
-                                              BorderRadius.circular(AppRadii.pill),
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadii.pill,
+                                          ),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 16,
@@ -433,9 +460,10 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                               color: _pendingIsCustomTime
                                                   ? AppColors.primary
                                                   : AppColors.surface,
-                                              borderRadius: BorderRadius.circular(
-                                                AppRadii.pill,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppRadii.pill,
+                                                  ),
                                               border: Border.all(
                                                 color: _pendingIsCustomTime
                                                     ? AppColors.primary
@@ -453,14 +481,15 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                               _pendingIsCustomTime
                                                   ? 'Custom: ${_pendingCookingTimeMinutes.round()}m'
                                                   : 'Custom Time',
-                                              style: AppTypography.caption(
-                                                color: _pendingIsCustomTime
-                                                    ? Colors.white
-                                                    : AppColors.textPrimary,
-                                              ).copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 12,
-                                              ),
+                                              style:
+                                                  AppTypography.caption(
+                                                    color: _pendingIsCustomTime
+                                                        ? Colors.white
+                                                        : AppColors.textPrimary,
+                                                  ).copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 12,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -469,9 +498,11 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                           icon: Icons.add,
                                           onTap: () {
                                             setSheetState(() {
-                                              if (_pendingCookingTimeMinutes < 120) {
+                                              if (_pendingCookingTimeMinutes <
+                                                  120) {
                                                 _pendingCookingTimeMinutes =
-                                                    (_pendingCookingTimeMinutes + 5)
+                                                    (_pendingCookingTimeMinutes +
+                                                            5)
                                                         .clamp(4.0, 120.0);
                                               }
                                             });
@@ -482,9 +513,11 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                           icon: Icons.remove,
                                           onTap: () {
                                             setSheetState(() {
-                                              if (_pendingCookingTimeMinutes > 4) {
+                                              if (_pendingCookingTimeMinutes >
+                                                  4) {
                                                 _pendingCookingTimeMinutes =
-                                                    (_pendingCookingTimeMinutes - 5)
+                                                    (_pendingCookingTimeMinutes -
+                                                            5)
                                                         .clamp(4.0, 120.0);
                                               }
                                             });
@@ -504,15 +537,18 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: const ['Easy', 'Medium', 'Hard']
-                                      .map((level) => _FilterChip(
-                                            label: level,
-                                            isSelected: _pendingDifficulty == level,
-                                            onTap: () {
-                                              setSheetState(() {
-                                                _pendingDifficulty = level;
-                                              });
-                                            },
-                                          ))
+                                      .map(
+                                        (level) => _FilterChip(
+                                          label: level,
+                                          isSelected:
+                                              _pendingDifficulty == level,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingDifficulty = level;
+                                            });
+                                          },
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               ),
@@ -528,33 +564,40 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                       children: [
                                         Text(
                                           '1',
-                                          style: AppTypography.caption(
-                                            color: AppColors.textSecondary,
-                                          ).copyWith(fontWeight: FontWeight.w600),
+                                          style:
+                                              AppTypography.caption(
+                                                color: AppColors.textSecondary,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                         Expanded(
                                           child: SliderTheme(
                                             data: SliderThemeData(
-                                              activeTrackColor: AppColors.primary,
-                                              inactiveTrackColor: AppColors.border,
+                                              activeTrackColor:
+                                                  AppColors.primary,
+                                              inactiveTrackColor:
+                                                  AppColors.border,
                                               thumbColor: AppColors.surface,
                                               overlayColor: AppColors.primary
                                                   .withValues(alpha: 0.2),
                                               thumbShape:
                                                   const RoundSliderThumbShape(
-                                                enabledThumbRadius: 10,
-                                                elevation: 3,
-                                              ),
+                                                    enabledThumbRadius: 10,
+                                                    elevation: 3,
+                                                  ),
                                               trackHeight: 4,
                                             ),
                                             child: Slider(
-                                              value: _pendingServings.toDouble(),
+                                              value: _pendingServings
+                                                  .toDouble(),
                                               min: 1,
                                               max: 12,
                                               divisions: 11,
                                               onChanged: (val) {
                                                 setSheetState(() {
-                                                  _pendingServings = val.round();
+                                                  _pendingServings = val
+                                                      .round();
                                                 });
                                               },
                                             ),
@@ -562,9 +605,12 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                         ),
                                         Text(
                                           '12',
-                                          style: AppTypography.caption(
-                                            color: AppColors.textSecondary,
-                                          ).copyWith(fontWeight: FontWeight.w600),
+                                          style:
+                                              AppTypography.caption(
+                                                color: AppColors.textSecondary,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -573,12 +619,13 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                       children: [
                                         Text(
                                           'Max $_pendingServings servings',
-                                          style: AppTypography.caption(
-                                            color: AppColors.primary,
-                                          ).copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12,
-                                          ),
+                                          style:
+                                              AppTypography.caption(
+                                                color: AppColors.primary,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                              ),
                                         ),
                                         const Spacer(),
                                         _StepIconButton(
@@ -668,20 +715,26 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
         scrolledUnderElevation: 1,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : widget.onNavigateHome != null
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                    onPressed: widget.onNavigateHome,
-                  )
-                : null,
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
+                onPressed: widget.onNavigateHome,
+              )
+            : null,
         title: Text(
           'Ano Pong Ulam?',
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         centerTitle: false,
       ),
@@ -693,7 +746,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.contentMaxWidth,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -710,10 +765,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                   // 3. Suggested Recipes Section Title
                   Text(
                     'Suggested Recipes',
-                    style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.headline(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
 
                   const SizedBox(height: 16),
@@ -723,11 +777,15 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                     future: _recipesFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const SectionLoadingSkeleton(height: 300, isHorizontal: false);
+                        return const SectionLoadingSkeleton(
+                          height: 300,
+                          isHorizontal: false,
+                        );
                       }
                       if (snapshot.hasError) {
                         return SectionErrorState(
-                          message: 'Unable to load recipes. Please check connection.',
+                          message:
+                              'Unable to load recipes. Please check connection.',
                           onRetry: _retry,
                         );
                       }
@@ -741,7 +799,8 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                           children: [
                             const SectionEmptyState(
                               message: 'No recipes matched your criteria',
-                              subtitle: 'Try adjusting your meal type or cooking time filters.',
+                              subtitle:
+                                  'Try adjusting your meal type or cooking time filters.',
                             ),
                             TextButton(
                               onPressed: _openFilterSheet,
@@ -751,7 +810,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                               ),
                               child: Text(
                                 'Edit filters',
-                                style: AppTypography.bodyStrong(color: AppColors.secondary),
+                                style: AppTypography.bodyStrong(
+                                  color: AppColors.secondary,
+                                ),
                               ),
                             ),
                           ],
@@ -760,13 +821,16 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
                       return Column(
                         children: suggestions
-                            .map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 20.0),
-                                  child: _SuggestedRecipeCard(
-                                    item: item,
-                                    onTap: () => _showRecipeDetailsDialog(item.recipe),
-                                  ),
-                                ))
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: _SuggestedRecipeCard(
+                                  item: item,
+                                  onTap: () =>
+                                      _showRecipeDetailsDialog(item.recipe),
+                                ),
+                              ),
+                            )
                             .toList(),
                       );
                     },
@@ -790,11 +854,12 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
           children: [
             Text(
               'Ano Pong Ulam?',
-              style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
+              style: AppTypography.headline(color: AppColors.textPrimary)
+                  .copyWith(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
             const SizedBox(width: 8),
             Container(
@@ -802,19 +867,24 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
               decoration: BoxDecoration(
                 color: AppColors.accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.auto_awesome, size: 12, color: AppColors.primary),
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 12,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Tita Approved',
-                    style: AppTypography.caption(color: AppColors.primary).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                    ),
+                    style: AppTypography.caption(
+                      color: AppColors.primary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 10),
                   ),
                 ],
               ),
@@ -824,10 +894,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
         const SizedBox(height: 4),
         Text(
           "The Helpful Tita's guide to your daily Filipino cravings.",
-          style: AppTypography.body(color: AppColors.textSecondary).copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTypography.body(
+            color: AppColors.textSecondary,
+          ).copyWith(fontSize: 13, fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -942,10 +1011,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
         children: [
           Text(
             title,
-            style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
+            style: AppTypography.caption(
+              color: AppColors.textSecondary,
+            ).copyWith(fontWeight: FontWeight.w600, fontSize: 12),
           ),
           const SizedBox(height: 8),
           child,
@@ -1000,12 +1068,13 @@ class _FilterChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: AppTypography.caption(
-              color: isSelected ? AppColors.primary : AppColors.textPrimary,
-            ).copyWith(
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 12,
-            ),
+            style:
+                AppTypography.caption(
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                ).copyWith(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                ),
           ),
         ),
       ),
@@ -1015,10 +1084,7 @@ class _FilterChip extends StatelessWidget {
 
 /// Round +/- step button for Cooking Time
 class _StepIconButton extends StatelessWidget {
-  const _StepIconButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _StepIconButton({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -1043,11 +1109,7 @@ class _StepIconButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: AppColors.textPrimary,
-        ),
+        child: Icon(icon, size: 18, color: AppColors.textPrimary),
       ),
     );
   }
@@ -1055,10 +1117,7 @@ class _StepIconButton extends StatelessWidget {
 
 /// Suggested Recipe Card matching the wireframe card component.
 class _SuggestedRecipeCard extends StatelessWidget {
-  const _SuggestedRecipeCard({
-    required this.item,
-    required this.onTap,
-  });
+  const _SuggestedRecipeCard({required this.item, required this.onTap});
 
   final SuggestedRecipeItem item;
   final VoidCallback onTap;
@@ -1120,10 +1179,13 @@ class _SuggestedRecipeCard extends StatelessWidget {
                         child: Center(
                           child: Text(
                             'Dish Image',
-                            style: AppTypography.headline(color: AppColors.textSecondary).copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style:
+                                AppTypography.headline(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                       ),
@@ -1136,7 +1198,10 @@ class _SuggestedRecipeCard extends StatelessWidget {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -1150,10 +1215,9 @@ class _SuggestedRecipeCard extends StatelessWidget {
                     ),
                     child: Text(
                       '${item.matchPercentage}% match',
-                      style: AppTypography.caption(color: matchColor).copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
+                      style: AppTypography.caption(
+                        color: matchColor,
+                      ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
                     ),
                   ),
                 ),
@@ -1169,10 +1233,9 @@ class _SuggestedRecipeCard extends StatelessWidget {
                   // Dish Name
                   Text(
                     recipe.name,
-                    style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.headline(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
 
                   const SizedBox(height: 4),
@@ -1180,9 +1243,9 @@ class _SuggestedRecipeCard extends StatelessWidget {
                   // Description
                   Text(
                     'Classic ${recipe.region} ${recipe.category.toLowerCase()} dish with ${recipe.ingredients.take(3).join(", ")}.',
-                    style: AppTypography.body(color: AppColors.textSecondary).copyWith(
-                      fontSize: 13,
-                    ),
+                    style: AppTypography.body(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 13),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1201,10 +1264,13 @@ class _SuggestedRecipeCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Missing Ingredient: ${item.missingIngredients.join(", ")}',
-                            style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
+                            style:
+                                AppTypography.caption(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

@@ -113,7 +113,8 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (markTouched) _passwordTouched = true;
     if (!_passwordTouched) return;
     setState(
-      () => _passwordError = Validators.signUpPassword(_passwordController.text),
+      () =>
+          _passwordError = Validators.signUpPassword(_passwordController.text),
     );
   }
 
@@ -149,7 +150,9 @@ class _SignUpScreenState extends State<SignUpScreen>
         _confirmController.text,
         _passwordController.text,
       );
-      _termsError = _termsAccepted ? null : 'Please accept the Terms to continue.';
+      _termsError = _termsAccepted
+          ? null
+          : 'Please accept the Terms to continue.';
     });
 
     if (_nameError != null) {
@@ -187,10 +190,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       if (!mounted) return;
 
       // Show a success message while still on this screen.
-      AppSnackbar.show(
-        context,
-        message: 'Account created! Please log in.',
-      );
+      AppSnackbar.show(context, message: 'Account created! Please log in.');
       // Small delay so the user can read the snackbar before navigating.
       await Future<void>.delayed(const Duration(milliseconds: 1500));
       if (!mounted) return;
@@ -213,7 +213,8 @@ class _SignUpScreenState extends State<SignUpScreen>
   }
 
   void _shake() {
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) return;
     _shakeController.forward(from: 0);
   }
@@ -434,7 +435,9 @@ class _TermsRowState extends State<_TermsRow> {
           height: 48,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadii.checkbox),
-            onTap: widget.enabled ? () => widget.onChanged(!widget.accepted) : null,
+            onTap: widget.enabled
+                ? () => widget.onChanged(!widget.accepted)
+                : null,
             child: Center(
               child: IgnorePointer(
                 child: SizedBox(
@@ -442,7 +445,9 @@ class _TermsRowState extends State<_TermsRow> {
                   height: 24,
                   child: Checkbox(
                     value: widget.accepted,
-                    onChanged: widget.enabled ? (v) => widget.onChanged(v ?? false) : null,
+                    onChanged: widget.enabled
+                        ? (v) => widget.onChanged(v ?? false)
+                        : null,
                     activeColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.border, width: 1.5),
                     shape: RoundedRectangleBorder(
@@ -466,15 +471,17 @@ class _TermsRowState extends State<_TermsRow> {
                   const TextSpan(text: "I agree to La Mia's "),
                   TextSpan(
                     text: 'Terms of Service',
-                    style: AppTypography.caption(color: AppColors.secondary)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.caption(
+                      color: AppColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w600),
                     recognizer: _termsRecognizer,
                   ),
                   const TextSpan(text: ' and '),
                   TextSpan(
                     text: 'Privacy Policy',
-                    style: AppTypography.caption(color: AppColors.secondary)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.caption(
+                      color: AppColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w600),
                     recognizer: _privacyRecognizer,
                   ),
                   const TextSpan(text: '.'),
@@ -494,8 +501,9 @@ class _TermsRowState extends State<_TermsRow> {
           builder: (context, child) {
             // Damped horizontal shake.
             final t = widget.shakeController.value;
-            final dx =
-                t == 0 ? 0.0 : 8 * (1 - t) * math.sin(t * 3 * 2 * math.pi);
+            final dx = t == 0
+                ? 0.0
+                : 8 * (1 - t) * math.sin(t * 3 * 2 * math.pi);
             return Transform.translate(offset: Offset(dx, 0), child: child);
           },
           child: row,

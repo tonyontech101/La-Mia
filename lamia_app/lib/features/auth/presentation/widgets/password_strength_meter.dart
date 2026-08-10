@@ -12,11 +12,11 @@ class PasswordStrengthMeter extends StatelessWidget {
   final PasswordStrength strength;
 
   Color get _color => switch (strength) {
-        PasswordStrength.empty => AppColors.border,
-        PasswordStrength.weak => AppColors.error,
-        PasswordStrength.okay => AppColors.accent,
-        PasswordStrength.strong => AppColors.success,
-      };
+    PasswordStrength.empty => AppColors.border,
+    PasswordStrength.weak => AppColors.error,
+    PasswordStrength.okay => AppColors.accent,
+    PasswordStrength.strong => AppColors.success,
+  };
 
   @override
   Widget build(BuildContext context) {

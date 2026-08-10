@@ -17,9 +17,9 @@ class AuthService {
     FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
     FirebaseFirestore? firestore,
-  })  : _authArg = auth,
-        _googleArg = googleSignIn,
-        _firestoreArg = firestore;
+  }) : _authArg = auth,
+       _googleArg = googleSignIn,
+       _firestoreArg = firestore;
 
   final FirebaseAuth? _authArg;
   final GoogleSignIn? _googleArg;
@@ -32,7 +32,8 @@ class AuthService {
   GoogleSignIn get _googleSignIn => _googleArg ?? GoogleSignIn();
 
   /// Resolves the [FirebaseFirestore] instance, preferring an injected one.
-  FirebaseFirestore get _firestore => _firestoreArg ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore =>
+      _firestoreArg ?? FirebaseFirestore.instance;
 
   /// The currently signed-in user, or `null`.
   User? get currentUser => _auth.currentUser;
@@ -143,10 +144,7 @@ class AuthService {
 
   /// Signs out of both Firebase Auth and Google Sign-In.
   Future<void> signOut() async {
-    await Future.wait([
-      _auth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
   }
 
   // ── Password Reset ─────────────────────────────────────────────────────

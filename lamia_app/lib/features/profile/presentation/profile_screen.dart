@@ -18,11 +18,7 @@ import 'widgets/profile_header_widget.dart';
 /// Includes App Bar (Back, Title, Hamburger options), Profile Header,
 /// Stat row, Tab Switcher (Posts, Likes, Saved Recipes), and 2-column Dish Grid.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({
-    super.key,
-    this.isGuest = false,
-    this.onNavigateHome,
-  });
+  const ProfileScreen({super.key, this.isGuest = false, this.onNavigateHome});
 
   final bool isGuest;
   final VoidCallback? onNavigateHome;
@@ -65,10 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _onSignOut() async {
     await AuthService().signOut();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      fadePageRoute(const LoginScreen()),
-      (_) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushAndRemoveUntil(fadePageRoute(const LoginScreen()), (_) => false);
   }
 
   void _showOptionsMenu(BuildContext context) {
@@ -97,24 +92,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Profile Options',
-                  style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
+                  leading: const Icon(
+                    Icons.person_outline_rounded,
+                    color: AppColors.primary,
+                  ),
                   title: const Text('Edit Profile'),
-                  subtitle: Text(widget.isGuest ? 'Guest user' : (user?.email ?? '')),
+                  subtitle: Text(
+                    widget.isGuest ? 'Guest user' : (user?.email ?? ''),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit profile coming soon!')),
+                      const SnackBar(
+                        content: Text('Edit profile coming soon!'),
+                      ),
                     );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.bookmark_border_rounded, color: AppColors.secondary),
+                  leading: const Icon(
+                    Icons.bookmark_border_rounded,
+                    color: AppColors.secondary,
+                  ),
                   title: const Text('Saved Collections'),
                   onTap: () {
                     Navigator.pop(context);
@@ -122,7 +127,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+                  leading: const Icon(
+                    Icons.settings_outlined,
+                    color: AppColors.textSecondary,
+                  ),
                   title: const Text('Preferences & Dietary Settings'),
                   onTap: () {
                     Navigator.pop(context);
@@ -139,7 +147,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   title: Text(
                     widget.isGuest ? 'Sign In / Register' : 'Sign Out',
-                    style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -195,7 +206,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.screenH,
@@ -225,10 +238,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Text(
                         'Profile',
-                        style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                        ),
+                        style: AppTypography.headline(
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
                       ),
                       IconButton(
                         onPressed: () => _showOptionsMenu(context),
@@ -310,8 +322,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     emptyMessage: _selectedTabIndex == 0
                         ? 'No recipe posts created yet'
                         : _selectedTabIndex == 1
-                            ? 'No liked recipes yet'
-                            : 'No saved recipes yet',
+                        ? 'No liked recipes yet'
+                        : 'No saved recipes yet',
                     onRecipeTap: _onRecipeTap,
                   ),
 
@@ -371,12 +383,17 @@ class _TabButton extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                style: AppTypography.caption(
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                ).copyWith(
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 11,
-                ),
+                style:
+                    AppTypography.caption(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ).copyWith(
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      fontSize: 11,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

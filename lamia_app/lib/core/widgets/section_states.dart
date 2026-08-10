@@ -20,8 +20,7 @@ class SectionLoadingSkeleton extends StatefulWidget {
   final bool isHorizontal;
 
   @override
-  State<SectionLoadingSkeleton> createState() =>
-      _SectionLoadingSkeletonState();
+  State<SectionLoadingSkeleton> createState() => _SectionLoadingSkeletonState();
 }
 
 class _SectionLoadingSkeletonState extends State<SectionLoadingSkeleton>
@@ -102,11 +101,7 @@ class _SectionLoadingSkeletonState extends State<SectionLoadingSkeleton>
 /// Displays an icon, a human-readable [message], and an optional
 /// [onRetry] callback wired to a "Retry" button.
 class SectionErrorState extends StatelessWidget {
-  const SectionErrorState({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const SectionErrorState({super.key, required this.message, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;

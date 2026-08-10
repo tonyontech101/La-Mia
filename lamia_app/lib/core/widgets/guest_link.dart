@@ -64,10 +64,7 @@ class PromptLink extends StatelessWidget {
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          prompt,
-          style: AppTypography.body(color: AppColors.textSecondary),
-        ),
+        Text(prompt, style: AppTypography.body(color: AppColors.textSecondary)),
         TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(

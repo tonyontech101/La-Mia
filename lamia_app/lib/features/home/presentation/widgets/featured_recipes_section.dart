@@ -31,17 +31,17 @@ class FeaturedRecipesSection extends StatelessWidget {
           children: [
             Text(
               'Featured Recipes',
-              style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.title(
+                color: AppColors.textPrimary,
+              ).copyWith(fontWeight: FontWeight.w700),
             ),
             GestureDetector(
               onTap: onViewAllTap,
               child: Text(
                 'View All',
-                style: AppTypography.label(color: AppColors.primary).copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTypography.label(
+                  color: AppColors.primary,
+                ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -70,10 +70,7 @@ class FeaturedRecipesSection extends StatelessWidget {
 }
 
 class _FeaturedCard extends StatelessWidget {
-  const _FeaturedCard({
-    required this.recipe,
-    this.onTap,
-  });
+  const _FeaturedCard({required this.recipe, this.onTap});
 
   final RecipeModel recipe;
   final VoidCallback? onTap;
@@ -125,7 +122,10 @@ class _FeaturedCard extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       height: 110,
                       color: AppColors.surfaceAlt,
-                      child: const Icon(Icons.restaurant, color: AppColors.textSecondary),
+                      child: const Icon(
+                        Icons.restaurant,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -133,7 +133,10 @@ class _FeaturedCard extends StatelessWidget {
                   top: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.textPrimary.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -165,14 +168,18 @@ class _FeaturedCard extends StatelessWidget {
                       children: [
                         Text(
                           recipe.name,
-                          style: AppTypography.bodyStrong(color: AppColors.textPrimary),
+                          style: AppTypography.bodyStrong(
+                            color: AppColors.textPrimary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           recipe.ingredients.take(3).join(', '),
-                          style: AppTypography.caption(color: AppColors.textSecondary),
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -180,28 +187,37 @@ class _FeaturedCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.timer_outlined, size: 14, color: AppColors.primary),
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           recipe.cookTime,
-                          style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontSize: 11, fontWeight: FontWeight.w500),
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.accentSoft,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             recipe.difficulty,
-                            style: AppTypography.caption(color: AppColors.textPrimary).copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style:
+                                AppTypography.caption(
+                                  color: AppColors.textPrimary,
+                                ).copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                       ],

@@ -71,16 +71,16 @@ class YourRankingCard extends StatelessWidget {
               children: [
                 Text(
                   'Your Ranking',
-                  style:
-                      AppTypography.bodyStrong(color: AppColors.textPrimary)
-                          .copyWith(fontSize: 14),
+                  style: AppTypography.bodyStrong(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 14),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   title,
-                  style:
-                      AppTypography.caption(color: AppColors.textSecondary)
-                          .copyWith(fontSize: 11),
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 11),
                 ),
               ],
             ),
@@ -105,10 +105,7 @@ class YourRankingCard extends StatelessWidget {
                     '${isPositive ? '+' : ''}$spotsChange Spots ${isPositive ? 'Up' : 'Down'}',
                     style: AppTypography.caption(
                       color: isPositive ? AppColors.success : AppColors.error,
-                    ).copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
+                    ).copyWith(fontWeight: FontWeight.w600, fontSize: 11),
                   ),
                 ],
               ),
@@ -117,14 +114,13 @@ class YourRankingCard extends StatelessWidget {
                 onTap: onSeeFullRank,
                 child: Text(
                   'See Full Rank',
-                  style:
-                      AppTypography.caption(color: AppColors.secondary)
-                          .copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                    decoration: TextDecoration.underline,
-                    decorationColor: AppColors.secondary,
-                  ),
+                  style: AppTypography.caption(color: AppColors.secondary)
+                      .copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.secondary,
+                      ),
                 ),
               ),
             ],

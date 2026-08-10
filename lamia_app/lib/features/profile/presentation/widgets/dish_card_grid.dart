@@ -80,10 +80,7 @@ class DishCardGrid extends StatelessWidget {
 }
 
 class _DishCard extends StatelessWidget {
-  const _DishCard({
-    required this.recipe,
-    required this.onTap,
-  });
+  const _DishCard({required this.recipe, required this.onTap});
 
   final RecipeModel recipe;
   final VoidCallback onTap;
@@ -126,7 +123,8 @@ class _DishCard extends StatelessWidget {
                             size: 32,
                           ),
                         ),
-                        errorWidget: (context, url, error) => _buildPlaceholder(),
+                        errorWidget: (context, url, error) =>
+                            _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
@@ -147,19 +145,18 @@ class _DishCard extends StatelessWidget {
                 children: [
                   Text(
                     recipe.name,
-                    style: AppTypography.label(color: AppColors.textPrimary).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
+                    style: AppTypography.label(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 14),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${recipe.category} • ${recipe.cookTime}',
-                    style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-                      fontSize: 11,
-                    ),
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -187,10 +184,9 @@ class _DishCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Dish Image',
-            style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTypography.caption(
+              color: AppColors.textSecondary,
+            ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),
