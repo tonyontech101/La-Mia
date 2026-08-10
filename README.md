@@ -1,29 +1,28 @@
 # La Mia — Discover, Cook, and Share Authentic Filipino Recipes 🍲
 
-Welcome to **La Mia**, a modern Flutter application designed to showcase authentic Filipino cuisine. The project features 200+ detailed recipes, an ingredient pricing catalog, interactive search, dynamic category filtering, and real-time backend synchronization powered by Firebase.
+**La Mia** is a modern Flutter mobile application built to celebrate and explore authentic Filipino cuisine. Designed with rich Material 3 UI aesthetics and real-time backend synchronization via Firebase, **La Mia** empowers home cooks, food enthusiasts, and culinary explorers to discover traditional dishes, match recipes based on available pantry ingredients, decide daily meals, and connect with a community of passion-driven chefs.
 
 ---
 
-> ⚠️ **SECURITY FIRST**  
-> Sensitive credential files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`) are **strictly excluded from Git** via `.gitignore` to prevent secret leaks. Please follow the instructions below to configure your local setup.
+## 📱 What is La Mia?
+
+Finding what to cook or managing kitchen ingredients can be challenging. **La Mia** solves this by combining rich culinary content with smart utility tools:
+
+- 🍳 **200+ Authentic Filipino Recipes**: Access a rich, curated dataset spanning 13 traditional dish categories—including *Almusal*, *Ulam*, *Sabaw*, *Merienda*, *Pang-himagas*, *Pulutan*, and regional specialties.
+- 🛒 **Cook-by-Ingredients (Pantry Matcher)**: Enter ingredients you currently have at home to instantly discover recipes you can make, complete with ingredient matching percentages and estimated market costs.
+- 🎲 **"Ano Pong Ulam?" Meal Decision Helper**: Can't decide what to eat today? Use the interactive decision tool to get instant meal suggestions tailored to your mood or preferences.
+- 🏆 **Community & Chef Leaderboard**: Celebrate top home chefs and discover community-favorite recipes through rankings and monthly featured chefs.
+- 👤 **User Profiles & Bookmarks**: Save your favorite dishes, track your cooking history, and manage your culinary profile.
 
 ---
 
 ## 🏗️ Tech Stack & Architecture
 
-- **Frontend**: [Flutter](https://flutter.dev/) (Dart 3.x) with Material 3 & Custom Design Tokens
-- **Database**: [Cloud Firestore](https://firebase.google.com/docs/firestore) (Recipes & Ingredient Catalog)
-- **Storage**: [Firebase Cloud Storage](https://firebase.google.com/docs/storage) (Hosted Recipe Cover Photos)
-- **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (Email/Password & Google Sign-In)
-- **Seed Utility**: [Node.js](https://nodejs.org/) + `firebase-admin` SDK
-
-> 📌 **Architecture status**: The full target architecture (Riverpod state
-> management, go_router declarative navigation, Cloud Functions for the
-> ingredient-matching engine, App Check, flavors, and CI) is described in
-> `La Mia - Architecture (Flutter + Firebase).md` and is **planned but not
-> yet implemented**. The current codebase uses `StatefulWidget` + imperative
-> `Navigator` and ships the UI scaffolding for the features below. See
-> `implementation_plan.md` for the build order.
+- **Frontend Framework**: [Flutter](https://flutter.dev/) (Dart 3.x) with Material 3 styling and custom design tokens.
+- **Backend & Database**: [Cloud Firestore](https://firebase.google.com/docs/firestore) for real-time recipe and user data storage.
+- **Media Storage**: [Firebase Cloud Storage](https://firebase.google.com/docs/storage) for hosted high-resolution recipe cover photos.
+- **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (Email/Password & Google Sign-In support).
+- **Data Seeding Utilities**: [Node.js](https://nodejs.org/) script runner using `firebase-admin` SDK for uploading recipes and ingredient catalogs.
 
 ---
 
@@ -31,47 +30,46 @@ Welcome to **La Mia**, a modern Flutter application designed to showcase authent
 
 ```text
 LaMia/
-├── lamia_app/                  # Core Flutter Application
+├── lamia_app/                  # Core Flutter Mobile Application
 │   ├── android/                # Android native project files
 │   ├── ios/                    # iOS native project files
-│   ├── assets/                 # App icons, static images & assets
+│   ├── assets/                 # Icons, static branding & app assets
 │   ├── lib/
-│   │   ├── app/                # App root widget, theme tokens & design system
-│   │   ├── core/               # Shared constants, utils & reusable UI states
+│   │   ├── app/                # App entry theme tokens & global design system
+│   │   ├── core/               # Shared constants, utilities & reusable UI widgets
 │   │   ├── features/
-│   │   │   ├── auth/           # Login, Sign-up & AuthService (Firebase Auth)
-│   │   │   ├── home/           # Dashboard, Feed, Search & navigation shell
-│   │   │   ├── recipes/        # Recipe Model, Firestore Repository & Cook-by-Ingredients
-│   │   │   ├── profile/        # User profile screen, tab grid & header widget  (planned stats)
-│   │   │   └── leaderboard/    # Chef ranking screen  (currently demo data)
-│   │   └── main.dart           # Application entry point
-│   ├── test/                   # Unit + widget tests (Validators, AuthErrorMessages, IngredientMatcher, LoginScreen)
-│   ├── firestore.rules         # Firestore security rules (deploy with `firebase deploy --only firestore:rules`)
-│   ├── firestore.indexes.json  # Composite indexes for RecipeRepository queries
+│   │   │   ├── auth/           # Login, Registration & Firebase AuthService
+│   │   │   ├── home/           # Main Dashboard, Feed, Search & Navigation Shell
+│   │   │   ├── recipes/        # Recipe Data Models, Firestore Repositories, Detail Screen & Pantry Matcher
+│   │   │   ├── profile/        # User Profile Screen, Saved Bookmarks & Settings
+│   │   │   └── leaderboard/    # Chef Rankings & Top Contributors
+│   │   └── main.dart           # App Entry Point & Firebase initialization
+│   ├── test/                   # Unit & Widget tests
+│   ├── firestore.rules         # Security rules for Cloud Firestore
+│   ├── firestore.indexes.json  # Composite query indexes for Firestore
 │   ├── storage.rules           # Cloud Storage security rules
-│   ├── firebase.json           # Firebase CLI config (project + rules + indexes wiring)
-│   └── pubspec.yaml            # Flutter dependencies & configuration
+│   ├── firebase.json           # Firebase CLI configuration
+│   └── pubspec.yaml            # Flutter packages & asset configuration
 │
-├── recipes/                    # Local Recipe Dataset (200 recipes in 13 categories)
+├── recipes/                    # Raw Local Recipe Dataset (200 recipes in 13 categories)
 │   ├── almusal/
 │   ├── ulam/
 │   └── ...
 │
-└── tools/                      # Node.js Database Seeding Tools
-    ├── seed_recipes.js         # Main seeding script (Firestore + Cloud Storage)
-    ├── seed_featured.js        # Featured & Popularity initial ranking script
-    ├── package.json            # Node.js dependencies (`firebase-admin`)
-    └── serviceAccountKey.json.example  # Template for Firebase Admin key
+└── tools/                      # Node.js Database & Storage Seeding Utilities
+    ├── seed_recipes.js         # Main seeding script (Firestore + Storage upload)
+    ├── seed_featured.js        # Initial score & popularity ranking script
+    └── package.json            # Tooling dependencies (`firebase-admin`)
 ```
 
 ---
 
 ## 🛠️ Prerequisites
 
-Before getting started, make sure your machine has the following tools installed:
+Ensure your development environment has the following tools installed before setting up the project:
 
-1. **Flutter SDK** (v3.12 or later) — [Install Guide](https://docs.flutter.dev/get-started/install)
-2. **Node.js** (v18 or later) — [Install Guide](https://nodejs.org/)
+1. **Flutter SDK** (v3.12 or higher) — [Install Flutter](https://docs.flutter.dev/get-started/install)
+2. **Node.js** (v18 or higher) — [Install Node.js](https://nodejs.org/)
 3. **Firebase CLI**:
    ```bash
    npm install -g firebase-tools
@@ -83,7 +81,7 @@ Before getting started, make sure your machine has the following tools installed
 
 ---
 
-## 🚀 Step-by-Step Developer Setup
+## 🚀 Step-by-Step Installation & Setup
 
 ### Step 1: Clone the Repository
 
@@ -96,7 +94,7 @@ cd LaMia
 
 ### Step 2: Install Flutter Dependencies
 
-Navigate to the `lamia_app` directory and fetch the required packages:
+Navigate into the Flutter application folder and fetch the dependencies:
 
 ```bash
 cd lamia_app
@@ -105,16 +103,16 @@ flutter pub get
 
 ---
 
-### Step 3: Firebase Client Configuration
+### Step 3: Firebase Configuration
 
-> 💡 **COLLABORATOR NOTE**:  
-> If your team lead has already provided the pre-configured project credentials (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`), place them in the locations listed in **Option B** and **skip Step 3**.
+> 💡 **Collaborator Note**:  
+> If you have received the official environment configuration files (`google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart`) from your project administrator, place them in their respective locations listed under **Option B** and skip to Step 4.
 
-Otherwise, connect your local app to the team's Firebase project using one of the options below:
+Otherwise, set up Firebase connection using one of the options below:
 
 #### Option A: Automatic Setup via FlutterFire CLI (Recommended)
 
-1. Log in to your Firebase account:
+1. Log in to Firebase:
    ```bash
    firebase login
    ```
@@ -122,106 +120,69 @@ Otherwise, connect your local app to the team's Firebase project using one of th
    ```bash
    flutterfire configure
    ```
-3. Select your Firebase project (`la-mia-e348d`) and target platforms (Android, iOS, Web).  
-   *This automatically generates `lib/firebase_options.dart` without committing secrets to Git.*
+3. Select your Firebase project and target platforms (Android, iOS, Web). This generates `lib/firebase_options.dart` automatically.
 
-#### Option B: Manual Configuration
+#### Option B: Manual Setup
 
-Obtain the files from the Firebase Console or project lead:
-
-1. **Android**: Download `google-services.json` (Project Settings → Android) and place in:
+1. **Android**: Download `google-services.json` from the Firebase Console and place it at:
    ```text
    lamia_app/android/app/google-services.json
    ```
-2. **iOS**: Download `GoogleService-Info.plist` (Project Settings → iOS) and place in:
+2. **iOS**: Download `GoogleService-Info.plist` from the Firebase Console and place it at:
    ```text
    lamia_app/ios/Runner/GoogleService-Info.plist
    ```
-3. **Flutter Options**: Copy the template file:
+3. **Flutter Options**: Copy the template file and fill in your keys:
    ```bash
    cp lib/firebase_options.dart.example lib/firebase_options.dart
    ```
-   Open `lib/firebase_options.dart` and fill in your project credentials.
 
 ---
 
 ### Step 4: Seed Database & Storage (`tools/`)
 
-To populate Cloud Firestore and Cloud Storage with the 200 recipes and ingredient pricing catalog:
+To populate Cloud Firestore and Cloud Storage with the 200+ recipes and ingredient catalog:
 
-1. **Download Service Account Key**:
-   - Go to [Firebase Console](https://console.firebase.google.com/) → **Project Settings** ⚙️ → **Service accounts**.
-   - Click **Generate new private key** (downloads a `.json` file).
-   - Move the file to `tools/` and rename it to `serviceAccountKey.json`.
-
-2. **Run Seeding Scripts**:
+1. Obtain `serviceAccountKey.json` from **Firebase Console** → **Project Settings** ⚙️ → **Service accounts** → **Generate new private key**.
+2. Save the key file to `tools/serviceAccountKey.json`.
+3. Run the seed tools:
    ```bash
-   cd tools
+   cd ../tools
    npm install
 
-   # Dry Run (Preview only — no writes to Firebase)
+   # Preview mode (dry-run without modifying database)
    npm run seed:dry
 
-   # Live Seed (Uploads images to Cloud Storage & populates Firestore)
+   # Upload recipe data & images to Firebase
    node seed_recipes.js
 
-   # Seed Featured & Popularity Scores
+   # Generate featured and popularity ranking scores
    node seed_featured.js
    ```
 
-> ℹ️ **Seeding Behavior**:
-> - **Idempotent**: Re-running scripts will update existing Firestore documents without duplicating data.
-> - **Storage Optimization**: Images already present in Cloud Storage are reused automatically to avoid unnecessary bandwidth usage.
-
 ---
 
-### Step 5: Run the Application
+### Step 5: Run the Mobile Application
 
-With configuration complete, launch the app on your emulator or physical device:
+Start an emulator or connect a physical device, then launch the Flutter app:
 
 ```bash
-cd lamia_app
+cd ../lamia_app
 flutter run
 ```
 
 ---
 
-## ❓ Troubleshooting & FAQs
+## 🔒 Security & Best Practices
 
-<details>
-<summary><b>1. PowerShell script error on Windows: <code>npm.ps1 cannot be loaded</code></b></summary>
-<br/>
-Windows PowerShell blocks `.ps1` script execution by default. To bypass this, run node scripts directly:
-```bash
-node seed_recipes.js
-```
-or run PowerShell as Administrator and execute:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-</details>
-
-<details>
-<summary><b>2. Firebase Error: <code>Bucket name not specified or invalid</code></b></summary>
-<br/>
-The seed script automatically infers your storage bucket (`<project_id>.firebasestorage.app`) from `serviceAccountKey.json`. If using a custom bucket, set the environment variable:
-```bash
-STORAGE_BUCKET=my-custom-bucket node seed_recipes.js
-```
-</details>
-
-<details>
-<summary><b>3. Missing asset directory errors in Flutter terminal</b></summary>
-<br/>
-If you see asset path warnings, ensure `pubspec.yaml` only lists existing folders (`assets/images/`). Cover photos for recipes are loaded via network URLs (`CachedNetworkImage`).
-</details>
+- 🛑 **Never commit secrets**: `serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart` are ignored in `.gitignore`.
+- 🔍 **Code Quality**: Always run `flutter analyze` inside `lamia_app/` before creating pull requests.
+- 🔐 **Security Rules**: Deploy updated Firestore rules using `firebase deploy --only firestore:rules`.
 
 ---
 
-## 🔒 Security & Contribution Checklist
+## 🤝 Contributing & Support
 
-Before submitting a Pull Request or pushing commits to GitHub:
-
-- [x] Verify secret files (`serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`) are ignored by `git status`.
-- [x] Do NOT force-add (`git add -f`) any credential files.
-- [x] Run `flutter analyze` inside `lamia_app/` to ensure no syntax or lint errors.
+Contributions are welcome! If you encounter issues or have suggestions:
+1. Open an issue on GitHub.
+2. Ensure your proposed code follows existing architecture and passes all lint checks (`flutter test` and `flutter analyze`).
