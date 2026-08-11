@@ -8,6 +8,9 @@ import '../../leaderboard/presentation/leaderboard_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_feed_screen.dart';
 
+import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../recipes/presentation/cook_by_ingredients_screen.dart';
+
 /// Redesigned Main Navigation Shell based on wireframe.
 ///
 /// Features 5 items:
@@ -124,7 +127,12 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _onTabTapped(1);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CookByIngredientsScreen(),
+                      ),
+                    );
                   },
                 ),
                 ListTile(
@@ -148,7 +156,12 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _onTabTapped(2);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AnoPongUlamScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
