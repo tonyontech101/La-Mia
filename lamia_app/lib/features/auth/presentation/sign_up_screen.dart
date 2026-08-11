@@ -16,6 +16,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
+import 'email_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 import 'widgets/password_strength_meter.dart';
@@ -182,22 +183,23 @@ class _SignUpScreenState extends State<SignUpScreen>
       );
       if (!mounted) return;
 
-      // Sign out so the user must log in with their new credentials.
-      await _authService.signOut();
+      // Send the Firebase verification email before navigating.
+      await _authService.sendEmailVerification();
       if (!mounted) return;
 
-      // Show a success message while still on this screen.
+      // Show confirmation with the user's email.
       AppSnackbar.show(
         context,
-        message: 'Account created! Please log in.',
+        message: 'Account created! Verification email sent to ${_emailController.text}.',
       );
-      // Small delay so the user can read the snackbar before navigating.
-      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      // Brief pause so the user sees the snackbar before navigating.
+      await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
 
-      // Navigate explicitly — clear the stack and push a fresh LoginScreen.
+      // Navigate to the verification screen -- the user stays signed in
+      // so the verification link works correctly.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
         (_) => false,
       );
     } catch (e) {
@@ -205,6 +207,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       AppSnackbar.show(
         context,
         message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _creating = false);
@@ -231,6 +234,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       AppSnackbar.show(
         context,
         message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _googleLoading = false);
