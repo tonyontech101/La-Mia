@@ -147,6 +147,45 @@ class AuthService {
     await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
   }
 
+  // ── Email Verification ────────────────────────────────────────────────
+
+  /// Sends a verification email to the currently signed-in user.
+  ///
+  /// Uses explicit [ActionCodeSettings] so the verification link always
+  /// points to a working Firebase-hosted page, regardless of the
+  /// "Email template action URL" configured in the Firebase Console.
+  /// Returns the [User] so callers can inspect `emailVerified` immediately.
+  Future<User?> sendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No user is currently signed in.');
+    }
+    try {
+      await user.sendEmailVerification(
+        ActionCodeSettings(
+          // Point to the Firebase-hosted project page so the link always
+          // resolves, even if the Console "Action URL" is left blank.
+          url: Uri.https('${_auth.app.options.projectId}.web.app').toString(),
+          handleCodeInApp: false,
+          iOSBundleId: 'com.lamia.lamiaApp',
+          androidPackageName: 'com.lamia.lamia_app',
+        ),
+      );
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_friendlyMessage(e.code));
+    }
+  }
+
+  /// Reloads the current user from Firebase to refresh cached properties
+  /// such as [User.emailVerified].
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+  }
+
+  /// Whether the current user has verified their email address.
+  bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
+
   // ── Password Reset ─────────────────────────────────────────────────────
 
   /// Sends a password-reset email to [email].

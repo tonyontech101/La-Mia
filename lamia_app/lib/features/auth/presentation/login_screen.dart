@@ -14,6 +14,8 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'sign_up_screen.dart';
+import 'forgot_password_screen.dart';
+import 'email_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 
@@ -97,15 +99,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _loggingIn = true);
     try {
-      await _authService.signInWithEmail(
+      final user = await _authService.signInWithEmail(
         email: _emailController.text,
         password: _passwordController.text,
       );
       if (!mounted) return;
-      // Navigate explicitly — don't rely on the StreamBuilder, because
-      // this LoginScreen may not be the StreamBuilder's root route.
+
+      // Reload to get the latest emailVerified state from Firebase.
+      await _authService.reloadUser();
+      if (!mounted) return;
+
+      // Google sign-in users are auto-verified; only gate email/password users.
+      final isGoogleUser = user.providerData
+          .any((info) => info.providerId == 'google.com');
+      final isVerified = isGoogleUser || _authService.isEmailVerified;
+
+      // Route based on verification status.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
+        MaterialPageRoute(
+          builder: (_) => isVerified
+              ? const HomePlaceholderScreen()
+              : const EmailVerificationScreen(),
+        ),
         (_) => false,
       );
     } catch (e) {
@@ -248,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const OrDivider(),
             const SizedBox(height: AppSpacing.lg),
             GoogleButton(
-              label: 'Continue with Google',
+              label: 'Login with Google',
               isLoading: _googleLoading,
               onPressed: _busy ? null : _onGoogle,
             ),
