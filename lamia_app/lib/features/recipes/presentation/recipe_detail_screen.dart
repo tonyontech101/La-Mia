@@ -248,43 +248,54 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       // Author & Action Icons Row
                       Row(
                         children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.border.withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(6),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.border.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    'Recipe by La Mia',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    AppSnackbar.show(
+                                      context,
+                                      message:
+                                          'Following chefs is coming soon!',
+                                    );
+                                  },
+                                  child: const Text(
+                                    '+ follow',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          // Author attribution will come from `recipe.authorName`
-                          // once the schema gains it; don't fabricate a name.
-                          const Text(
-                            'Recipe by La Mia',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              AppSnackbar.show(
-                                context,
-                                message: 'Following chefs is coming soon!',
-                              );
-                            },
-                            child: const Text(
-                              '+ follow',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
+                          const SizedBox(width: 4),
                           // Print, Share, Bookmark Actions — these are
                           // client-only stubs and don't write to Firestore.
                           IconButton(
