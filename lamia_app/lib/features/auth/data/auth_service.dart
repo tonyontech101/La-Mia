@@ -173,7 +173,7 @@ class AuthService {
       );
       return user;
     } on FirebaseAuthException catch (e) {
-      throw Exception(_friendlyMessage(e.code));
+      throw Exception(AuthErrorMessages.fromCode(e.code));
     }
   }
 

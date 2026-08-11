@@ -14,7 +14,6 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'sign_up_screen.dart';
-import 'forgot_password_screen.dart';
 import 'email_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
@@ -110,8 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       // Google sign-in users are auto-verified; only gate email/password users.
-      final isGoogleUser = user.providerData
-          .any((info) => info.providerId == 'google.com');
+      final isGoogleUser = user.providerData.any(
+        (info) => info.providerId == 'google.com',
+      );
       final isVerified = isGoogleUser || _authService.isEmailVerified;
 
       // Route based on verification status.
@@ -263,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const OrDivider(),
             const SizedBox(height: AppSpacing.lg),
             GoogleButton(
-              label: 'Login with Google',
+              label: 'Continue with Google',
               isLoading: _googleLoading,
               onPressed: _busy ? null : _onGoogle,
             ),

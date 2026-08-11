@@ -166,9 +166,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
   void _goToLogin() {
     _cooldownTimer?.cancel();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
@@ -223,7 +223,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           // -- Body -----------------------------------------------
           if (!_emailSent) ...[
             Text(
-              "Enter the email address you used to create your account "
+              'Enter the email address you used to create your account '
               "and we'll send you a link to reset your password.",
               style: AppTypography.body(color: AppColors.textSecondary),
               textAlign: TextAlign.center,

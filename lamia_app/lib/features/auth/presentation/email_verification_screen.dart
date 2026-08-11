@@ -184,11 +184,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: _navigated ? AppColors.success.withValues(alpha: 0.15) : AppColors.accentSoft,
+                  color: _navigated
+                      ? AppColors.success.withValues(alpha: 0.15)
+                      : AppColors.accentSoft,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _navigated ? Icons.check_circle_outline : Icons.mark_email_unread_outlined,
+                  _navigated
+                      ? Icons.check_circle_outline
+                      : Icons.mark_email_unread_outlined,
                   size: 40,
                   color: _navigated ? AppColors.success : AppColors.primary,
                 ),
@@ -245,8 +249,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                   ? 'Resend in $_cooldownText'
                   : 'Resend verification email',
               isLoading: _resending,
-              onPressed:
-                  (_resending || _cooldownRemaining > 0) ? null : _resendEmail,
+              onPressed: (_resending || _cooldownRemaining > 0)
+                  ? null
+                  : _resendEmail,
             ),
           ],
 
