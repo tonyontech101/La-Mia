@@ -85,8 +85,9 @@ class _LaMiaAppState extends State<LaMiaApp> {
                 if (snapshot.hasData) {
                   final user = snapshot.data!;
                   // Google users have no password provider — treat as verified.
-                  final isGoogleUser = user.providerData
-                      .any((info) => info.providerId == 'google.com');
+                  final isGoogleUser = user.providerData.any(
+                    (info) => info.providerId == 'google.com',
+                  );
                   if (isGoogleUser || user.emailVerified) {
                     return const HomePlaceholderScreen();
                   }
