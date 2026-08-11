@@ -53,19 +53,19 @@ enum PasswordStrength { empty, weak, okay, strong }
 
 extension PasswordStrengthX on PasswordStrength {
   String get label => switch (this) {
-        PasswordStrength.empty => '',
-        PasswordStrength.weak => 'Weak',
-        PasswordStrength.okay => 'Okay',
-        PasswordStrength.strong => 'Strong',
-      };
+    PasswordStrength.empty => '',
+    PasswordStrength.weak => 'Weak',
+    PasswordStrength.okay => 'Okay',
+    PasswordStrength.strong => 'Strong',
+  };
 
   /// Number of filled segments in the 3-segment meter.
   int get segments => switch (this) {
-        PasswordStrength.empty => 0,
-        PasswordStrength.weak => 1,
-        PasswordStrength.okay => 2,
-        PasswordStrength.strong => 3,
-      };
+    PasswordStrength.empty => 0,
+    PasswordStrength.weak => 1,
+    PasswordStrength.okay => 2,
+    PasswordStrength.strong => 3,
+  };
 }
 
 /// Estimates password strength using the same thresholds as the spec:

@@ -18,8 +18,10 @@ class HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     // Decode the large photo at roughly device width to save memory.
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth =
-        (MediaQuery.sizeOf(context).width * dpr).round().clamp(1, 4096);
+    final cacheWidth = (MediaQuery.sizeOf(context).width * dpr).round().clamp(
+      1,
+      4096,
+    );
 
     return SizedBox(
       height: height,
@@ -36,9 +38,8 @@ class HeroHeader extends StatelessWidget {
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
               cacheWidth: cacheWidth,
-              errorBuilder: (context, error, stackTrace) => const ColoredBox(
-                color: AppColors.primaryDark,
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  const ColoredBox(color: AppColors.primaryDark),
             ),
           ),
           // Warm multiply overlay to unify tone (decorative).

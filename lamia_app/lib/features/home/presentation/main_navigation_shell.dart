@@ -1,21 +1,21 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/utils/page_transitions.dart';
-import '../../../core/widgets/primary_button.dart';
-import '../../auth/data/auth_service.dart';
-import '../../auth/presentation/login_screen.dart';
-import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
+import '../../leaderboard/presentation/leaderboard_screen.dart';
 import 'home_dashboard_screen.dart';
+import 'home_feed_screen.dart';
 
-/// Navigation Shell hosting the 4 bottom tabs from image.png wireframe:
+/// Redesigned Main Navigation Shell based on wireframe.
+///
+/// Features 5 items:
 /// 1. Home
-/// 2. Cook (Cook by Ingredients)
-/// 3. Suggestion (Ano Pong Ulam?)
-/// 4. Me (Profile & Saved Recipes)
+/// 2. Cook
+/// 3. Prominent Floating Center Action Button (`+`)
+/// 4. Leaderboard
+/// 5. Me (Profile Screen)
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({
     super.key,
@@ -45,79 +45,246 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     });
   }
 
+  void _onPlusActionTap() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Quick Culinary Actions',
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.add_a_photo_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: const Text(
+                    'Post New Dish / Recipe',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Share your homemade dish & recipe step-by-step',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Recipe creation feature opening...'),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.soup_kitchen_rounded,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                  title: const Text(
+                    'Cook by Ingredients',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Find what to cook with available pantry items',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _onTabTapped(1);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.casino_rounded,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  title: const Text(
+                    'Ano Pong Ulam? Randomizer',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Get instant meal suggestions for breakfast, lunch, or dinner',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _onTabTapped(2);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
-      // Tab 0: Home Dashboard
+      // 0: Home Feed (social-style recipe feed)
+      HomeFeedScreen(isGuest: widget.isGuest, onNavigateToTab: _onTabTapped),
+
+      // 1: Cook (former Home Dashboard content)
       HomeDashboardScreen(
         isGuest: widget.isGuest,
         onNavigateToTab: _onTabTapped,
       ),
 
-      // Tab 1: Cook by Ingredients
-      _CookTabPlaceholder(onNavigateHome: () => _onTabTapped(0)),
+      // 2: Leaderboard
+      LeaderboardScreen(onNavigateHome: () => _onTabTapped(0)),
 
-      // Tab 2: Suggestion (Ano Pong Ulam?)
-      AnoPongUlamScreen(onNavigateHome: () => _onTabTapped(0)),
-
-      // Tab 3: Me (Profile)
-      _ProfileTab(isGuest: widget.isGuest),
+      // 3: Me (Profile Screen matching wireframe)
+      ProfileScreen(
+        isGuest: widget.isGuest,
+        onNavigateHome: () => _onTabTapped(0),
+      ),
     ];
+
+    // Map nav index to screen index (Center '+' button does not change screen index)
+    int getMappedScreenIndex() {
+      if (_currentIndex >= 3) return 3;
+      return _currentIndex;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 12,
-              offset: Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  isSelected: _currentIndex == 0,
-                  onTap: () => _onTabTapped(0),
-                ),
-                _NavItem(
-                  icon: Icons.soup_kitchen_outlined,
-                  label: 'Cook',
-                  isSelected: _currentIndex == 1,
-                  onTap: () => _onTabTapped(1),
-                ),
-                _NavItem(
-                  icon: Icons.restaurant_menu_rounded,
-                  label: 'Suggestion',
-                  isSelected: _currentIndex == 2,
-                  onTap: () => _onTabTapped(2),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Me',
-                  isSelected: _currentIndex == 3,
-                  onTap: () => _onTabTapped(3),
+      body: IndexedStack(index: getMappedScreenIndex(), children: screens),
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Redesigned Floating Bottom Navigation Bar Container
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              border: Border(
+                top: BorderSide(color: AppColors.border, width: 1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.cardShadow,
+                  blurRadius: 16,
+                  offset: Offset(0, -4),
                 ),
               ],
             ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // 1. Home
+                    _NavItem(
+                      icon: Icons.home_rounded,
+                      label: 'Home',
+                      isSelected: _currentIndex == 0,
+                      onTap: () => _onTabTapped(0),
+                    ),
+
+                    // 2. Cook
+                    _NavItem(
+                      icon: Icons.soup_kitchen_outlined,
+                      label: 'Cook',
+                      isSelected: _currentIndex == 1,
+                      onTap: () => _onTabTapped(1),
+                    ),
+
+                    // 3. Center Space reserved for Floating '+' Action Button
+                    const SizedBox(width: 48),
+
+                    // 4. Leaderboard
+                    _NavItem(
+                      icon: Icons.leaderboard_rounded,
+                      label: 'Rank',
+                      isSelected: _currentIndex == 2,
+                      onTap: () => _onTabTapped(2),
+                    ),
+
+                    // 5. Me (Profile)
+                    _NavItem(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Me',
+                      isSelected: _currentIndex == 3,
+                      onTap: () => _onTabTapped(3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
+
+          // Wireframe Prominent Center Floating '+' Button
+          Positioned(
+            top: -24,
+            child: GestureDetector(
+              onTap: _onPlusActionTap,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: AppColors.cookCardGradient,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surface, width: 3.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: AppColors.onPrimary,
+                  size: 32,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -143,26 +310,18 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.pill),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
+            Icon(icon, color: color, size: 22),
             const SizedBox(height: 2),
             Text(
               label,
@@ -172,120 +331,6 @@ class _NavItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CookTabPlaceholder extends StatelessWidget {
-  const _CookTabPlaceholder({required this.onNavigateHome});
-  final VoidCallback onNavigateHome;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Cook by Ingredients'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.kitchen_outlined, size: 72, color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Cook by Ingredients',
-                style: AppTypography.headline(),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Select ingredients in your pantry to get instant recipe matches.',
-                style: AppTypography.body(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Back to Home Dashboard',
-                onPressed: onNavigateHome,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab({required this.isGuest});
-  final bool isGuest;
-
-  Future<void> _onSignOut(BuildContext context) async {
-    await AuthService().signOut();
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      fadePageRoute(const LoginScreen()),
-      (_) => false,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final displayName =
-        isGuest ? 'Guest' : (user?.displayName ?? user?.email ?? 'User');
-    final email = isGuest ? 'Browsing as guest' : (user?.email ?? '');
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                ),
-                child: Center(
-                  child: Text(
-                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                displayName,
-                style: AppTypography.headline(),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                style: AppTypography.body(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 32),
-              PrimaryButton(
-                label: isGuest ? 'Sign In / Register' : 'Sign Out',
-                onPressed: () => _onSignOut(context),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -114,7 +114,8 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (markTouched) _passwordTouched = true;
     if (!_passwordTouched) return;
     setState(
-      () => _passwordError = Validators.signUpPassword(_passwordController.text),
+      () =>
+          _passwordError = Validators.signUpPassword(_passwordController.text),
     );
   }
 
@@ -150,7 +151,9 @@ class _SignUpScreenState extends State<SignUpScreen>
         _confirmController.text,
         _passwordController.text,
       );
-      _termsError = _termsAccepted ? null : 'Please accept the Terms to continue.';
+      _termsError = _termsAccepted
+          ? null
+          : 'Please accept the Terms to continue.';
     });
 
     if (_nameError != null) {
@@ -187,13 +190,10 @@ class _SignUpScreenState extends State<SignUpScreen>
       await _authService.sendEmailVerification();
       if (!mounted) return;
 
-      // Show confirmation with the user's email.
-      AppSnackbar.show(
-        context,
-        message: 'Account created! Verification email sent to ${_emailController.text}.',
-      );
-      // Brief pause so the user sees the snackbar before navigating.
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Show a success message while still on this screen.
+      AppSnackbar.show(context, message: 'Account created! Please log in.');
+      // Small delay so the user can read the snackbar before navigating.
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
       if (!mounted) return;
 
       // Navigate to the verification screen -- the user stays signed in
@@ -215,7 +215,8 @@ class _SignUpScreenState extends State<SignUpScreen>
   }
 
   void _shake() {
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) return;
     _shakeController.forward(from: 0);
   }
@@ -374,7 +375,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 }
 
 /// Terms/privacy checkbox row with an optional shake animation on submit error.
-class _TermsRow extends StatelessWidget {
+class _TermsRow extends StatefulWidget {
   const _TermsRow({
     required this.accepted,
     required this.error,
@@ -394,6 +395,39 @@ class _TermsRow extends StatelessWidget {
   final VoidCallback onOpenPrivacy;
 
   @override
+  State<_TermsRow> createState() => _TermsRowState();
+}
+
+class _TermsRowState extends State<_TermsRow> {
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = widget.onOpenTerms;
+    _privacyRecognizer = TapGestureRecognizer()..onTap = widget.onOpenPrivacy;
+  }
+
+  @override
+  void didUpdateWidget(covariant _TermsRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.onOpenTerms != widget.onOpenTerms) {
+      _termsRecognizer.onTap = widget.onOpenTerms;
+    }
+    if (oldWidget.onOpenPrivacy != widget.onOpenPrivacy) {
+      _privacyRecognizer.onTap = widget.onOpenPrivacy;
+    }
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,15 +437,19 @@ class _TermsRow extends StatelessWidget {
           height: 48,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadii.checkbox),
-            onTap: enabled ? () => onChanged(!accepted) : null,
+            onTap: widget.enabled
+                ? () => widget.onChanged(!widget.accepted)
+                : null,
             child: Center(
               child: IgnorePointer(
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: Checkbox(
-                    value: accepted,
-                    onChanged: enabled ? (v) => onChanged(v ?? false) : null,
+                    value: widget.accepted,
+                    onChanged: widget.enabled
+                        ? (v) => widget.onChanged(v ?? false)
+                        : null,
                     activeColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.border, width: 1.5),
                     shape: RoundedRectangleBorder(
@@ -435,16 +473,18 @@ class _TermsRow extends StatelessWidget {
                   const TextSpan(text: "I agree to La Mia's "),
                   TextSpan(
                     text: 'Terms of Service',
-                    style: AppTypography.caption(color: AppColors.secondary)
-                        .copyWith(fontWeight: FontWeight.w600),
-                    recognizer: TapGestureRecognizer()..onTap = onOpenTerms,
+                    style: AppTypography.caption(
+                      color: AppColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                    recognizer: _termsRecognizer,
                   ),
                   const TextSpan(text: ' and '),
                   TextSpan(
                     text: 'Privacy Policy',
-                    style: AppTypography.caption(color: AppColors.secondary)
-                        .copyWith(fontWeight: FontWeight.w600),
-                    recognizer: TapGestureRecognizer()..onTap = onOpenPrivacy,
+                    style: AppTypography.caption(
+                      color: AppColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                    recognizer: _privacyRecognizer,
                   ),
                   const TextSpan(text: '.'),
                 ],
@@ -459,21 +499,22 @@ class _TermsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AnimatedBuilder(
-          animation: shakeController,
+          animation: widget.shakeController,
           builder: (context, child) {
             // Damped horizontal shake.
-            final t = shakeController.value;
-            final dx =
-                t == 0 ? 0.0 : 8 * (1 - t) * math.sin(t * 3 * 2 * math.pi);
+            final t = widget.shakeController.value;
+            final dx = t == 0
+                ? 0.0
+                : 8 * (1 - t) * math.sin(t * 3 * 2 * math.pi);
             return Transform.translate(offset: Offset(dx, 0), child: child);
           },
           child: row,
         ),
-        if (error != null)
+        if (widget.error != null)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xxs, left: 2),
             child: Text(
-              error!,
+              widget.error!,
               style: AppTypography.caption(color: AppColors.error),
             ),
           ),

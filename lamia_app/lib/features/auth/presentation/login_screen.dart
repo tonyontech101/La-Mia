@@ -163,10 +163,30 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _onForgotPassword() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-    );
+  Future<void> _onForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'Enter your email above, then tap Forgot password.',
+      );
+      return;
+    }
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: 'Password reset email sent. Check your inbox.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    }
   }
 
   void _goToSignUp() {
@@ -196,7 +216,10 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icons.mail_outline,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.username, AutofillHints.email],
+              autofillHints: const [
+                AutofillHints.username,
+                AutofillHints.email,
+              ],
               enabled: !_busy,
               errorText: _emailError,
               onChanged: (_) => _validateEmail(),

@@ -72,10 +72,12 @@ class RecipeModel {
       servings: data['servings'] as int,
       difficulty: data['difficulty'] as String,
       ingredients: (data['ingredients'] as List<dynamic>)
-          .map((e) => e is String
-              ? e
-              : (e as Map<String, dynamic>)['display'] as String? ??
-                  e.toString())
+          .map(
+            (e) => e is String
+                ? e
+                : (e as Map<String, dynamic>)['display'] as String? ??
+                      e.toString(),
+          )
           .toList(),
       instructions: List<String>.from(data['instructions'] as List),
       tags: List<String>.from(data['tags'] as List),

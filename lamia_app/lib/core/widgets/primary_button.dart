@@ -25,7 +25,9 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final interactive = !isLoading && onPressed != null;
-    final labelColor = interactive ? AppColors.onPrimary : AppColors.textSecondary;
+    final labelColor = interactive
+        ? AppColors.onPrimary
+        : AppColors.textSecondary;
     return SizedBox(
       width: double.infinity,
       height: _height,
@@ -44,26 +46,28 @@ class PrimaryButton extends StatelessWidget {
         ),
         child: FilledButton(
           onPressed: isLoading ? null : onPressed,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            disabledBackgroundColor:
-                isLoading ? AppColors.primary : AppColors.primaryDisabled,
-            foregroundColor: AppColors.onPrimary,
-            disabledForegroundColor: AppColors.textSecondary,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.button),
-            ),
-          ).copyWith(
-            overlayColor: const WidgetStatePropertyAll(Color(0x1AFFFFFF)),
-            backgroundColor: WidgetStateProperty.resolveWith((states) {
-              if (isLoading) return AppColors.primary;
-              if (states.contains(WidgetState.pressed)) {
-                return AppColors.primaryDark;
-              }
-              return AppColors.primary;
-            }),
-          ),
+          style:
+              FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: isLoading
+                    ? AppColors.primary
+                    : AppColors.primaryDisabled,
+                foregroundColor: AppColors.onPrimary,
+                disabledForegroundColor: AppColors.textSecondary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.button),
+                ),
+              ).copyWith(
+                overlayColor: const WidgetStatePropertyAll(Color(0x1AFFFFFF)),
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (isLoading) return AppColors.primary;
+                  if (states.contains(WidgetState.pressed)) {
+                    return AppColors.primaryDark;
+                  }
+                  return AppColors.primary;
+                }),
+              ),
           child: isLoading
               ? const SizedBox(
                   width: 20,
@@ -74,8 +78,9 @@ class PrimaryButton extends StatelessWidget {
                   ),
                 )
               : Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
                   child: Text(
                     label,
                     style: AppTypography.button(color: labelColor),

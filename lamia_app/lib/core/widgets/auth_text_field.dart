@@ -80,8 +80,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
     final iconColor = hasError
         ? AppColors.error
         : _focused
-            ? AppColors.primary
-            : AppColors.textSecondary;
+        ? AppColors.primary
+        : AppColors.textSecondary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +166,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
   }
 
   OutlineInputBorder _border(Color color, double width) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadii.field),
-        borderSide: BorderSide(color: color, width: width),
-      );
+    borderRadius: BorderRadius.circular(AppRadii.field),
+    borderSide: BorderSide(color: color, width: width),
+  );
 }

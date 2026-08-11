@@ -14,13 +14,15 @@ void main() {
 
   setUp(() {
     // Use a tall phone viewport so all fields/buttons are laid out on-screen.
-    final view = TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
     view.physicalSize = const Size(1080, 2400);
     view.devicePixelRatio = 1.0;
   });
 
   tearDown(() {
-    final view = TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
     view.resetPhysicalSize();
     view.resetDevicePixelRatio();
   });
@@ -37,8 +39,9 @@ void main() {
     expect(find.text('Create an account'), findsOneWidget);
   });
 
-  testWidgets('Login shows an email error when submitting empty form',
-      (tester) async {
+  testWidgets('Login shows an email error when submitting empty form', (
+    tester,
+  ) async {
     await tester.pumpWidget(wrap(const LoginScreen()));
     await tester.pump();
 
@@ -48,8 +51,9 @@ void main() {
     expect(find.text('Enter a valid email address.'), findsOneWidget);
   });
 
-  testWidgets('Navigating to Sign Up shows the Join La Mia screen',
-      (tester) async {
+  testWidgets('Navigating to Sign Up shows the Join La Mia screen', (
+    tester,
+  ) async {
     await tester.pumpWidget(wrap(const LoginScreen()));
     await tester.pump();
 

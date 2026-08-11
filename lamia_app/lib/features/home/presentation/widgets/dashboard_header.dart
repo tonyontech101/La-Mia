@@ -32,10 +32,7 @@ class DashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'LaMia',
-                style: AppTypography.brandWordmark(),
-              ),
+              Text('LaMia', style: AppTypography.brandWordmark()),
               const SizedBox(height: AppSpacing.xxs),
               // Amber accent underline — mirrors the auth hero_header motif.
               Container(
@@ -51,10 +48,10 @@ class DashboardHeader extends StatelessWidget {
                 'FILIPINO RECIPE & MEAL ASSISTANT',
                 style: AppTypography.caption(color: AppColors.textSecondary)
                     .copyWith(
-                  fontSize: 9,
-                  letterSpacing: 0.6,
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontSize: 9,
+                      letterSpacing: 0.6,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),

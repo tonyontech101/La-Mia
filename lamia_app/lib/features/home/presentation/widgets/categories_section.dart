@@ -26,9 +26,9 @@ class CategoriesSection extends StatelessWidget {
       children: [
         Text(
           'Categories',
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -101,13 +101,16 @@ class _CategoryItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             category.name.toUpperCase(),
-            style: AppTypography.caption(
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ).copyWith(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
+            style:
+                AppTypography.caption(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ).copyWith(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
           ),
         ],
       ),

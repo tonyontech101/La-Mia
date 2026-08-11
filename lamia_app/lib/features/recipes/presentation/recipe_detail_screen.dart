@@ -4,7 +4,34 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../data/recipe_model.dart';
+
+/// Parses a raw instruction string into a `(title, body)` pair.
+///
+/// If the instruction contains a `:` the first segment becomes the title and
+/// the rest becomes the body. Otherwise the title is `Step {index + 1}`.
+/// Pure top-level function so it can be unit-tested in isolation.
+(String title, String body) parseInstructionStep(
+  int index,
+  String rawInstruction,
+) {
+  if (rawInstruction.contains(':')) {
+    final parts = rawInstruction.split(':');
+    final title = parts.first.trim();
+    final body = parts.sublist(1).join(':').trim();
+    return (title, body);
+  }
+  return ('Step ${index + 1}', rawInstruction);
+}
+
+/// Generic chef's tips for any recipe that doesn't yet ship authoritative
+/// tips via its Firestore document. Remove once `recipe.chefsTips` ships.
+const List<String> _defaultChefsTips = [
+  'Use fresh, high-quality ingredients for optimal taste and aroma.',
+  'Adjust seasoning gradually to suit your personal preference.',
+  'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
+];
 
 /// Screen displaying complete details of a recipe, featuring:
 /// - Header image & back navigation
@@ -27,66 +54,11 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   int _activeTabIndex = 0; // 0: Ingredients, 1: Instructions, 2: Chef's Tips
   bool _isBookmarked = false;
-  bool _isLiked = false;
-  bool _isFollowing = false;
-
-  /// Helper to format instruction text into title and detailed body if possible.
-  (String title, String body) _parseInstructionStep(int index, String rawInstruction) {
-    if (rawInstruction.contains(':')) {
-      final parts = rawInstruction.split(':');
-      final title = parts.first.trim();
-      final body = parts.sublist(1).join(':').trim();
-      return (title, body);
-    }
-
-    // Default step titles based on index if not present in raw text
-    final defaultTitles = [
-      'Marinate the Chicken',
-      'Sear for Flavor',
-      'The Slow Simmer',
-      'Vinegar & Reduction',
-      'Garnish & Serve',
-      'Final Prep',
-    ];
-
-    final title = index < defaultTitles.length
-        ? defaultTitles[index]
-        : 'Step ${index + 1}';
-
-    return (title, rawInstruction);
-  }
-
-  /// Default Chef's Tips based on dish category or recipe specifics
-  List<String> _getChefsTips() {
-    final cat = widget.recipe.category.toLowerCase();
-    if (cat.contains('chicken') || cat.contains('adobo')) {
-      return [
-        'For maximum flavor, marinate the meat overnight in the refrigerator.',
-        'Never stir immediately after adding vinegar; let it come to a full boil uncovered first.',
-        'Sear the chicken skin side down first to render out natural fats for extra richness.',
-      ];
-    } else if (cat.contains('soup') || cat.contains('sinigang')) {
-      return [
-        'Add green leafy vegetables at the very end of cooking to maintain crunch and bright green color.',
-        'Use fresh tamarind or calamansi juice for an authentic, vibrant sour broth.',
-      ];
-    } else if (cat.contains('pork') || cat.contains('beef')) {
-      return [
-        'Simmer gently on low heat until fork-tender to keep the meat juicy.',
-        'Skim off excess surface fat during the initial boil for a cleaner flavor.',
-      ];
-    }
-    return [
-      'Use fresh, high-quality ingredients for optimal taste and aroma.',
-      'Adjust seasoning gradually to suit your personal preference.',
-      'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
     final recipe = widget.recipe;
-    final chefsTips = _getChefsTips();
+    final chefsTips = _defaultChefsTips;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,10 +72,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         ),
         title: Text(
           widget.screenTitle,
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.title(
+            color: AppColors.textPrimary,
+          ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -132,9 +103,19 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.restaurant, size: 54, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.restaurant,
+                              size: 54,
+                              color: AppColors.textSecondary,
+                            ),
                             SizedBox(height: 8),
-                            Text('Dish Image', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
+                            Text(
+                              'Dish Image',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -154,7 +135,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(AppRadii.card),
-                    border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.7),
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: AppColors.cardShadow,
@@ -182,27 +165,28 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
+                          // Ratings + likes live here once the social features
+                          // ship (ratingAvg / likeCount on the Firestore doc).
+                          // Until then, show a tasteful placeholder so the
+                          // screen doesn't lie about non-existent numbers.
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.star_rounded, size: 18, color: Colors.black),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    '4.9 ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: AppColors.textPrimary,
-                                    ),
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 18,
+                                    color: AppColors.textSecondary,
                                   ),
+                                  const SizedBox(width: 2),
                                   Text(
-                                    '(1.2k)',
+                                    'Ratings soon',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       color: AppColors.textSecondary,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                 ],
@@ -214,20 +198,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                   IconButton(
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
-                                    icon: Icon(
-                                      _isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                                    icon: const Icon(
+                                      Icons.thumb_up_alt_outlined,
                                       size: 14,
-                                      color: _isLiked ? AppColors.primary : AppColors.textSecondary,
+                                      color: AppColors.textSecondary,
                                     ),
+                                    tooltip: 'Like',
                                     onPressed: () {
-                                      setState(() {
-                                        _isLiked = !_isLiked;
-                                      });
+                                      AppSnackbar.show(
+                                        context,
+                                        message: 'Likes are coming soon!',
+                                      );
                                     },
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${_isLiked ? 357 : 356} likes',
+                                    'Like',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppColors.textSecondary,
@@ -243,9 +229,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
                       const SizedBox(height: 8),
 
-                      // Short Description
+                      // Short description — neutral intro built from the
+                      // recipe's own `category` + `region` fields. Don't
+                      // fabricate history claims ("early 19th century").
                       Text(
-                        'A popular ${recipe.category.toLowerCase()} recipe dated back in the early 19th century.',
+                        'A ${recipe.category.toLowerCase()} recipe'
+                        '${recipe.region.isEmpty || recipe.region == 'Unknown' ? '' : ' from ${recipe.region}'}'
+                        '.',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -267,8 +257,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
+                          // Author attribution will come from `recipe.authorName`
+                          // once the schema gains it; don't fabricate a name.
                           const Text(
-                            'username',
+                            'Recipe by La Mia',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -278,59 +270,90 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () {
-                              setState(() {
-                                _isFollowing = !_isFollowing;
-                              });
+                              AppSnackbar.show(
+                                context,
+                                message: 'Following chefs is coming soon!',
+                              );
                             },
-                            child: Text(
-                              _isFollowing ? '✓ following' : '+ follow',
+                            child: const Text(
+                              '+ follow',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: _isFollowing ? AppColors.success : AppColors.textPrimary,
+                                color: AppColors.textPrimary,
                               ),
                             ),
                           ),
                           const Spacer(),
-                          // Print, Share, Bookmark Actions
+                          // Print, Share, Bookmark Actions — these are
+                          // client-only stubs and don't write to Firestore.
                           IconButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Recipe sent to printer')),
+                              AppSnackbar.show(
+                                context,
+                                message: 'Recipe sent to printer',
                               );
                             },
-                            icon: const Icon(Icons.print_outlined, size: 20, color: AppColors.textPrimary),
+                            tooltip: 'Print recipe',
+                            icon: const Icon(
+                              Icons.print_outlined,
+                              size: 20,
+                              color: AppColors.textPrimary,
+                            ),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                           IconButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Recipe link copied to clipboard')),
+                              AppSnackbar.show(
+                                context,
+                                message: 'Recipe link copied to clipboard',
                               );
                             },
-                            icon: const Icon(Icons.share_outlined, size: 20, color: AppColors.textPrimary),
+                            tooltip: 'Share recipe',
+                            icon: const Icon(
+                              Icons.share_outlined,
+                              size: 20,
+                              color: AppColors.textPrimary,
+                            ),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                           IconButton(
                             onPressed: () {
                               setState(() {
                                 _isBookmarked = !_isBookmarked;
                               });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(_isBookmarked ? 'Recipe saved' : 'Recipe removed'),
-                                ),
+                              AppSnackbar.show(
+                                context,
+                                message: _isBookmarked
+                                    ? 'Recipe saved'
+                                    : 'Recipe removed',
                               );
                             },
+                            tooltip: _isBookmarked
+                                ? 'Remove bookmark'
+                                : 'Save recipe',
                             icon: Icon(
-                              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                              _isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
                               size: 20,
-                              color: _isBookmarked ? AppColors.primary : AppColors.textPrimary,
+                              color: _isBookmarked
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
                             ),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                           ),
                         ],
                       ),
@@ -344,7 +367,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             child: _buildMetricBox(
                               icon: Icons.access_time,
                               label: 'Prep',
-                              value: recipe.prepTime.replaceAll(RegExp(r'mins?'), 'm').trim(),
+                              value: recipe.prepTime
+                                  .replaceAll(RegExp(r'mins?'), 'm')
+                                  .trim(),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -352,7 +377,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             child: _buildMetricBox(
                               icon: Icons.soup_kitchen_outlined,
                               label: 'Cook',
-                              value: recipe.cookTime.replaceAll(RegExp(r'mins?'), 'm').trim(),
+                              value: recipe.cookTime
+                                  .replaceAll(RegExp(r'mins?'), 'm')
+                                  .trim(),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -378,7 +405,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.8),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -387,7 +416,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       decoration: const BoxDecoration(
                         color: Color(0xFFEBE6E0),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(19)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(19),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -508,7 +539,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         return Column(
           children: recipe.instructions.asMap().entries.map((entry) {
             final idx = entry.key;
-            final (stepTitle, stepBody) = _parseInstructionStep(idx, entry.value);
+            final (stepTitle, stepBody) = parseInstructionStep(
+              idx,
+              entry.value,
+            );
 
             return Container(
               margin: const EdgeInsets.only(bottom: 14),
@@ -580,7 +614,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text(
+                      '• ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         tip,
