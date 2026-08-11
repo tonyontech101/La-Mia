@@ -7,6 +7,8 @@ import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
+import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import 'widgets/categories_section.dart';
 import 'widgets/dashboard_header.dart';
@@ -110,9 +112,22 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                   // 3. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
                   HeroActionCards(
-                    onCookByIngredientsTap: () =>
-                        widget.onNavigateToTab?.call(1),
-                    onAnoPongUlamTap: () => widget.onNavigateToTab?.call(2),
+                    onCookByIngredientsTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CookByIngredientsScreen(),
+                        ),
+                      );
+                    },
+                    onAnoPongUlamTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AnoPongUlamScreen(),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 28),
