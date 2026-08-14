@@ -12,6 +12,9 @@ class UserModel {
     this.photoUrl,
     this.recipeCount = 0,
     this.totalLikesReceived = 0,
+    this.followerCount = 0,
+    this.followingCount = 0,
+    this.savedCount = 0,
     this.role = 'user',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -22,6 +25,9 @@ class UserModel {
   final String? photoUrl;
   final int recipeCount;
   final int totalLikesReceived;
+  final int followerCount;
+  final int followingCount;
+  final int savedCount;
   final String role; // "user" | "trusted" | "admin"
   final DateTime createdAt;
 
@@ -35,6 +41,9 @@ class UserModel {
       photoUrl: data['photoUrl'] as String?,
       recipeCount: data['recipeCount'] as int? ?? 0,
       totalLikesReceived: data['totalLikesReceived'] as int? ?? 0,
+      followerCount: data['followerCount'] as int? ?? 0,
+      followingCount: data['followingCount'] as int? ?? 0,
+      savedCount: data['savedCount'] as int? ?? 0,
       role: data['role'] as String? ?? 'user',
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
@@ -50,8 +59,12 @@ class UserModel {
       'photoUrl': photoUrl,
       'recipeCount': recipeCount,
       'totalLikesReceived': totalLikesReceived,
+      'followerCount': followerCount,
+      'followingCount': followingCount,
+      'savedCount': savedCount,
       'role': role,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }
+

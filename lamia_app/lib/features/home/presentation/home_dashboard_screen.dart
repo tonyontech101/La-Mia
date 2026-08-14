@@ -10,6 +10,7 @@ import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
 import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
+import '../../search/presentation/universal_search_screen.dart';
 import 'widgets/categories_section.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/featured_recipes_section.dart';
@@ -103,8 +104,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   // 2. Search Bar Widget
                   SearchBarWidget(
                     onTap: () {
-                      // Navigate to search / cook tab
-                      widget.onNavigateToTab?.call(1);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const UniversalSearchScreen(),
+                        ),
+                      );
                     },
                   ),
 

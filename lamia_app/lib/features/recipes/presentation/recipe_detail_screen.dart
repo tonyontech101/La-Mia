@@ -1,10 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../profile/presentation/profile_screen.dart';
+import '../../social/data/favorites_repository.dart';
+import '../../social/data/follow_repository.dart';
+import '../../social/data/like_repository.dart';
 import '../data/recipe_model.dart';
 
 /// Parses a raw instruction string into a `(title, body)` pair.
@@ -53,7 +58,136 @@ class RecipeDetailScreen extends StatefulWidget {
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   int _activeTabIndex = 0; // 0: Ingredients, 1: Instructions, 2: Chef's Tips
+
+  // ── Social state ────────────────────────────────────────────────────────
+  final LikeRepository _likeRepo = LikeRepository();
+  final FavoritesRepository _favoritesRepo = FavoritesRepository();
+  final FollowRepository _followRepo = FollowRepository();
+
+  bool _isLiked = false;
   bool _isBookmarked = false;
+  bool _isFollowing = false;
+  bool _socialLoading = true;
+  int _localLikeCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _localLikeCount = widget.recipe.likeCount;
+    _loadSocialState();
+  }
+
+  Future<void> _loadSocialState() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _socialLoading = false);
+      return;
+    }
+    final recipeId = widget.recipe.id;
+    if (recipeId == null) {
+      if (mounted) setState(() => _socialLoading = false);
+      return;
+    }
+    try {
+      final results = await Future.wait([
+        _likeRepo.isLiked(recipeId: recipeId, userId: user.uid),
+        _favoritesRepo.isSaved(recipeId: recipeId, userId: user.uid),
+        if (widget.recipe.authorId != null && !widget.recipe.isSystemRecipe)
+          _followRepo.isFollowing(
+            currentUid: user.uid,
+            targetUid: widget.recipe.authorId!,
+          )
+        else
+          Future.value(false),
+      ]);
+      if (mounted) {
+        setState(() {
+          _isLiked = results[0];
+          _isBookmarked = results[1];
+          _isFollowing = results[2];
+          _socialLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _socialLoading = false);
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      AppSnackbar.show(context, message: 'Sign in to like recipes');
+      return;
+    }
+    final recipeId = widget.recipe.id;
+    if (recipeId == null) return;
+    final newState = await _likeRepo.toggleLike(
+      recipeId: recipeId,
+      userId: user.uid,
+      recipeAuthorId: widget.recipe.authorId,
+    );
+    if (mounted) {
+      setState(() {
+        _isLiked = newState;
+        _localLikeCount += newState ? 1 : -1;
+      });
+    }
+  }
+
+  Future<void> _toggleBookmark() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      AppSnackbar.show(context, message: 'Sign in to save recipes');
+      return;
+    }
+    final recipeId = widget.recipe.id;
+    if (recipeId == null) return;
+    final newState = await _favoritesRepo.toggleSave(
+      recipeId: recipeId,
+      userId: user.uid,
+    );
+    if (mounted) {
+      setState(() => _isBookmarked = newState);
+      AppSnackbar.show(
+        context,
+        message: newState ? 'Recipe saved' : 'Recipe removed from saved',
+      );
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      AppSnackbar.show(context, message: 'Sign in to follow chefs');
+      return;
+    }
+    final authorId = widget.recipe.authorId;
+    if (authorId == null || widget.recipe.isSystemRecipe) return;
+    final newState = await _followRepo.toggleFollow(
+      currentUid: user.uid,
+      targetUid: authorId,
+    );
+    if (mounted) {
+      setState(() => _isFollowing = newState);
+      AppSnackbar.show(
+        context,
+        message: newState
+            ? 'Following ${widget.recipe.authorName}'
+            : 'Unfollowed ${widget.recipe.authorName}',
+      );
+    }
+  }
+
+  void _navigateToAuthorProfile() {
+    final authorId = widget.recipe.authorId;
+    if (authorId == null || widget.recipe.isSystemRecipe) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(targetUserId: authorId),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +283,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Row: Dish Title & Ratings/Likes
+                      // Header Row: Dish Title & Like Button
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -165,62 +299,64 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Ratings + likes live here once the social features
-                          // ship (ratingAvg / likeCount on the Firestore doc).
-                          // Until then, show a tasteful placeholder so the
-                          // screen doesn't lie about non-existent numbers.
+                          // Like button + count
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    size: 18,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Ratings soon',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontStyle: FontStyle.italic,
+                              if (recipe.ratingAvg > 0)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      size: 18,
+                                      color: AppColors.accent,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      recipe.ratingAvg.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               const SizedBox(height: 4),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: const Icon(
-                                      Icons.thumb_up_alt_outlined,
-                                      size: 14,
-                                      color: AppColors.textSecondary,
+                              GestureDetector(
+                                onTap: _socialLoading ? null : _toggleLike,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: Icon(
+                                        _isLiked
+                                            ? Icons.favorite_rounded
+                                            : Icons.favorite_border_rounded,
+                                        key: ValueKey(_isLiked),
+                                        size: 20,
+                                        color: _isLiked
+                                            ? AppColors.error
+                                            : AppColors.textSecondary,
+                                      ),
                                     ),
-                                    tooltip: 'Like',
-                                    onPressed: () {
-                                      AppSnackbar.show(
-                                        context,
-                                        message: 'Likes are coming soon!',
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Like',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w500,
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _localLikeCount > 0
+                                          ? '$_localLikeCount'
+                                          : 'Like',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _isLiked
+                                            ? AppColors.error
+                                            : AppColors.textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -249,55 +385,142 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.border.withValues(
-                                      alpha: 0.6,
+                            child: GestureDetector(
+                              onTap: recipe.isSystemRecipe
+                                  ? null
+                                  : _navigateToAuthorProfile,
+                              child: Row(
+                                children: [
+                                  // Author avatar
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: recipe.isSystemRecipe
+                                          ? AppColors.primary.withValues(alpha: 0.12)
+                                          : AppColors.border.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
-                                    borderRadius: BorderRadius.circular(6),
+                                    child: recipe.isSystemRecipe
+                                        ? const Icon(
+                                            Icons.restaurant_rounded,
+                                            size: 18,
+                                            color: AppColors.primary,
+                                          )
+                                        : recipe.authorPhotoUrl != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: CachedNetworkImage(
+                                                  imageUrl: recipe.authorPhotoUrl!,
+                                                  fit: BoxFit.cover,
+                                                  errorWidget: (_, _, _) => Center(
+                                                    child: Text(
+                                                      recipe.authorName.isNotEmpty
+                                                          ? recipe.authorName[0].toUpperCase()
+                                                          : 'U',
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.w700,
+                                                        color: AppColors.primary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                            : Center(
+                                                child: Text(
+                                                  recipe.authorName.isNotEmpty
+                                                      ? recipe.authorName[0].toUpperCase()
+                                                      : 'U',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Flexible(
-                                  child: Text(
-                                    'Recipe by La Mia',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                'Recipe by ${recipe.authorName}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (recipe.isSystemRecipe) ...[
+                                              const SizedBox(width: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'Original',
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                GestureDetector(
-                                  onTap: () {
-                                    AppSnackbar.show(
-                                      context,
-                                      message:
-                                          'Following chefs is coming soon!',
-                                    );
-                                  },
-                                  child: const Text(
-                                    '+ follow',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                  // Follow button — only for non-system recipes
+                                  if (!recipe.isSystemRecipe &&
+                                      recipe.authorId != null &&
+                                      recipe.authorId !=
+                                          FirebaseAuth.instance.currentUser?.uid)
+                                    GestureDetector(
+                                      onTap: _socialLoading ? null : _toggleFollow,
+                                      child: Container(
+                                        margin: const EdgeInsets.only(left: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _isFollowing
+                                              ? AppColors.primary.withValues(alpha: 0.12)
+                                              : AppColors.primary,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          _isFollowing ? 'Following' : '+ Follow',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: _isFollowing
+                                                ? AppColors.primary
+                                                : AppColors.onPrimary,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
-                          // Print, Share, Bookmark Actions — these are
-                          // client-only stubs and don't write to Firestore.
+                          // Print, Share, Bookmark Actions
                           IconButton(
                             onPressed: () {
                               AppSnackbar.show(
@@ -337,28 +560,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _isBookmarked = !_isBookmarked;
-                              });
-                              AppSnackbar.show(
-                                context,
-                                message: _isBookmarked
-                                    ? 'Recipe saved'
-                                    : 'Recipe removed',
-                              );
-                            },
+                            onPressed: _socialLoading ? null : _toggleBookmark,
                             tooltip: _isBookmarked
                                 ? 'Remove bookmark'
                                 : 'Save recipe',
-                            icon: Icon(
-                              _isBookmarked
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              size: 20,
-                              color: _isBookmarked
-                                  ? AppColors.primary
-                                  : AppColors.textPrimary,
+                            icon: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(
+                                _isBookmarked
+                                    ? Icons.bookmark_rounded
+                                    : Icons.bookmark_border_rounded,
+                                key: ValueKey(_isBookmarked),
+                                size: 20,
+                                color: _isBookmarked
+                                    ? AppColors.primary
+                                    : AppColors.textPrimary,
+                              ),
                             ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
