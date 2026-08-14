@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -49,10 +50,20 @@ class ChefOfMonthCard extends StatelessWidget {
                 AspectRatio(
                   aspectRatio: 16 / 9,
                   child: imageUrl != null && imageUrl!.isNotEmpty
-                      ? Image.network(
-                          imageUrl!,
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+                          placeholder: (_, _) => Container(
+                            color: AppColors.surfaceAlt,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, _, _) => _buildImagePlaceholder(),
                         )
                       : _buildImagePlaceholder(),
                 ),

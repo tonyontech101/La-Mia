@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -58,10 +59,20 @@ class FeedRecipeCard extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 16 / 10,
                 child: recipe.coverPhotoUrl.isNotEmpty
-                    ? Image.network(
-                        recipe.coverPhotoUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: recipe.coverPhotoUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _buildPhotoPlaceholder(),
+                        placeholder: (_, _) => Container(
+                          color: AppColors.surfaceAlt,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, _, _) => _buildPhotoPlaceholder(),
                       )
                     : _buildPhotoPlaceholder(),
               ),
