@@ -22,12 +22,10 @@ class FeedRecipeCard extends StatelessWidget {
   const FeedRecipeCard({
     super.key,
     required this.recipe,
-    required this.dummyUsername,
     this.onTap,
   });
 
   final RecipeModel recipe;
-  final String dummyUsername;
   final VoidCallback? onTap;
 
   @override
@@ -87,35 +85,69 @@ class FeedRecipeCard extends StatelessWidget {
                   // Username row + tag pills
                   Row(
                     children: [
-                      // Small avatar circle
+                      // Author avatar circle
                       Container(
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primary.withValues(alpha: 0.12),
+                          color: recipe.isSystemRecipe
+                              ? AppColors.primary.withValues(alpha: 0.12)
+                              : AppColors.primary.withValues(alpha: 0.12),
                         ),
                         child: Center(
-                          child: Text(
-                            dummyUsername.isNotEmpty
-                                ? dummyUsername[0].toUpperCase()
-                                : 'U',
+                          child: recipe.isSystemRecipe
+                              ? const Icon(
+                                  Icons.restaurant_rounded,
+                                  size: 13,
+                                  color: AppColors.primary,
+                                )
+                              : Text(
+                                  recipe.authorName.isNotEmpty
+                                      ? recipe.authorName[0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Author name
+                      Flexible(
+                        child: Text(
+                          '@ ${recipe.authorName}',
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontWeight: FontWeight.w500, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // System recipe badge
+                      if (recipe.isSystemRecipe) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Original',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 8,
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      // @ username
-                      Text(
-                        '@ $dummyUsername',
-                        style: AppTypography.caption(
-                          color: AppColors.textSecondary,
-                        ).copyWith(fontWeight: FontWeight.w500, fontSize: 12),
-                      ),
+                      ],
                       const Spacer(),
                       // Tag pills: cook time + category
                       _TagPill(

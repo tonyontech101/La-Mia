@@ -40,7 +40,7 @@ class SearchBarWidget extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Search for different foods...',
+                'Search recipes or chefs...',
                 style: AppTypography.body(color: AppColors.textSecondary),
               ),
             ),

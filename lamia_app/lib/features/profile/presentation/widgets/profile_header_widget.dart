@@ -23,7 +23,10 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.likesCount = '1.2k',
     this.followersCount = '950',
     this.isGuest = false,
+    this.isOwnProfile = true,
+    this.isFollowing = false,
     this.onEditProfileTap,
+    this.onFollowTap,
   });
 
   final String displayName;
@@ -34,13 +37,16 @@ class ProfileHeaderWidget extends StatelessWidget {
   final String likesCount;
   final String followersCount;
   final bool isGuest;
+  final bool isOwnProfile;
+  final bool isFollowing;
   final VoidCallback? onEditProfileTap;
+  final VoidCallback? onFollowTap;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. Avatar with edit / status badge
+        // 1. Avatar with edit badge (if own profile)
         Stack(
           children: [
             Container(
@@ -72,34 +78,35 @@ class ProfileHeaderWidget extends StatelessWidget {
                     : _buildAvatarFallback(),
               ),
             ),
-            Positioned(
-              right: 2,
-              bottom: 2,
-              child: GestureDetector(
-                onTap: onEditProfileTap,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.surface, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: AppColors.cardShadow,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.edit_rounded,
-                    color: AppColors.onPrimary,
-                    size: 14,
+            if (isOwnProfile && onEditProfileTap != null)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: GestureDetector(
+                  onTap: onEditProfileTap,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.surface, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.cardShadow,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.onPrimary,
+                      size: 14,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
 
@@ -158,6 +165,27 @@ class ProfileHeaderWidget extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+
+        // 3b. Follow Button for Other User Profiles
+        if (!isOwnProfile && onFollowTap != null) ...[
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: onFollowTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  isFollowing ? AppColors.surfaceAlt : AppColors.primary,
+              foregroundColor:
+                  isFollowing ? AppColors.textPrimary : AppColors.onPrimary,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              elevation: isFollowing ? 0 : 2,
+            ),
+            child: Text(
+              isFollowing ? 'Following' : '+ Follow',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
 
         const SizedBox(height: 18),
 
