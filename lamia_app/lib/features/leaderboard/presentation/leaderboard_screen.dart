@@ -414,6 +414,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 }
 
 /// Tab switcher for "Top Contributors" / "Most Cooked".
+///
+/// The white active pill glides smoothly between the two tabs.
 class _LeaderboardTabSwitcher extends StatelessWidget {
   const _LeaderboardTabSwitcher({
     required this.activeTab,
@@ -432,73 +434,45 @@ class _LeaderboardTabSwitcher extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(3),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabPill(
-              label: 'Top Contributors',
-              isActive: activeTab == 0,
-              onTap: () => onTabChanged(0),
-            ),
-          ),
-          Expanded(
-            child: _TabPill(
-              label: 'Most Cooked',
-              isActive: activeTab == 1,
-              onTap: () => onTabChanged(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: isActive
-              ? const [
-                  BoxShadow(
-                    color: AppColors.cardShadow,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style:
-                AppTypography.caption(
-                  color: isActive
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                ).copyWith(
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 12,
-                ),
+      child: SlidingTabBar(
+        index: activeTab,
+        itemCount: 2,
+        highlight: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
         ),
+        onChanged: onTabChanged,
+        builder: (context, i, isActive) {
+          const labels = ['Top Contributors', 'Most Cooked'];
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                style:
+                    AppTypography.caption(
+                      color: isActive
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ).copyWith(
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                child: Text(labels[i]),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/constants/asset_constants.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 
 /// Hero Action Cards matching the two main cards in image.png wireframe:
 /// 1. "Cook by Ingredients"
@@ -76,22 +77,24 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 150,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.colors.first.withValues(alpha: 0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: ClipRRect(
+    return PressableScale(
+      pressedScale: 0.97,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 150,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.colors.first.withValues(alpha: 0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadii.card),
           child: Stack(
             children: [
@@ -183,6 +186,7 @@ class _HeroCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

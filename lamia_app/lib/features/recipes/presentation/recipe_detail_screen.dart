@@ -639,7 +639,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Folder Tab Bar
+                    // Folder Tab Bar — the white active tab glides smoothly
+                    // between Ingredients / Instructions / Chef's Tips.
                     Container(
                       padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       decoration: const BoxDecoration(
@@ -648,55 +649,62 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           top: Radius.circular(19),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          _buildTabButton(index: 0, title: 'Ingredients'),
-                          _buildTabButton(index: 1, title: 'Instructions'),
-                          _buildTabButton(index: 2, title: 'Chef\'s Tips'),
-                        ],
+                      child: SlidingTabBar(
+                        index: _activeTabIndex,
+                        itemCount: 3,
+                        highlight: Container(
+                          decoration: const BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                          ),
+                        ),
+                        onChanged: (i) => setState(() => _activeTabIndex = i),
+                        builder: (context, i, isActive) {
+                          const titles = [
+                            'Ingredients',
+                            'Instructions',
+                            'Chef\'s Tips',
+                          ];
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 240),
+                                curve: Curves.easeOutCubic,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isActive
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: isActive
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                ),
+                                child: Text(titles[i]),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
 
-                    // Tab Body Content
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: _buildActiveTabContent(recipe, chefsTips),
+                    // Tab Body Content — slides horizontally in the direction
+                    // of the tapped tab between Ingredients / Instructions /
+                    // Chef's Tips.
+                    SlideTabSwitcher(
+                      index: _activeTabIndex,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: _buildActiveTabContent(recipe, chefsTips),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton({required int index, required String title}) {
-    final isActive = _activeTabIndex == index;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _activeTabIndex = index;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.surface : Colors.transparent,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-              color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
-            ),
-          ),
         ),
       ),
     );

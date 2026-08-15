@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/fade_in_view.dart';
 import '../../../../core/widgets/hero_header.dart';
 
 /// Shared layout for the auth screens: a full-bleed hero photo with a floating
@@ -37,9 +38,16 @@ class AuthScaffold extends StatelessWidget {
           child: Stack(
             children: [
               HeroHeader(height: heroHeight),
-              Padding(
-                padding: EdgeInsets.only(top: cardTop),
-                child: Container(
+              // The floating card rises and fades in just after the hero so
+              // the auth screens feel alive on entry.
+              FadeInView(
+                delay: const Duration(milliseconds: 60),
+                duration: const Duration(milliseconds: 480),
+                offset: const Offset(0, 26),
+                curve: Curves.easeOutCubic,
+                child: Padding(
+                  padding: EdgeInsets.only(top: cardTop),
+                  child: Container(
                   width: double.infinity,
                   constraints: BoxConstraints(minHeight: cardMinHeight),
                   decoration: const BoxDecoration(
@@ -74,6 +82,7 @@ class AuthScaffold extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
                 ),
               ),
             ],

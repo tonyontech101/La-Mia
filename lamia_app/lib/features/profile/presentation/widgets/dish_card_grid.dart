@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/fade_in_view.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
 
 /// 2-column grid of Dish Cards matching the wireframe layout.
@@ -70,9 +72,15 @@ class DishCardGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         final recipe = recipes[index];
-        return _DishCard(
-          recipe: recipe,
-          onTap: () => onRecipeTap?.call(recipe),
+        return FadeInView(
+          key: ValueKey<String>('dish-${recipe.name}'),
+          delay: Duration(milliseconds: (index % 4) * 70),
+          duration: const Duration(milliseconds: 420),
+          offset: const Offset(0, 16),
+          child: _DishCard(
+            recipe: recipe,
+            onTap: () => onRecipeTap?.call(recipe),
+          ),
         );
       },
     );
@@ -87,22 +95,24 @@ class _DishCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          border: Border.all(color: AppColors.border, width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
+    return PressableScale(
+      pressedScale: 0.96,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: AppColors.border, width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 6,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -164,6 +174,7 @@ class _DishCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 
 /// Search input bar matching the wireframe:
 /// [ Search for different foods... ]
@@ -43,20 +44,37 @@ class SearchBarWidget extends StatelessWidget {
                 'Search recipes or chefs...',
                 style: AppTypography.body(color: AppColors.textSecondary),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                color: AppColors.textSecondary,
+                size: 22,
               ),
-              child: const Icon(
-                Icons.tune_rounded,
-                color: AppColors.primary,
-                size: 18,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Search for different foods...',
+                  style: AppTypography.body(color: AppColors.textSecondary),
+                ),
               ),
-            ),
-          ],
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

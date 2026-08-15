@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
 
 /// Popular Choices section matching image.png wireframe:
@@ -56,11 +57,13 @@ class _PopularChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
+    return PressableScale(
+      pressedScale: 0.98,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.card),
           border: Border.all(color: AppColors.border, width: 1),
@@ -153,7 +156,10 @@ class _PopularChoiceCard extends StatelessWidget {
                           'Prep ${recipe.prepTime} • Cook ${recipe.cookTime}',
                           style: AppTypography.caption(
                             color: AppColors.textSecondary,
-                          ).copyWith(fontSize: 10, fontWeight: FontWeight.w500),
+                          ).copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -183,6 +189,7 @@ class _PopularChoiceCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -5,6 +5,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/widgets/slide_tab_switcher.dart';
+import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/auth_service.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
@@ -406,18 +408,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       border: Border.all(color: AppColors.border),
                     ),
                     padding: const EdgeInsets.all(4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _TabButton(
+                    // The white active pill glides smoothly between
+                    // Posts / Likes / Saved Recipes.
+                    child: SlidingTabBar(
+                      index: _selectedTabIndex,
+                      itemCount: 3,
+                      highlight: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.cardShadow,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      onChanged: (i) => setState(() => _selectedTabIndex = i),
+                      builder: (context, i, isSelected) {
+                        const tabs = [
+                          (
                             label: 'Posts',
                             icon: Icons.mark_email_unread_outlined,
                             isSelected: _selectedTabIndex == 0,
                             onTap: () => _onTabSelected(0),
                           ),
-                        ),
-                        Expanded(
-                          child: _TabButton(
+                          (
                             label: 'Likes',
                             icon: Icons.favorite_border_rounded,
                             isSelected: _selectedTabIndex == 1,
@@ -462,69 +480,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
+/// An [Icon] whose color fades smoothly to [color] whenever it changes.
+class AnimatedIconColor extends StatelessWidget {
+  const AnimatedIconColor({
+    super.key,
     required this.icon,
-    required this.isSelected,
-    required this.onTap,
+    required this.color,
+    this.size = 16,
   });
 
-  final String label;
   final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: isSelected
-              ? [
-                  const BoxShadow(
-                    color: AppColors.cardShadow,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                label,
-                style:
-                    AppTypography.caption(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ).copyWith(
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      fontSize: 11,
-                    ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: color),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedColor, _) {
+        return Icon(icon, size: size, color: animatedColor);
+      },
     );
   }
 }

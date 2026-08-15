@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/fade_in_view.dart';
+import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -175,21 +177,47 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                   ),
                 ),
 
-                // Scrollable feed
+                // Scrollable feed — slides in the direction of the tapped tab
+                // between Following / For You, and gently crossfades between
+                // loading/error/empty/ready states.
                 Expanded(
-                  child: _isLoading
-                      ? _buildLoadingSkeleton()
-                      : _hasError
-                      ? _buildErrorState()
-                      : tabRecipes.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          color: AppColors.primary,
-                          onRefresh: _loadRecipes,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.screenH,
-                              vertical: 8,
+                  child: SlideTabSwitcher(
+                    index: _activeTab,
+                    transitionKey:
+                        '$_isLoading-$_hasError-${tabRecipes.length}',
+                    child: _isLoading
+                        ? _buildLoadingSkeleton()
+                        : _hasError
+                        ? _buildErrorState()
+                        : tabRecipes.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            color: AppColors.primary,
+                            onRefresh: _loadRecipes,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.screenH,
+                                vertical: 8,
+                              ),
+                              itemCount: tabRecipes.length,
+                              itemBuilder: (context, index) {
+                                final recipe = tabRecipes[index];
+                                return FadeInView(
+                                  key: ValueKey<String>(
+                                    'feed-${recipe.name}',
+                                  ),
+                                  delay: Duration(
+                                    milliseconds: (index % 6) * 55,
+                                  ),
+                                  duration: const Duration(milliseconds: 400),
+                                  offset: const Offset(0, 20),
+                                  child: FeedRecipeCard(
+                                    recipe: recipe,
+                                    dummyUsername: _getDummyUsername(index),
+                                    onTap: () => _onRecipeTap(recipe),
+                                  ),
+                                );
+                              },
                             ),
                             itemCount: tabRecipes.length,
                             itemBuilder: (context, index) {
@@ -200,7 +228,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                               );
                             },
                           ),
-                        ),
+                  ),
                 ),
               ],
             ),
@@ -310,28 +338,114 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 
 /// "Following" / "For You" tab switcher matching the wireframe.
 ///
-/// Centered text with an underline on the active tab.
-class _FeedTabSwitcher extends StatelessWidget {
+/// Centered text with an underline that glides smoothly between the two tabs.
+class _FeedTabSwitcher extends StatefulWidget {
   const _FeedTabSwitcher({required this.activeTab, required this.onTabChanged});
 
   final int activeTab;
   final ValueChanged<int> onTabChanged;
 
   @override
+  State<_FeedTabSwitcher> createState() => _FeedTabSwitcherState();
+}
+
+class _FeedTabSwitcherState extends State<_FeedTabSwitcher> {
+  final GlobalKey _barKey = GlobalKey();
+  final GlobalKey _followingKey = GlobalKey();
+  final GlobalKey _forYouKey = GlobalKey();
+
+  /// Target geometry (left + width, relative to the switcher) for the sliding
+  /// underline. Null until the first frame has laid the tabs out.
+  Rect? _underline;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleMeasure(widget.activeTab);
+  }
+
+  @override
+  void didUpdateWidget(_FeedTabSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activeTab != widget.activeTab) {
+      _scheduleMeasure(widget.activeTab);
+    }
+  }
+
+  void _scheduleMeasure(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure(index));
+  }
+
+  void _measure(int index) {
+    if (!mounted) return;
+    final barBox = _barKey.currentContext?.findRenderObject() as RenderBox?;
+    final tabKey = index == 0 ? _followingKey : _forYouKey;
+    final tabBox = tabKey.currentContext?.findRenderObject() as RenderBox?;
+    if (barBox == null || tabBox == null || !barBox.hasSize) return;
+
+    final tabLeft = tabBox.localToGlobal(Offset.zero).dx;
+    final barLeft = barBox.localToGlobal(Offset.zero).dx;
+    setState(() {
+      _underline = Rect.fromLTWH(
+        tabLeft - barLeft,
+        0,
+        tabBox.size.width,
+        2,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final underline = _underline;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    final underlineBar = Container(
+      height: 2,
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary,
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+
+    return Stack(
+      key: _barKey,
+      alignment: Alignment.center,
       children: [
-        _TabItem(
-          label: 'Following',
-          isActive: activeTab == 0,
-          onTap: () => onTabChanged(0),
-        ),
-        const SizedBox(width: 28),
-        _TabItem(
-          label: 'For You',
-          isActive: activeTab == 1,
-          onTap: () => onTabChanged(1),
+        if (underline != null)
+          reduceMotion
+              ? Positioned(
+                  left: underline.left,
+                  width: underline.width,
+                  bottom: 0,
+                  child: underlineBar,
+                )
+              : AnimatedPositioned(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  left: underline.left,
+                  width: underline.width,
+                  bottom: 0,
+                  child: underlineBar,
+                ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _TabItem(
+              key: _followingKey,
+              label: 'Following',
+              isActive: widget.activeTab == 0,
+              onTap: () => widget.onTabChanged(0),
+            ),
+            const SizedBox(width: 28),
+            _TabItem(
+              key: _forYouKey,
+              label: 'For You',
+              isActive: widget.activeTab == 1,
+              onTap: () => widget.onTabChanged(1),
+            ),
+          ],
         ),
       ],
     );
@@ -340,6 +454,7 @@ class _FeedTabSwitcher extends StatelessWidget {
 
 class _TabItem extends StatelessWidget {
   const _TabItem({
+    super.key,
     required this.label,
     required this.isActive,
     required this.onTap,
@@ -353,28 +468,21 @@ class _TabItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.only(bottom: 6),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? AppColors.textPrimary : Colors.transparent,
-              width: 2,
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        style:
+            AppTypography.bodyStrong(
+              color: isActive
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
+            ).copyWith(
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 15,
             ),
-          ),
-        ),
-        child: Text(
-          label,
-          style:
-              AppTypography.bodyStrong(
-                color: isActive
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
-              ).copyWith(
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 15,
-              ),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(label),
         ),
       ),
     );

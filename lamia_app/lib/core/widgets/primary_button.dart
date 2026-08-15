@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_typography.dart';
+import 'pressable_scale.dart';
 
 /// Full-width filled primary action button.
 ///
@@ -31,63 +32,87 @@ class PrimaryButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: _height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.button),
-          boxShadow: interactive
-              ? const [
-                  BoxShadow(
-                    color: Color(0x47C4462B), // primary @ ~0.28
-                    offset: Offset(0, 4),
-                    blurRadius: 12,
+      child: PressableScale(
+        pressedScale: 0.975,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.button),
+            boxShadow: interactive
+                ? const [
+                    BoxShadow(
+                      color: Color(0x47C4462B), // primary @ ~0.28
+                      offset: Offset(0, 4),
+                      blurRadius: 12,
+                    ),
+                  ]
+                : null,
+          ),
+          child: FilledButton(
+            onPressed: isLoading ? null : onPressed,
+            style:
+                FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: isLoading
+                      ? AppColors.primary
+                      : AppColors.primaryDisabled,
+                  foregroundColor: AppColors.onPrimary,
+                  disabledForegroundColor: AppColors.textSecondary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.button),
                   ),
-                ]
-              : null,
-        ),
-        child: FilledButton(
-          onPressed: isLoading ? null : onPressed,
-          style:
-              FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                disabledBackgroundColor: isLoading
-                    ? AppColors.primary
-                    : AppColors.primaryDisabled,
-                foregroundColor: AppColors.onPrimary,
-                disabledForegroundColor: AppColors.textSecondary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.button),
+                ).copyWith(
+                  overlayColor: const WidgetStatePropertyAll(
+                    Color(0x1AFFFFFF),
+                  ),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (isLoading) return AppColors.primary;
+                    if (states.contains(WidgetState.pressed)) {
+                      return AppColors.primaryDark;
+                    }
+                    return AppColors.primary;
+                  }),
                 ),
-              ).copyWith(
-                overlayColor: const WidgetStatePropertyAll(Color(0x1AFFFFFF)),
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (isLoading) return AppColors.primary;
-                  if (states.contains(WidgetState.pressed)) {
-                    return AppColors.primaryDark;
-                  }
-                  return AppColors.primary;
-                }),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(
+                    animation,
+                  ),
+                  child: child,
+                ),
               ),
-          child: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: AppColors.onPrimary,
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  child: Text(
-                    label,
-                    style: AppTypography.button(color: labelColor),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              // Key by state so the label/spinner cross-fade without
+              // re-animating on every cooldown tick text change.
+              child: KeyedSubtree(
+                key: ValueKey<bool>(isLoading),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.onPrimary,
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Text(
+                          label,
+                          style: AppTypography.button(color: labelColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+              ),
+            ),
+          ),
         ),
       ),
     );

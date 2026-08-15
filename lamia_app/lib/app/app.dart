@@ -2,7 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'theme/app_colors.dart';
+import 'theme/app_spacing.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_typography.dart';
+import '../core/widgets/fade_in_view.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/email_verification_screen.dart';
 import '../features/home/presentation/home_placeholder_screen.dart';
@@ -58,24 +62,20 @@ class _LaMiaAppState extends State<LaMiaApp> {
         home: FutureBuilder<void>(
           future: _initialReload,
           builder: (context, reloadSnapshot) {
-            // While the initial reload is in flight, show a loading
-            // indicator so we don't render with a stale emailVerified.
+            // While the initial reload is in flight, show a branded splash so
+            // we don't render with a stale emailVerified.
             if (reloadSnapshot.connectionState != ConnectionState.done) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+              return const _AppSplash();
             }
 
             // Now listen to auth state changes for the real-time routing.
             return StreamBuilder<User?>(
               stream: FirebaseAuth.instance.authStateChanges(),
               builder: (context, snapshot) {
-                // Show a brief loading indicator while Firebase resolves the
+                // Show a brief branded splash while Firebase resolves the
                 // persisted session on cold start.
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
+                  return const _AppSplash();
                 }
 
                 // If user is signed in, check email verification.
@@ -97,6 +97,48 @@ class _LaMiaAppState extends State<LaMiaApp> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Branded loading splash shown while Firebase resolves the session on
+/// cold start. Wordmark fades in with the app's signature amber underline.
+class _AppSplash extends StatelessWidget {
+  const _AppSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: FadeInView(
+          duration: const Duration(milliseconds: 500),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('La Mia', style: AppTypography.brandWordmark()),
+              const SizedBox(height: 6),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
