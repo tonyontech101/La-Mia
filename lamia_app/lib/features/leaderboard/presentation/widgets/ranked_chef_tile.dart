@@ -39,83 +39,83 @@ class RankedChefTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border, width: 1),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Rank number badge
-            _RankBadge(rank: rank),
-            const SizedBox(width: 12),
-
-            // Avatar
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _getAvatarColor().withValues(alpha: 0.12),
-                border: Border.all(
-                  color: _getAvatarColor().withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 8,
+                offset: Offset(0, 3),
               ),
-              child: Center(
-                child: Text(
-                  chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: _getAvatarColor(),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Rank number badge
+              _RankBadge(rank: rank),
+              const SizedBox(width: 12),
+
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _getAvatarColor().withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: _getAvatarColor().withValues(alpha: 0.3),
+                    width: 1.5,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Name + recipes count
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    chefName,
-                    style: AppTypography.bodyStrong(
-                      color: AppColors.textPrimary,
-                    ).copyWith(fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                child: Center(
+                  child: Text(
+                    chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _getAvatarColor(),
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'no. of Recipes Shared',
-                    style: AppTypography.caption(
-                      color: AppColors.textSecondary,
-                    ).copyWith(fontSize: 11),
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
 
-            // Chevron
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-              size: 24,
-            ),
-          ],
-        ),
+              // Name + recipes count
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chefName,
+                      style: AppTypography.bodyStrong(
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'no. of Recipes Shared',
+                      style: AppTypography.caption(
+                        color: AppColors.textSecondary,
+                      ).copyWith(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Chevron
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+                size: 24,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -128,64 +128,64 @@ class RankedChefTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            // Rank number
-            SizedBox(
-              width: 24,
-              child: Text(
-                '$rank',
-                style: AppTypography.bodyStrong(
-                  color: AppColors.textSecondary,
-                ).copyWith(fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Avatar (smaller)
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.08),
-              ),
-              child: Center(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              // Rank number
+              SizedBox(
+                width: 24,
                 child: Text(
-                  chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                  '$rank',
+                  style: AppTypography.bodyStrong(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Avatar (smaller)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                ),
+                child: Center(
+                  child: Text(
+                    chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-            // Name
-            Expanded(
-              child: Text(
-                chefName,
-                style: AppTypography.body(
-                  color: AppColors.textPrimary,
-                ).copyWith(fontWeight: FontWeight.w500, fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // Name
+              Expanded(
+                child: Text(
+                  chefName,
+                  style: AppTypography.body(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w500, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
 
-            // Recipes count
-            Text(
-              'no. of Recipes Shared',
-              style: AppTypography.caption(
-                color: AppColors.textSecondary,
-              ).copyWith(fontSize: 11),
-            ),
-          ],
-        ),
+              // Recipes count
+              Text(
+                'no. of Recipes Shared',
+                style: AppTypography.caption(
+                  color: AppColors.textSecondary,
+                ).copyWith(fontSize: 11),
+              ),
+            ],
+          ),
         ),
       ),
     );

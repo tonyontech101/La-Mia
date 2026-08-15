@@ -52,20 +52,14 @@ class FollowRepository {
       batch.update(currentUserRef, {
         'followingCount': FieldValue.increment(-1),
       });
-      batch.update(targetUserRef, {
-        'followerCount': FieldValue.increment(-1),
-      });
+      batch.update(targetUserRef, {'followerCount': FieldValue.increment(-1)});
     } else {
       // Follow
       final now = FieldValue.serverTimestamp();
       batch.set(followingRef, {'followedAt': now});
       batch.set(followerRef, {'followedAt': now});
-      batch.update(currentUserRef, {
-        'followingCount': FieldValue.increment(1),
-      });
-      batch.update(targetUserRef, {
-        'followerCount': FieldValue.increment(1),
-      });
+      batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
+      batch.update(targetUserRef, {'followerCount': FieldValue.increment(1)});
     }
 
     await batch.commit();

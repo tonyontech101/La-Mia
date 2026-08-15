@@ -50,9 +50,10 @@ class _FadeInViewState extends State<FadeInView>
 
     final curved = CurvedAnimation(parent: _controller, curve: widget.curve);
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(curved);
-    _position = Tween<Offset>(begin: widget.offset, end: Offset.zero).animate(
-      curved,
-    );
+    _position = Tween<Offset>(
+      begin: widget.offset,
+      end: Offset.zero,
+    ).animate(curved);
     _scale = Tween<double>(begin: 0.985, end: 1.0).animate(curved);
   }
 
@@ -89,10 +90,7 @@ class _FadeInViewState extends State<FadeInView>
           opacity: _opacity.value,
           child: Transform.translate(
             offset: _position.value,
-            child: Transform.scale(
-              scale: _scale.value,
-              child: child,
-            ),
+            child: Transform.scale(scale: _scale.value, child: child),
           ),
         );
       },

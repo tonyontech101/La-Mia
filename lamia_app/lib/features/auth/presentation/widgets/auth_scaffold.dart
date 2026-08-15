@@ -48,41 +48,41 @@ class AuthScaffold extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.only(top: cardTop),
                   child: Container(
-                  width: double.infinity,
-                  constraints: BoxConstraints(minHeight: cardMinHeight),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(AppRadii.card),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x1F2B211B), // ~0.12 alpha
-                        offset: Offset(0, -2),
-                        blurRadius: 28,
+                    width: double.infinity,
+                    constraints: BoxConstraints(minHeight: cardMinHeight),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(AppRadii.card),
                       ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: AppSpacing.contentMaxWidth,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x1F2B211B), // ~0.12 alpha
+                          offset: Offset(0, -2),
+                          blurRadius: 28,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.screenH,
-                            AppSpacing.xxl,
-                            AppSpacing.screenH,
-                            AppSpacing.xl,
+                      ],
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: AppSpacing.contentMaxWidth,
                           ),
-                          child: child,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.screenH,
+                              AppSpacing.xxl,
+                              AppSpacing.screenH,
+                              AppSpacing.xl,
+                            ),
+                            child: child,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 ),
               ),
             ],

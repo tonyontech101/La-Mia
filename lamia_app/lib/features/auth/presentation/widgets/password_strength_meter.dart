@@ -47,10 +47,7 @@ class PasswordStrengthMeter extends StatelessWidget {
               duration: const Duration(milliseconds: 260),
               curve: Curves.easeOutCubic,
               style: AppTypography.caption(color: _color),
-              child: Text(
-                strength.label,
-                textAlign: TextAlign.right,
-              ),
+              child: Text(strength.label, textAlign: TextAlign.right),
             ),
           ),
         ],

@@ -163,9 +163,7 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
                           height: 48,
                           decoration: BoxDecoration(
                             color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.field,
-                            ),
+                            borderRadius: BorderRadius.circular(AppRadii.field),
                             border: Border.all(color: AppColors.border),
                             boxShadow: const [
                               BoxShadow(
@@ -265,8 +263,8 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
                           ),
                         )
                       : !_hasSearched
-                          ? _buildInitialPrompt()
-                          : _buildSearchResults(),
+                      ? _buildInitialPrompt()
+                      : _buildSearchResults(),
                 ),
               ],
             ),
@@ -415,9 +413,7 @@ class _FilterTabPill extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : AppColors.surface,
+          color: isSelected ? AppColors.primary : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -431,9 +427,7 @@ class _FilterTabPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.onPrimary
-                    : AppColors.textPrimary,
+                color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
               ),
             ),
             if (count > 0) ...[

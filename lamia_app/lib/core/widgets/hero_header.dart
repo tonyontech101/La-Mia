@@ -39,10 +39,8 @@ class HeroHeader extends StatelessWidget {
               tween: Tween(begin: 1.08, end: 1.0),
               duration: const Duration(milliseconds: 1400),
               curve: Curves.easeOutCubic,
-              builder: (context, scale, child) => Transform.scale(
-                scale: scale,
-                child: child,
-              ),
+              builder: (context, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
               child: Image.asset(
                 _asset,
                 fit: BoxFit.cover,

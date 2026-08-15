@@ -50,8 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final model = await _userRepo.getUser(user.uid);
       if (mounted) {
         setState(() {
-          _nameController.text =
-              model?.displayName ?? user.displayName ?? '';
+          _nameController.text = model?.displayName ?? user.displayName ?? '';
           _bioController.text = model?.bio ?? '';
           _isLoading = false;
         });
@@ -140,7 +139,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.screenH),
               child: Form(
@@ -173,7 +174,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                       validator: (value) {
@@ -196,7 +200,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       maxLength: 160,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: 'Tell the community about your cooking style...',
+                        hintText:
+                            'Tell the community about your cooking style...',
                         filled: true,
                         fillColor: AppColors.surface,
                         border: OutlineInputBorder(
@@ -209,7 +214,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),

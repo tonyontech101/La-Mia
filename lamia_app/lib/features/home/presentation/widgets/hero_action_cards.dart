@@ -95,98 +95,100 @@ class _HeroCard extends StatelessWidget {
             ],
           ),
           child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          child: Stack(
-            children: [
-              // Background Image
-              Positioned.fill(
-                child: CachedNetworkImage(
-                  imageUrl: bgImageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      Container(color: gradient.colors.first),
-                  errorWidget: (_, _, _) =>
-                      Container(color: gradient.colors.first),
-                ),
-              ),
-
-              // Dark Overlay Scrim
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        gradient.colors.first.withValues(alpha: 0.92),
-                        gradient.colors.last.withValues(alpha: 0.75),
-                      ],
-                    ),
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            child: Stack(
+              children: [
+                // Background Image
+                Positioned.fill(
+                  child: CachedNetworkImage(
+                    imageUrl: bgImageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) =>
+                        Container(color: gradient.colors.first),
+                    errorWidget: (_, _, _) =>
+                        Container(color: gradient.colors.first),
                   ),
                 ),
-              ),
 
-              // Glassmorphism accent shapes
-              Positioned(
-                right: -20,
-                bottom: -20,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-              ),
-
-              // Content Layout
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Icon
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(icon, color: Colors.white, size: 20),
+                // Dark Overlay Scrim
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          gradient.colors.first.withValues(alpha: 0.92),
+                          gradient.colors.last.withValues(alpha: 0.75),
+                        ],
                       ),
                     ),
-
-                    // Title & Description
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: AppTypography.headline(
-                            color: Colors.white,
-                          ).copyWith(fontSize: 22, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: AppTypography.caption(
-                            color: Colors.white.withValues(alpha: 0.88),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Glassmorphism accent shapes
+                Positioned(
+                  right: -20,
+                  bottom: -20,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+
+                // Content Layout
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Icon
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: Colors.white, size: 20),
+                        ),
+                      ),
+
+                      // Title & Description
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: AppTypography.headline(color: Colors.white)
+                                .copyWith(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: AppTypography.caption(
+                              color: Colors.white.withValues(alpha: 0.88),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );

@@ -62,9 +62,7 @@ class PrimaryButton extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppRadii.button),
                   ),
                 ).copyWith(
-                  overlayColor: const WidgetStatePropertyAll(
-                    Color(0x1AFFFFFF),
-                  ),
+                  overlayColor: const WidgetStatePropertyAll(Color(0x1AFFFFFF)),
                   backgroundColor: WidgetStateProperty.resolveWith((states) {
                     if (isLoading) return AppColors.primary;
                     if (states.contains(WidgetState.pressed)) {
@@ -80,9 +78,7 @@ class PrimaryButton extends StatelessWidget {
               transitionBuilder: (child, animation) => FadeTransition(
                 opacity: animation,
                 child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(
-                    animation,
-                  ),
+                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
                   child: child,
                 ),
               ),

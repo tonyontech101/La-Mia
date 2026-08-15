@@ -7,13 +7,14 @@ import 'user_model.dart';
 /// Provides methods for fetching, streaming, and updating user profiles.
 /// Profile photo upload is deferred to a later phase.
 class UserRepository {
-  UserRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  UserRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
 
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestore;
+
+  FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
-      _firestore.collection('users');
+      _db.collection('users');
 
   // ── Read ─────────────────────────────────────────────────────────────────
 
@@ -77,10 +78,7 @@ class UserRepository {
   }
 
   /// Prefix search for users by display name. Returns up to [limit] users.
-  Future<List<UserModel>> searchUsers(
-    String query, {
-    int limit = 20,
-  }) async {
+  Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
     final q = query.trim();
     if (q.isEmpty) return [];
 
@@ -93,4 +91,3 @@ class UserRepository {
     return snap.docs.map((d) => UserModel.fromFirestore(d)).toList();
   }
 }
-

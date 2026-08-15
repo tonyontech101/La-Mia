@@ -6,6 +6,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/slide_tab_switcher.dart';
+import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
@@ -183,9 +185,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     if (authorId == null || widget.recipe.isSystemRecipe) return;
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ProfileScreen(targetUserId: authorId),
-      ),
+      MaterialPageRoute(builder: (_) => ProfileScreen(targetUserId: authorId)),
     );
   }
 
@@ -330,7 +330,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       child: Icon(
                                         _isLiked
                                             ? Icons.favorite_rounded
@@ -397,8 +399,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                     height: 32,
                                     decoration: BoxDecoration(
                                       color: recipe.isSystemRecipe
-                                          ? AppColors.primary.withValues(alpha: 0.12)
-                                          : AppColors.border.withValues(alpha: 0.6),
+                                          ? AppColors.primary.withValues(
+                                              alpha: 0.12,
+                                            )
+                                          : AppColors.border.withValues(
+                                              alpha: 0.6,
+                                            ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: recipe.isSystemRecipe
@@ -408,28 +414,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                             color: AppColors.primary,
                                           )
                                         : recipe.authorPhotoUrl != null
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: CachedNetworkImage(
-                                                  imageUrl: recipe.authorPhotoUrl!,
-                                                  fit: BoxFit.cover,
-                                                  errorWidget: (_, _, _) => Center(
-                                                    child: Text(
-                                                      recipe.authorName.isNotEmpty
-                                                          ? recipe.authorName[0].toUpperCase()
-                                                          : 'U',
-                                                      style: const TextStyle(
-                                                        fontWeight: FontWeight.w700,
-                                                        color: AppColors.primary,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                            : Center(
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: CachedNetworkImage(
+                                              imageUrl: recipe.authorPhotoUrl!,
+                                              fit: BoxFit.cover,
+                                              errorWidget: (_, _, _) => Center(
                                                 child: Text(
                                                   recipe.authorName.isNotEmpty
-                                                      ? recipe.authorName[0].toUpperCase()
+                                                      ? recipe.authorName[0]
+                                                            .toUpperCase()
                                                       : 'U',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w700,
@@ -437,11 +433,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                                   ),
                                                 ),
                                               ),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Text(
+                                              recipe.authorName.isNotEmpty
+                                                  ? recipe.authorName[0]
+                                                        .toUpperCase()
+                                                  : 'U',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                   const SizedBox(width: 10),
                                   Flexible(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -461,13 +472,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                             if (recipe.isSystemRecipe) ...[
                                               const SizedBox(width: 4),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.primary.withValues(alpha: 0.12),
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: AppColors.primary
+                                                      .withValues(alpha: 0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
                                                 child: const Text(
                                                   'Original',
@@ -488,9 +502,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                   if (!recipe.isSystemRecipe &&
                                       recipe.authorId != null &&
                                       recipe.authorId !=
-                                          FirebaseAuth.instance.currentUser?.uid)
+                                          FirebaseAuth
+                                              .instance
+                                              .currentUser
+                                              ?.uid)
                                     GestureDetector(
-                                      onTap: _socialLoading ? null : _toggleFollow,
+                                      onTap: _socialLoading
+                                          ? null
+                                          : _toggleFollow,
                                       child: Container(
                                         margin: const EdgeInsets.only(left: 6),
                                         padding: const EdgeInsets.symmetric(
@@ -499,12 +518,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: _isFollowing
-                                              ? AppColors.primary.withValues(alpha: 0.12)
+                                              ? AppColors.primary.withValues(
+                                                  alpha: 0.12,
+                                                )
                                               : AppColors.primary,
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
-                                          _isFollowing ? 'Following' : '+ Follow',
+                                          _isFollowing
+                                              ? 'Following'
+                                              : '+ Follow',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w700,

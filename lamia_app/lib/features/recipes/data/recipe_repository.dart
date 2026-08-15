@@ -148,9 +148,7 @@ class RecipeRepository {
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
       results.addAll(
-        snap.docs.map(
-          (d) => RecipeModel.fromFirestore(d.data(), docId: d.id),
-        ),
+        snap.docs.map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id)),
       );
     }
     return results;
@@ -178,9 +176,7 @@ class RecipeRepository {
           .limit(limit)
           .get();
       results.addAll(
-        snap.docs.map(
-          (d) => RecipeModel.fromFirestore(d.data(), docId: d.id),
-        ),
+        snap.docs.map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id)),
       );
     }
     // Sort merged results by createdAt descending and cap at limit.
@@ -192,4 +188,3 @@ class RecipeRepository {
     return results.take(limit).toList();
   }
 }
-

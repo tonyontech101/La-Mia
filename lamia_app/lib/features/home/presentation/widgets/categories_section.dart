@@ -120,9 +120,7 @@ class _CategoryItem extends StatelessWidget {
                         : AppColors.textSecondary,
                   ).copyWith(
                     fontSize: 10,
-                    fontWeight: isSelected
-                        ? FontWeight.w700
-                        : FontWeight.w600,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                     letterSpacing: 0.3,
                   ),
               child: Text(category.name.toUpperCase()),

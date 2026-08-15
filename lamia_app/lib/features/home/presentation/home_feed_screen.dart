@@ -203,9 +203,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                               itemBuilder: (context, index) {
                                 final recipe = tabRecipes[index];
                                 return FadeInView(
-                                  key: ValueKey<String>(
-                                    'feed-${recipe.name}',
-                                  ),
+                                  key: ValueKey<String>('feed-${recipe.name}'),
                                   delay: Duration(
                                     milliseconds: (index % 6) * 55,
                                   ),
@@ -213,20 +211,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                                   offset: const Offset(0, 20),
                                   child: FeedRecipeCard(
                                     recipe: recipe,
-                                    dummyUsername: _getDummyUsername(index),
                                     onTap: () => _onRecipeTap(recipe),
                                   ),
                                 );
                               },
                             ),
-                            itemCount: tabRecipes.length,
-                            itemBuilder: (context, index) {
-                              final recipe = tabRecipes[index];
-                              return FeedRecipeCard(
-                                recipe: recipe,
-                                onTap: () => _onRecipeTap(recipe),
-                              );
-                            },
                           ),
                   ),
                 ),
@@ -386,12 +375,7 @@ class _FeedTabSwitcherState extends State<_FeedTabSwitcher> {
     final tabLeft = tabBox.localToGlobal(Offset.zero).dx;
     final barLeft = barBox.localToGlobal(Offset.zero).dx;
     setState(() {
-      _underline = Rect.fromLTWH(
-        tabLeft - barLeft,
-        0,
-        tabBox.size.width,
-        2,
-      );
+      _underline = Rect.fromLTWH(tabLeft - barLeft, 0, tabBox.size.width, 2);
     });
   }
 
@@ -473,9 +457,7 @@ class _TabItem extends StatelessWidget {
         curve: Curves.easeOutCubic,
         style:
             AppTypography.bodyStrong(
-              color: isActive
-                  ? AppColors.textPrimary
-                  : AppColors.textSecondary,
+              color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
             ).copyWith(
               fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               fontSize: 15,

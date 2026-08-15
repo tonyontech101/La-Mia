@@ -8,19 +8,16 @@ import '../../../auth/data/user_model.dart';
 
 /// List item displaying a chef/user search result.
 class ChefSearchTile extends StatelessWidget {
-  const ChefSearchTile({
-    super.key,
-    required this.user,
-    this.onTap,
-  });
+  const ChefSearchTile({super.key, required this.user, this.onTap});
 
   final UserModel user;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : 'U';
+    final initial = user.displayName.isNotEmpty
+        ? user.displayName[0].toUpperCase()
+        : 'U';
 
     return GestureDetector(
       onTap: onTap,

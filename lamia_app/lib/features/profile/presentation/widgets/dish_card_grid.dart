@@ -113,68 +113,71 @@ class _DishCard extends StatelessWidget {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Dish Image Section
-            Expanded(
-              child: Container(
-                color: AppColors.surfaceAlt,
-                child: recipe.coverPhotoUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: recipe.coverPhotoUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: AppColors.surfaceAlt,
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.soup_kitchen_rounded,
-                            color: AppColors.textSecondary,
-                            size: 32,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Dish Image Section
+              Expanded(
+                child: Container(
+                  color: AppColors.surfaceAlt,
+                  child: recipe.coverPhotoUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: recipe.coverPhotoUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: AppColors.surfaceAlt,
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.soup_kitchen_rounded,
+                              color: AppColors.textSecondary,
+                              size: 32,
+                            ),
                           ),
-                        ),
-                        errorWidget: (context, url, error) =>
-                            _buildPlaceholder(),
-                      )
-                    : _buildPlaceholder(),
-              ),
-            ),
-
-            // 2. Dish Name & Description Container (Wireframe style)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(
-                  top: BorderSide(color: AppColors.border, width: 1),
+                          errorWidget: (context, url, error) =>
+                              _buildPlaceholder(),
+                        )
+                      : _buildPlaceholder(),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    recipe.name,
-                    style: AppTypography.label(
-                      color: AppColors.textPrimary,
-                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+              // 2. Dish Name & Description Container (Wireframe style)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(
+                    top: BorderSide(color: AppColors.border, width: 1),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${recipe.category} • ${recipe.cookTime}',
-                    style: AppTypography.caption(
-                      color: AppColors.textSecondary,
-                    ).copyWith(fontSize: 11),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      recipe.name,
+                      style: AppTypography.label(
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.w700, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${recipe.category} • ${recipe.cookTime}',
+                      style: AppTypography.caption(
+                        color: AppColors.textSecondary,
+                      ).copyWith(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
