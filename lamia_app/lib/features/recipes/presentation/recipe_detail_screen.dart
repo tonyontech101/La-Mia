@@ -6,6 +6,8 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/slide_tab_switcher.dart';
+import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';

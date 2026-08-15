@@ -5,7 +5,6 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/utils/page_transitions.dart';
-import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/auth_service.dart';
 import '../../auth/data/user_model.dart';
@@ -412,7 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Posts / Likes / Saved Recipes.
                     child: SlidingTabBar(
                       index: _selectedTabIndex,
-                      itemCount: 3,
+                      itemCount: _isOwnProfile ? 3 : 2,
                       highlight: Container(
                         decoration: BoxDecoration(
                           color: AppColors.surface,
@@ -426,32 +425,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                       ),
-                      onChanged: (i) => setState(() => _selectedTabIndex = i),
+                      onChanged: _onTabSelected,
                       builder: (context, i, isSelected) {
-                        const tabs = [
+                        final tabs = [
                           (
                             label: 'Posts',
                             icon: Icons.mark_email_unread_outlined,
-                            isSelected: _selectedTabIndex == 0,
-                            onTap: () => _onTabSelected(0),
                           ),
                           (
                             label: 'Likes',
                             icon: Icons.favorite_border_rounded,
-                            isSelected: _selectedTabIndex == 1,
-                            onTap: () => _onTabSelected(1),
                           ),
-                        ),
-                        if (_isOwnProfile)
-                          Expanded(
-                            child: _TabButton(
+                          if (_isOwnProfile)
+                            (
                               label: 'Saved Recipes',
                               icon: Icons.bookmark_border_rounded,
-                              isSelected: _selectedTabIndex == 2,
-                              onTap: () => _onTabSelected(2),
                             ),
+                        ];
+                        final tab = tabs[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 4,
                           ),
-                      ],
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              AnimatedIconColor(
+                                icon: tab.icon,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 240),
+                                  curve: Curves.easeOutCubic,
+                                  style: AppTypography.caption(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary,
+                                  ).copyWith(
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  child: Text(tab.label),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
 

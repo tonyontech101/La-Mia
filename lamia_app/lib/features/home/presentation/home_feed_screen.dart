@@ -213,20 +213,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                                   offset: const Offset(0, 20),
                                   child: FeedRecipeCard(
                                     recipe: recipe,
-                                    dummyUsername: _getDummyUsername(index),
                                     onTap: () => _onRecipeTap(recipe),
                                   ),
                                 );
                               },
                             ),
-                            itemCount: tabRecipes.length,
-                            itemBuilder: (context, index) {
-                              final recipe = tabRecipes[index];
-                              return FeedRecipeCard(
-                                recipe: recipe,
-                                onTap: () => _onRecipeTap(recipe),
-                              );
-                            },
                           ),
                   ),
                 ),

@@ -8,12 +8,14 @@ import 'user_model.dart';
 /// Profile photo upload is deferred to a later phase.
 class UserRepository {
   UserRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore;
 
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestore;
+
+  FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
-      _firestore.collection('users');
+      _db.collection('users');
 
   // ── Read ─────────────────────────────────────────────────────────────────
 

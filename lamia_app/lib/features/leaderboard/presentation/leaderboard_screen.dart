@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -44,6 +45,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     _ChefData('Ate Carla Domingo', 31),
     _ChefData('Tita Joy Navarro', 28),
     _ChefData('Nanay Luz Garcia', 25),
+  ];
+
+  static const _demoChefsMostCooked = [
+    _ChefData('Chef Paolo Mendoza', 156),
+    _ChefData('Manang Cely Tan', 142),
+    _ChefData('Inay Dina Ramos', 128),
+    _ChefData('Tito Romy Bautista', 115),
+    _ChefData('Ate Bea Villanueva', 103),
+    _ChefData('Chef Andrei Lim', 97),
   ];
 
   @override
@@ -168,7 +178,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           )
           .toList();
     } else {
-      data = _demoChefs;
+      data = _activeTab == 0 ? _demoChefs : _demoChefsMostCooked;
     }
 
     final top3 = data.take(3).toList();
