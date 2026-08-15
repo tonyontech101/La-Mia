@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
 
 /// Featured Recipes section matching image.png wireframe:
@@ -77,11 +78,13 @@ class _FeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 190,
-        decoration: BoxDecoration(
+    return PressableScale(
+      pressedScale: 0.97,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 190,
+          decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.card),
           border: Border.all(color: AppColors.border, width: 1),
@@ -197,7 +200,10 @@ class _FeaturedCard extends StatelessWidget {
                           recipe.cookTime,
                           style: AppTypography.caption(
                             color: AppColors.textSecondary,
-                          ).copyWith(fontSize: 11, fontWeight: FontWeight.w500),
+                          ).copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         const Spacer(),
                         Container(
@@ -227,6 +233,7 @@ class _FeaturedCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

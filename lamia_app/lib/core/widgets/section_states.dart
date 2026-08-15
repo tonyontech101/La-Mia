@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_typography.dart';
+import 'fade_in_view.dart';
 
 /// Skeleton placeholder shown while a section's data is loading from Firebase.
 ///
@@ -108,47 +109,51 @@ class SectionErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.xl,
-          horizontal: AppSpacing.screenH,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 40,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textSecondary),
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              GestureDetector(
-                onTap: onRetry,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppRadii.button),
-                  ),
-                  child: Text(
-                    'Retry',
-                    style: AppTypography.button(color: AppColors.onPrimary),
+    return FadeInView(
+      duration: const Duration(milliseconds: 380),
+      offset: const Offset(0, 12),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.xl,
+            horizontal: AppSpacing.screenH,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.cloud_off_rounded,
+                size: 40,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.body(color: AppColors.textSecondary),
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(AppRadii.button),
+                    ),
+                    child: Text(
+                      'Retry',
+                      style: AppTypography.button(color: AppColors.onPrimary),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -170,35 +175,39 @@ class SectionEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.xl,
-          horizontal: AppSpacing.screenH,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.restaurant_menu_rounded,
-              size: 40,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyStrong(color: AppColors.textPrimary),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                style: AppTypography.caption(color: AppColors.textSecondary),
+    return FadeInView(
+      duration: const Duration(milliseconds: 380),
+      offset: const Offset(0, 12),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.xl,
+            horizontal: AppSpacing.screenH,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.restaurant_menu_rounded,
+                size: 40,
+                color: AppColors.textSecondary,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyStrong(color: AppColors.textPrimary),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.caption(color: AppColors.textSecondary),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

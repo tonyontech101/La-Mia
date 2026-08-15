@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/fade_in_view.dart';
+import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_states.dart';
 import '../data/recipe_model.dart';
@@ -333,48 +335,75 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
               children: [
                 // Render selected ingredient tag chips (e.g. Eggs x, Garlic x, Rice x)
                 if (_selectedIngredients.isNotEmpty) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _selectedIngredients.map((tag) {
-                      return Container(
-                        padding: const EdgeInsets.only(
-                          left: 12,
-                          right: 6,
-                          top: 6,
-                          bottom: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                          border: Border.all(color: AppColors.border, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              tag,
-                              style: AppTypography.bodyStrong(
-                                color: AppColors.textPrimary,
-                              ).copyWith(fontSize: 13),
+                  // Container smoothly grows/shrinks as tags are added/removed.
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedIngredients.map((tag) {
+                        // Tags pop in with a tiny scale + fade.
+                        return TweenAnimationBuilder<double>(
+                          key: ValueKey<String>('tag-$tag'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOutBack,
+                          builder: (context, t, child) {
+                            return Opacity(
+                              opacity: t.clamp(0.0, 1.0),
+                              child: Transform.scale(
+                                scale: 0.8 + (0.2 * t),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.only(
+                              left: 12,
+                              right: 6,
+                              top: 6,
+                              bottom: 6,
                             ),
-                            const SizedBox(width: 4),
-                            InkWell(
-                              onTap: () => _removeIngredientTag(tag),
-                              borderRadius: BorderRadius.circular(12),
-                              child: const Padding(
-                                padding: EdgeInsets.all(2.0),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 16,
-                                  color: AppColors.textSecondary,
-                                ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.pill,
+                              ),
+                              border: Border.all(
+                                color: AppColors.border,
+                                width: 1,
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  tag,
+                                  style: AppTypography.bodyStrong(
+                                    color: AppColors.textPrimary,
+                                  ).copyWith(fontSize: 13),
+                                ),
+                                const SizedBox(width: 4),
+                                InkWell(
+                                  onTap: () => _removeIngredientTag(tag),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(2.0),
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -553,12 +582,19 @@ class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
             ),
             const SizedBox(height: 16),
             Column(
-              children: matches.map((match) {
+              children: matches.asMap().entries.map((entry) {
+                final match = entry.value;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  child: _CookMatchedRecipeCard(
-                    matchItem: match,
-                    onTap: () => _navigateToDetail(match.recipe),
+                  child: FadeInView(
+                    key: ValueKey<String>('match-${match.recipe.name}'),
+                    delay: Duration(milliseconds: (entry.key % 5) * 60),
+                    duration: const Duration(milliseconds: 400),
+                    offset: const Offset(0, 18),
+                    child: _CookMatchedRecipeCard(
+                      matchItem: match,
+                      onTap: () => _navigateToDetail(match.recipe),
+                    ),
                   ),
                 );
               }).toList(),
@@ -588,10 +624,12 @@ class _CookMatchedRecipeCard extends StatelessWidget {
     final recipe = matchItem.recipe;
     final badgeColor = _getMatchBadgeColor(matchItem.matchPercentage);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.card),
-      child: Container(
+    return PressableScale(
+      pressedScale: 0.98,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.card),
@@ -767,6 +805,7 @@ class _CookMatchedRecipeCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

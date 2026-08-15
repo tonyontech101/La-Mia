@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 
 /// "Chef of the Month" featured card at the top of the Leaderboard.
 ///
@@ -186,22 +187,28 @@ class ChefOfMonthCard extends StatelessWidget {
                     ),
 
                     // View Profile button
-                    GestureDetector(
-                      onTap: onViewProfile,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.textPrimary,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                        ),
-                        child: Text(
-                          'View Profile',
-                          style: AppTypography.caption(
-                            color: AppColors.onPrimary,
-                          ).copyWith(fontWeight: FontWeight.w600, fontSize: 11),
+                    PressableScale(
+                      pressedScale: 0.92,
+                      child: GestureDetector(
+                        onTap: onViewProfile,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.textPrimary,
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Text(
+                            'View Profile',
+                            style: AppTypography.caption(
+                              color: AppColors.onPrimary,
+                            ).copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
                       ),
                     ),

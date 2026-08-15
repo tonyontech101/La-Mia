@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
 import '../../recipes/data/recipe_model.dart';
@@ -154,10 +155,15 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               'Recipes will appear here once they are added.',
                         );
                       }
-                      return FeaturedRecipesSection(
-                        recipes: recipes,
-                        onViewAllTap: () => widget.onNavigateToTab?.call(1),
-                        onRecipeTap: _showRecipeDetailsDialog,
+                      return FadeInView(
+                        key: const ValueKey('featured-recipes'),
+                        duration: const Duration(milliseconds: 450),
+                        offset: const Offset(0, 14),
+                        child: FeaturedRecipesSection(
+                          recipes: recipes,
+                          onViewAllTap: () => widget.onNavigateToTab?.call(1),
+                          onRecipeTap: _showRecipeDetailsDialog,
+                        ),
                       );
                     },
                   ),
@@ -204,9 +210,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               'Popular recipes will appear here as more people cook.',
                         );
                       }
-                      return PopularChoicesSection(
-                        recipes: recipes,
-                        onRecipeTap: _showRecipeDetailsDialog,
+                      return FadeInView(
+                        key: const ValueKey('popular-choices'),
+                        duration: const Duration(milliseconds: 450),
+                        offset: const Offset(0, 14),
+                        child: PopularChoicesSection(
+                          recipes: recipes,
+                          onRecipeTap: _showRecipeDetailsDialog,
+                        ),
                       );
                     },
                   ),

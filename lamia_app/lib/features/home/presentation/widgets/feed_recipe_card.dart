@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
 
 /// Full-width social-feed recipe card matching the wireframe layout.
@@ -31,9 +32,11 @@ class FeedRecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return PressableScale(
+      pressedScale: 0.985,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -146,6 +149,7 @@ class FeedRecipeCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

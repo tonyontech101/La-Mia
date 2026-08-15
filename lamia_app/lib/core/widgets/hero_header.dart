@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_typography.dart';
+import 'fade_in_view.dart';
 
 /// Full-bleed hero photo of Filipino dishes + the Philippine flag, topped with
 /// a vertical dark scrim and the "La Mia" wordmark. Sits behind the floating
@@ -29,17 +30,27 @@ class HeroHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Photo
+          // Photo — slowly settles from a gentle zoom on first appearance
+          // (subtle "Ken Burns" settle so the hero feels alive).
           Semantics(
             label: 'Collage of Filipino dishes with the Philippine flag',
             image: true,
-            child: Image.asset(
-              _asset,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              cacheWidth: cacheWidth,
-              errorBuilder: (context, error, stackTrace) =>
-                  const ColoredBox(color: AppColors.primaryDark),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1.08, end: 1.0),
+              duration: const Duration(milliseconds: 1400),
+              curve: Curves.easeOutCubic,
+              builder: (context, scale, child) => Transform.scale(
+                scale: scale,
+                child: child,
+              ),
+              child: Image.asset(
+                _asset,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                cacheWidth: cacheWidth,
+                errorBuilder: (context, error, stackTrace) =>
+                    const ColoredBox(color: AppColors.primaryDark),
+              ),
             ),
           ),
           // Warm multiply overlay to unify tone (decorative).
@@ -60,19 +71,24 @@ class HeroHeader extends StatelessWidget {
             left: AppSpacing.screenH,
             right: AppSpacing.screenH,
             bottom: AppSpacing.xl + 28,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _Wordmark(),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Discover, Cook, and Share Delicious Recipes.',
-                  style: AppTypography.label(
-                    color: AppColors.onPrimary.withValues(alpha: 0.85),
+            child: FadeInView(
+              delay: const Duration(milliseconds: 120),
+              duration: const Duration(milliseconds: 600),
+              offset: const Offset(0, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _Wordmark(),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Discover, Cook, and Share Delicious Recipes.',
+                    style: AppTypography.label(
+                      color: AppColors.onPrimary.withValues(alpha: 0.85),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/pressable_scale.dart';
 
 /// A ranked chef tile used in the Top 3 and Trending Cooks sections.
 ///
@@ -33,9 +34,11 @@ class RankedChefTile extends StatelessWidget {
 
   /// Large card-style row for ranks 1–3.
   Widget _buildTopThreeTile(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return PressableScale(
+      pressedScale: 0.98,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
@@ -113,15 +116,18 @@ class RankedChefTile extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 
   /// Compact list-row style for ranks 4+.
   Widget _buildTrendingTile(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
+    return PressableScale(
+      pressedScale: 0.97,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
@@ -179,6 +185,7 @@ class RankedChefTile extends StatelessWidget {
               ).copyWith(fontSize: 11),
             ),
           ],
+        ),
         ),
       ),
     );

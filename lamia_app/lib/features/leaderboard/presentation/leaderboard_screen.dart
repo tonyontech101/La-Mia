@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/fade_in_view.dart';
+import '../../../core/widgets/slide_tab_switcher.dart';
+import '../../../core/widgets/sliding_tab_bar.dart';
 import 'widgets/chef_of_month_card.dart';
 import 'widgets/ranked_chef_tile.dart';
 import 'widgets/your_ranking_card.dart';
@@ -261,19 +264,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         const SizedBox(height: 12),
 
                         // 1. Chef of the Month
-                        ChefOfMonthCard(
-                          chefName: data.first.name,
-                          dishName: 'Chicken Adobo sa Gata',
-                          likes: _mostCooked.first.count, // demo count
-                          onViewProfile: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Viewing ${data.first.name}\'s profile...',
+                        FadeInView(
+                          duration: const Duration(milliseconds: 450),
+                          offset: const Offset(0, 16),
+                          child: ChefOfMonthCard(
+                            chefName: data.first.name,
+                            dishName: 'Chicken Adobo sa Gata',
+                            likes: _mostCooked.first.count, // demo count
+                            onViewProfile: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Viewing ${data.first.name}\'s profile...',
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
 
                         const SizedBox(height: 20),
@@ -287,100 +294,134 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                         const SizedBox(height: 16),
 
-                        // 3. Top 3 Ranked Chefs
-                        for (int i = 0; i < top3.length; i++)
-                          RankedChefTile(
-                            rank: i + 1,
-                            chefName: top3[i].name,
-                            recipesShared: top3[i].count,
-                            isTopThree: true,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Viewing ${top3[i].name}\'s profile...',
+                        // 3-5. Ranked lists — slide horizontally in the
+                        // direction of the tapped tab between Top Contributors
+                        // and Most Cooked.
+                        SlideTabSwitcher(
+                          index: _activeTab,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 3. Top 3 Ranked Chefs
+                              for (int i = 0; i < top3.length; i++)
+                                FadeInView(
+                                  key: ValueKey<String>('top-${top3[i].name}'),
+                                  delay: Duration(milliseconds: 80 + i * 90),
+                                  duration: const Duration(milliseconds: 420),
+                                  offset: const Offset(0, 16),
+                                  child: RankedChefTile(
+                                    rank: i + 1,
+                                    chefName: top3[i].name,
+                                    recipesShared: top3[i].count,
+                                    isTopThree: true,
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Viewing ${top3[i].name}\'s profile...',
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
-                              );
-                            },
-                          ),
 
-                        const SizedBox(height: 20),
+                              const SizedBox(height: 20),
 
-                        // 4. TRENDING COOKS header + See All
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'TRENDING COOKS',
-                              style:
-                                  AppTypography.caption(
-                                    color: AppColors.textSecondary,
-                                  ).copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
-                                    letterSpacing: 0.8,
-                                  ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Full trending list coming soon!',
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'See All',
-                                style:
-                                    AppTypography.caption(
-                                      color: AppColors.secondary,
+                              // 4. TRENDING COOKS header + See All
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'TRENDING COOKS',
+                                    style: AppTypography.caption(
+                                      color: AppColors.textSecondary,
                                     ).copyWith(
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       fontSize: 11,
+                                      letterSpacing: 0.8,
                                     ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Full trending list coming soon!',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'See All',
+                                      style: AppTypography.caption(
+                                        color: AppColors.secondary,
+                                      ).copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
 
-                        // Divider
-                        const Divider(height: 16, color: AppColors.border),
+                              // Divider
+                              const Divider(
+                                height: 16,
+                                color: AppColors.border,
+                              ),
 
-                        // 5. Trending Cooks rows (4, 5, 6...)
-                        for (int i = 0; i < trending.length; i++)
-                          RankedChefTile(
-                            rank: i + 4,
-                            chefName: trending[i].name,
-                            recipesShared: trending[i].count,
-                            isTopThree: false,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Viewing ${trending[i].name}\'s profile...',
+                              // 5. Trending Cooks rows (4, 5, 6...)
+                              for (int i = 0; i < trending.length; i++)
+                                FadeInView(
+                                  key: ValueKey<String>(
+                                    'trend-${trending[i].name}',
+                                  ),
+                                  delay: Duration(milliseconds: 80 + i * 80),
+                                  duration: const Duration(milliseconds: 400),
+                                  offset: const Offset(0, 14),
+                                  child: RankedChefTile(
+                                    rank: i + 4,
+                                    chefName: trending[i].name,
+                                    recipesShared: trending[i].count,
+                                    isTopThree: false,
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Viewing ${trending[i].name}\'s profile...',
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
-                              );
-                            },
+                            ],
                           ),
+                        ),
 
                         const SizedBox(height: 24),
 
                         // 6. Your Ranking card — demo values until real user stats ship.
-                        YourRankingCard(
-                          rank: 0, // 0 = "unranked / demo"
-                          title: 'Cooking Enthusiast',
-                          spotsChange: 0,
-                          onSeeFullRank: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Full ranking view coming soon!'),
-                              ),
-                            );
-                          },
+                        FadeInView(
+                          delay: const Duration(milliseconds: 120),
+                          duration: const Duration(milliseconds: 420),
+                          offset: const Offset(0, 16),
+                          child: YourRankingCard(
+                            rank: 0, // 0 = "unranked / demo"
+                            title: 'Cooking Enthusiast',
+                            spotsChange: 0,
+                            onSeeFullRank: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Full ranking view coming soon!',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
 
                         const SizedBox(height: 32),
@@ -398,6 +439,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 }
 
 /// Tab switcher for "Top Contributors" / "Most Cooked".
+///
+/// The white active pill glides smoothly between the two tabs.
 class _LeaderboardTabSwitcher extends StatelessWidget {
   const _LeaderboardTabSwitcher({
     required this.activeTab,
@@ -416,73 +459,45 @@ class _LeaderboardTabSwitcher extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(3),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabPill(
-              label: 'Top Contributors',
-              isActive: activeTab == 0,
-              onTap: () => onTabChanged(0),
-            ),
-          ),
-          Expanded(
-            child: _TabPill(
-              label: 'Most Cooked',
-              isActive: activeTab == 1,
-              onTap: () => onTabChanged(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabPill extends StatelessWidget {
-  const _TabPill({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: isActive
-              ? const [
-                  BoxShadow(
-                    color: AppColors.cardShadow,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style:
-                AppTypography.caption(
-                  color: isActive
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                ).copyWith(
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 12,
-                ),
+      child: SlidingTabBar(
+        index: activeTab,
+        itemCount: 2,
+        highlight: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
         ),
+        onChanged: onTabChanged,
+        builder: (context, i, isActive) {
+          const labels = ['Top Contributors', 'Most Cooked'];
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                style:
+                    AppTypography.caption(
+                      color: isActive
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ).copyWith(
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                child: Text(labels[i]),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

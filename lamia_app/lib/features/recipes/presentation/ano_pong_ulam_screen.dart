@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/fade_in_view.dart';
+import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_states.dart';
 import '../data/recipe_model.dart';
@@ -820,18 +822,27 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                       }
 
                       return Column(
-                        children: suggestions
-                            .map(
-                              (item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 20.0),
-                                child: _SuggestedRecipeCard(
-                                  item: item,
-                                  onTap: () =>
-                                      _showRecipeDetailsDialog(item.recipe),
-                                ),
+                        children: suggestions.asMap().entries.map((entry) {
+                          final item = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20.0),
+                            child: FadeInView(
+                              key: ValueKey<String>(
+                                'suggest-${item.recipe.name}',
                               ),
-                            )
-                            .toList(),
+                              delay: Duration(
+                                milliseconds: (entry.key % 5) * 60,
+                              ),
+                              duration: const Duration(milliseconds: 400),
+                              offset: const Offset(0, 18),
+                              child: _SuggestedRecipeCard(
+                                item: item,
+                                onTap: () =>
+                                    _showRecipeDetailsDialog(item.recipe),
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       );
                     },
                   ),
@@ -1091,25 +1102,29 @@ class _StepIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
+    return PressableScale(
+      pressedScale: 0.85,
+      springBackDuration: const Duration(milliseconds: 280),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.border),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 18, color: AppColors.textPrimary),
         ),
-        child: Icon(icon, size: 18, color: AppColors.textPrimary),
       ),
     );
   }
@@ -1133,22 +1148,24 @@ class _SuggestedRecipeCard extends StatelessWidget {
     final recipe = item.recipe;
     final matchColor = _getMatchColor(item.matchPercentage);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          border: Border.all(color: AppColors.border, width: 1),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
+    return PressableScale(
+      pressedScale: 0.98,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1282,6 +1299,7 @@ class _SuggestedRecipeCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

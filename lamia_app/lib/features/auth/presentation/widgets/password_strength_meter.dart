@@ -28,7 +28,9 @@ class PasswordStrengthMeter extends StatelessWidget {
         children: [
           for (var i = 0; i < 3; i++) ...[
             Expanded(
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
                 height: 4,
                 decoration: BoxDecoration(
                   color: i < strength.segments ? _color : AppColors.border,
@@ -41,10 +43,14 @@ class PasswordStrengthMeter extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           SizedBox(
             width: MediaQuery.textScalerOf(context).scale(44),
-            child: Text(
-              strength.label,
-              textAlign: TextAlign.right,
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
               style: AppTypography.caption(color: _color),
+              child: Text(
+                strength.label,
+                textAlign: TextAlign.right,
+              ),
             ),
           ),
         ],

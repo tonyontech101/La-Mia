@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/pressable_scale.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../leaderboard/presentation/leaderboard_screen.dart';
 import 'home_dashboard_screen.dart';
@@ -202,7 +203,26 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(index: getMappedScreenIndex(), children: screens),
+      // Crossfade between tabs instead of an instant swap — all screens stay
+      // mounted (state preserved) but only the active one is interactive.
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          for (var i = 0; i < screens.length; i++)
+            IgnorePointer(
+              ignoring: i != getMappedScreenIndex(),
+              child: AnimatedOpacity(
+                opacity: i == getMappedScreenIndex() ? 1 : 0,
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeInOut,
+                child: TickerMode(
+                  enabled: i == getMappedScreenIndex(),
+                  child: screens[i],
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -272,27 +292,31 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           // Wireframe Prominent Center Floating '+' Button
           Positioned(
             top: -24,
-            child: GestureDetector(
-              onTap: _onPlusActionTap,
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: AppColors.cookCardGradient,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.surface, width: 3.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.add_rounded,
-                  color: AppColors.onPrimary,
-                  size: 32,
+            child: PressableScale(
+              pressedScale: 0.90,
+              springBackDuration: const Duration(milliseconds: 320),
+              child: GestureDetector(
+                onTap: _onPlusActionTap,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.cookCardGradient,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.surface, width: 3.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: AppColors.onPrimary,
+                    size: 32,
+                  ),
                 ),
               ),
             ),
@@ -323,7 +347,9 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.pill),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected
@@ -334,14 +360,22 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 22),
+            // Springy pop on the icon when the tab becomes active.
+            AnimatedScale(
+              scale: isSelected ? 1.14 : 1.0,
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutBack,
+              child: Icon(icon, color: color, size: 22),
+            ),
             const SizedBox(height: 2),
-            Text(
-              label,
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
               style: AppTypography.caption(color: color).copyWith(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
+              child: Text(label),
             ),
           ],
         ),
