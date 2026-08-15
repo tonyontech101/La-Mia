@@ -7,7 +7,7 @@ import 'user_model.dart';
 /// Provides methods for fetching, streaming, and updating user profiles.
 /// Profile photo upload is deferred to a later phase.
 class UserRepository {
-  UserRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  UserRepository({this._firestore});
 
   final FirebaseFirestore? _firestore;
 

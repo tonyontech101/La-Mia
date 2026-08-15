@@ -235,11 +235,36 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
               style: AppTypography.body(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              "Didn't find it? Check your spam or junk folder.",
-              style: AppTypography.caption(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.accentSoft,
+                borderRadius: BorderRadius.circular(AppRadii.snackbar),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      "If you don't see the email, please check your Spam/Junk folder and click \"Report as not spam\".\n\nWhen a few users do this, email providers (like Gmail) learn that our emails are legitimate, and they will begin delivering them to the main Inbox for everyone else.",
+                      style: AppTypography.caption(
+                        color: AppColors.textPrimary,
+                      ).copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl),
 

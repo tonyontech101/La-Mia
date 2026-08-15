@@ -11,6 +11,7 @@ import 'home_feed_screen.dart';
 
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
 import '../../recipes/presentation/cook_by_ingredients_screen.dart';
+import '../../recipes/presentation/recipe_creating_screen.dart';
 
 /// Redesigned Main Navigation Shell based on wireframe.
 ///
@@ -100,9 +101,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Recipe creation feature opening...'),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RecipeCreatingScreen(),
                       ),
                     );
                   },
