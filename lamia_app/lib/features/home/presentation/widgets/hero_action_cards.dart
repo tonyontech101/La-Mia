@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -99,10 +100,12 @@ class _HeroCard extends StatelessWidget {
             children: [
               // Background Image
               Positioned.fill(
-                child: Image.network(
-                  bgImageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: bgImageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
+                  placeholder: (_, _) =>
+                      Container(color: gradient.colors.first),
+                  errorWidget: (_, _, _) =>
                       Container(color: gradient.colors.first),
                 ),
               ),

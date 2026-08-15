@@ -4,8 +4,8 @@ import 'recipe_model.dart';
 
 /// Reads recipe data from Cloud Firestore.
 ///
-/// Provides methods for featured, popular, category-filtered, and
-/// search-based recipe queries. Each method limits its result set via
+/// Provides methods for featured, popular, category-filtered, author-filtered,
+/// and search-based recipe queries. Each method limits its result set via
 /// Firestore `limit()`; cursor-based pagination is not yet implemented —
 /// see the build order in `La Mia - Architecture (Flutter + Firebase).md` §9.
 class RecipeRepository {
@@ -33,7 +33,7 @@ class RecipeRepository {
     });
     return docs
         .take(limit)
-        .map((d) => RecipeModel.fromFirestore(d.data()))
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
         .toList();
   }
 
@@ -48,7 +48,9 @@ class RecipeRepository {
         .orderBy('trendingScore', descending: true)
         .limit(limit)
         .get();
-    return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
+    return snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
   }
 
   /// Fetches a slice of the recipe collection, ordered by trending score.
@@ -64,7 +66,9 @@ class RecipeRepository {
         .orderBy('trendingScore', descending: true)
         .limit(limit)
         .get();
-    return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
+    return snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
   }
 
   /// Returns recipes matching [category] (exact match on the Firestore
@@ -81,7 +85,9 @@ class RecipeRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .get();
-    return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
+    return snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
   }
 
   /// Prefix search by recipe name via a Firestore range query on the
@@ -104,6 +110,86 @@ class RecipeRepository {
         .orderBy('name')
         .limit(limit)
         .get();
-    return snap.docs.map((d) => RecipeModel.fromFirestore(d.data())).toList();
+    return snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
+  }
+
+  // ── User-centric queries ────────────────────────────────────────────────
+
+  /// Returns recipes authored by [authorId], ordered by creation date.
+  Future<List<RecipeModel>> recipesByAuthor(
+    String authorId, {
+    int limit = 50,
+  }) async {
+    final snap = await _firestore
+        .collection('recipes')
+        .where('authorId', isEqualTo: authorId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
+    return snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
+  }
+
+  /// Batch-fetches recipes by their document IDs.
+  ///
+  /// Firestore `whereIn` caps at 30 elements, so this method chunks
+  /// the list and merges results. Used for liked/saved recipe lists.
+  Future<List<RecipeModel>> recipesByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final results = <RecipeModel>[];
+    // Firestore whereIn supports max 30 values per query.
+    for (var i = 0; i < ids.length; i += 30) {
+      final chunk = ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30);
+      final snap = await _firestore
+          .collection('recipes')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      results.addAll(
+        snap.docs.map(
+          (d) => RecipeModel.fromFirestore(d.data(), docId: d.id),
+        ),
+      );
+    }
+    return results;
+  }
+
+  /// Returns recipes from the given [authorIds] — used for the "Following"
+  /// feed tab. Ordered by `createdAt` descending.
+  ///
+  /// Firestore `whereIn` caps at 30 elements; this chunks the list.
+  Future<List<RecipeModel>> recipesFromFollowing(
+    List<String> authorIds, {
+    int limit = 30,
+  }) async {
+    if (authorIds.isEmpty) return [];
+    final results = <RecipeModel>[];
+    for (var i = 0; i < authorIds.length; i += 30) {
+      final chunk = authorIds.sublist(
+        i,
+        i + 30 > authorIds.length ? authorIds.length : i + 30,
+      );
+      final snap = await _firestore
+          .collection('recipes')
+          .where('authorId', whereIn: chunk)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+      results.addAll(
+        snap.docs.map(
+          (d) => RecipeModel.fromFirestore(d.data(), docId: d.id),
+        ),
+      );
+    }
+    // Sort merged results by createdAt descending and cap at limit.
+    results.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    return results.take(limit).toList();
   }
 }
+

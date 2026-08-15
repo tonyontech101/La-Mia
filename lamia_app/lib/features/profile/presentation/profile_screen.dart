@@ -8,22 +8,38 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/auth_service.dart';
+import '../../auth/data/user_model.dart';
+import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/login_screen.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
+import '../../social/data/favorites_repository.dart';
+import '../../social/data/follow_repository.dart';
+import '../../social/data/like_repository.dart';
+import 'edit_profile_screen.dart';
 import 'widgets/dish_card_grid.dart';
 import 'widgets/profile_header_widget.dart';
 
-/// Full Profile Screen designed according to the wireframe.
+/// Full Profile Screen with real Firestore data.
 ///
-/// Includes App Bar (Back, Title, Hamburger options), Profile Header,
-/// Stat row, Tab Switcher (Posts, Likes, Saved Recipes), and 2-column Dish Grid.
+/// Supports two modes:
+/// - **Own profile**: when [targetUserId] is null, shows the logged-in user
+/// - **Other user**: when [targetUserId] is set, shows that user's profile
+///   with a follow button instead of edit.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, this.isGuest = false, this.onNavigateHome});
+  const ProfileScreen({
+    super.key,
+    this.isGuest = false,
+    this.onNavigateHome,
+    this.targetUserId,
+  });
 
   final bool isGuest;
   final VoidCallback? onNavigateHome;
+
+  /// When set, displays another user's profile instead of the logged-in user.
+  final String? targetUserId;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -31,10 +47,29 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedTabIndex = 0; // 0: Posts, 1: Likes, 2: Saved Recipes
-  final RecipeRepository _recipeRepository = RecipeRepository();
 
-  List<RecipeModel> _allRecipes = [];
+  final UserRepository _userRepo = UserRepository();
+  final RecipeRepository _recipeRepo = RecipeRepository();
+  final LikeRepository _likeRepo = LikeRepository();
+  final FavoritesRepository _favoritesRepo = FavoritesRepository();
+  final FollowRepository _followRepo = FollowRepository();
+
+  UserModel? _userModel;
+  List<RecipeModel> _userRecipes = [];
+  List<RecipeModel> _likedRecipes = [];
+  List<RecipeModel> _savedRecipes = [];
   bool _isLoading = true;
+  bool _isFollowing = false;
+
+  /// Whether we are viewing our own profile or another user's.
+  bool get _isOwnProfile {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    return widget.targetUserId == null || widget.targetUserId == currentUid;
+  }
+
+  /// The UID being displayed.
+  String? get _displayedUid =>
+      widget.targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
@@ -43,21 +78,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfileData() async {
+    final uid = _displayedUid;
+    if (uid == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
     try {
-      final recipes = await _recipeRepository.allRecipes(limit: 20);
+      // Load user model + user's posted recipes in parallel.
+      final results = await Future.wait([
+        _userRepo.getUser(uid),
+        _recipeRepo.recipesByAuthor(uid),
+      ]);
+
+      final user = results[0] as UserModel?;
+      final recipes = results[1] as List<RecipeModel>;
+
+      // Check follow status if viewing another user.
+      bool following = false;
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      if (!_isOwnProfile && currentUid != null) {
+        following = await _followRepo.isFollowing(
+          currentUid: currentUid,
+          targetUid: uid,
+        );
+      }
+
       if (mounted) {
         setState(() {
-          _allRecipes = recipes;
+          _userModel = user;
+          _userRecipes = recipes;
+          _isFollowing = following;
           _isLoading = false;
         });
       }
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Lazily loads liked recipes when the Likes tab is first selected.
+  Future<void> _loadLikedRecipes() async {
+    if (_likedRecipes.isNotEmpty) return;
+    final uid = _displayedUid;
+    if (uid == null) return;
+    try {
+      final recipes = await _likeRepo.getLikedRecipes(uid);
+      if (mounted) setState(() => _likedRecipes = recipes);
+    } catch (_) {}
+  }
+
+  /// Lazily loads saved recipes when the Saved tab is first selected.
+  Future<void> _loadSavedRecipes() async {
+    if (_savedRecipes.isNotEmpty) return;
+    final uid = _displayedUid;
+    if (uid == null) return;
+    try {
+      final recipes = await _favoritesRepo.getSavedRecipes(uid);
+      if (mounted) setState(() => _savedRecipes = recipes);
+    } catch (_) {}
   }
 
   Future<void> _onSignOut() async {
@@ -66,6 +145,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.of(
       context,
     ).pushAndRemoveUntil(fadePageRoute(const LoginScreen()), (_) => false);
+  }
+
+  Future<void> _toggleFollow() async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final targetUid = _displayedUid;
+    if (currentUid == null || targetUid == null) return;
+    final newState = await _followRepo.toggleFollow(
+      currentUid: currentUid,
+      targetUid: targetUid,
+    );
+    if (mounted) setState(() => _isFollowing = newState);
   }
 
   void _showOptionsMenu(BuildContext context) {
@@ -99,52 +189,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.person_outline_rounded,
-                    color: AppColors.primary,
+                if (_isOwnProfile) ...[
+                  ListTile(
+                    leading: const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: const Text('Edit Profile'),
+                    subtitle: Text(
+                      widget.isGuest
+                          ? 'Guest user'
+                          : (user?.email ?? ''),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _navigateToEditProfile();
+                    },
                   ),
-                  title: const Text('Edit Profile'),
-                  subtitle: Text(
-                    widget.isGuest ? 'Guest user' : (user?.email ?? ''),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.bookmark_border_rounded,
+                      color: AppColors.secondary,
+                    ),
+                    title: const Text('Saved Collections'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _onTabSelected(2);
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Edit profile coming soon!'),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.bookmark_border_rounded,
-                    color: AppColors.secondary,
+                  ListTile(
+                    leading: const Icon(
+                      Icons.settings_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                    title: const Text('Preferences & Dietary Settings'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Preferences coming soon!'),
+                        ),
+                      );
+                    },
                   ),
-                  title: const Text('Saved Collections'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() => _selectedTabIndex = 2);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.settings_outlined,
-                    color: AppColors.textSecondary,
-                  ),
-                  title: const Text('Preferences & Dietary Settings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Preferences coming soon!')),
-                    );
-                  },
-                ),
-                const Divider(height: 24),
+                  const Divider(height: 24),
+                ],
                 ListTile(
                   leading: Icon(
-                    widget.isGuest ? Icons.login_rounded : Icons.logout_rounded,
+                    widget.isGuest
+                        ? Icons.login_rounded
+                        : Icons.logout_rounded,
                     color: AppColors.error,
                   ),
                   title: Text(
@@ -167,6 +261,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _navigateToEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+    ).then((_) {
+      // Reload profile data when returning from edit screen.
+      _loadProfileData();
+    });
+  }
+
+  void _onTabSelected(int index) {
+    setState(() => _selectedTabIndex = index);
+    if (index == 1) _loadLikedRecipes();
+    if (index == 2) _loadSavedRecipes();
+  }
+
   void _onRecipeTap(RecipeModel recipe) {
     Navigator.push(
       context,
@@ -177,29 +287,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   List<RecipeModel> _getTabRecipes() {
-    if (_allRecipes.isEmpty) return [];
     switch (_selectedTabIndex) {
       case 0:
-        // Posts (take first 6 recipes as user posts)
-        return _allRecipes.take(6).toList();
+        return _userRecipes;
       case 1:
-        // Likes (take next subset)
-        return _allRecipes.skip(2).take(6).toList();
+        return _likedRecipes;
       case 2:
-        // Saved Recipes
-        return _allRecipes.skip(4).take(6).toList();
+        return _savedRecipes;
       default:
-        return _allRecipes;
+        return _userRecipes;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final displayName = widget.isGuest
-        ? 'Guest Foodie'
-        : (user?.displayName ?? user?.email?.split('@').first ?? 'Chef Foodie');
-    final photoUrl = widget.isGuest ? null : user?.photoURL;
+    final displayName = _userModel?.displayName ??
+        (widget.isGuest
+            ? 'Guest Foodie'
+            : (user?.displayName ??
+                user?.email?.split('@').first ??
+                'Chef Foodie'));
+    final photoUrl = _userModel?.photoUrl ??
+        (widget.isGuest ? null : user?.photoURL);
+    final bio = _userModel?.bio ??
+        (widget.isGuest
+            ? 'Browsing as guest foodie. Sign in to post family recipes!'
+            : null);
 
     final tabRecipes = _getTabRecipes();
 
@@ -239,40 +353,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         tooltip: 'Back',
                       ),
                       Text(
-                        'Profile',
+                        _isOwnProfile ? 'Profile' : displayName,
                         style: AppTypography.headline(
                           color: AppColors.textPrimary,
                         ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
                       ),
-                      IconButton(
-                        onPressed: () => _showOptionsMenu(context),
-                        icon: const Icon(
-                          Icons.menu_rounded,
-                          color: AppColors.textPrimary,
-                          size: 26,
-                        ),
-                        tooltip: 'Menu Options',
-                      ),
+                      if (_isOwnProfile)
+                        IconButton(
+                          onPressed: () => _showOptionsMenu(context),
+                          icon: const Icon(
+                            Icons.menu_rounded,
+                            color: AppColors.textPrimary,
+                            size: 26,
+                          ),
+                          tooltip: 'Menu Options',
+                        )
+                      else
+                        const SizedBox(width: 48),
                     ],
                   ),
 
                   const SizedBox(height: 12),
 
                   // 2. Profile Header (Avatar, Badge, Bio, Stats)
-                  // Stats placeholders (`—`) until real user stats ship —
-                  // don't fabricate follower/like counts.
                   ProfileHeaderWidget(
                     displayName: displayName,
                     photoUrl: photoUrl,
-                    bio: widget.isGuest
-                        ? 'Browsing as guest foodie. Sign in to post family recipes!'
-                        : 'Passionate home cook & Filipino food lover. Sharing traditional family recipes!',
+                    bio: bio,
                     ranking: '— ranking',
-                    recipesCount: widget.isGuest ? '0' : '—',
-                    likesCount: widget.isGuest ? '0' : '—',
-                    followersCount: widget.isGuest ? '0' : '—',
+                    recipesCount: _userModel?.recipeCount.toString() ??
+                        (widget.isGuest ? '0' : '—'),
+                    likesCount:
+                        _userModel?.totalLikesReceived.toString() ??
+                        (widget.isGuest ? '0' : '—'),
+                    followersCount:
+                        _userModel?.followerCount.toString() ??
+                        (widget.isGuest ? '0' : '—'),
                     isGuest: widget.isGuest,
-                    onEditProfileTap: () => _showOptionsMenu(context),
+                    isOwnProfile: _isOwnProfile,
+                    isFollowing: _isFollowing,
+                    onEditProfileTap: _isOwnProfile
+                        ? _navigateToEditProfile
+                        : null,
+                    onFollowTap: !_isOwnProfile ? _toggleFollow : null,
                   ),
 
                   const SizedBox(height: 24),
@@ -309,76 +432,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           (
                             label: 'Posts',
                             icon: Icons.mark_email_unread_outlined,
+                            isSelected: _selectedTabIndex == 0,
+                            onTap: () => _onTabSelected(0),
                           ),
                           (
                             label: 'Likes',
                             icon: Icons.favorite_border_rounded,
+                            isSelected: _selectedTabIndex == 1,
+                            onTap: () => _onTabSelected(1),
                           ),
-                          (
-                            label: 'Saved Recipes',
-                            icon: Icons.bookmark_border_rounded,
+                        ),
+                        if (_isOwnProfile)
+                          Expanded(
+                            child: _TabButton(
+                              label: 'Saved Recipes',
+                              icon: Icons.bookmark_border_rounded,
+                              isSelected: _selectedTabIndex == 2,
+                              onTap: () => _onTabSelected(2),
+                            ),
                           ),
-                        ];
-                        final tab = tabs[i];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 4,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              AnimatedIconColor(
-                                icon: tab.icon,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 240),
-                                  curve: Curves.easeOutCubic,
-                                  style: AppTypography.caption(
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ).copyWith(
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    fontSize: 11,
-                                  ),
-                                  child: Text(
-                                    tab.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                      ],
                     ),
                   ),
 
                   const SizedBox(height: 18),
 
-                  // 4. 2-Column Dish Cards Grid matching wireframe — slides
-                  // between Posts / Likes / Saved Recipes.
-                  SlideTabSwitcher(
-                    index: _selectedTabIndex,
-                    child: DishCardGrid(
-                      recipes: tabRecipes,
-                      isLoading: _isLoading,
-                      emptyMessage: _selectedTabIndex == 0
-                          ? 'No recipe posts created yet'
-                          : _selectedTabIndex == 1
-                          ? 'No liked recipes yet'
-                          : 'No saved recipes yet',
-                      onRecipeTap: _onRecipeTap,
-                    ),
+                  // 4. 2-Column Dish Cards Grid
+                  DishCardGrid(
+                    recipes: tabRecipes,
+                    isLoading: _isLoading,
+                    emptyMessage: _selectedTabIndex == 0
+                        ? 'No recipe posts created yet'
+                        : _selectedTabIndex == 1
+                        ? 'No liked recipes yet'
+                        : 'No saved recipes yet',
+                    onRecipeTap: _onRecipeTap,
                   ),
 
                   const SizedBox(height: 24),
@@ -417,3 +505,4 @@ class AnimatedIconColor extends StatelessWidget {
     );
   }
 }
+

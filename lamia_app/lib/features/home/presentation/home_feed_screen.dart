@@ -9,6 +9,8 @@ import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
+import '../../search/presentation/universal_search_screen.dart';
+import '../../social/data/follow_repository.dart';
 import 'widgets/feed_app_bar.dart';
 import 'widgets/feed_recipe_card.dart';
 import 'widgets/search_bar_widget.dart';
@@ -28,26 +30,13 @@ class HomeFeedScreen extends StatefulWidget {
 class _HomeFeedScreenState extends State<HomeFeedScreen> {
   int _activeTab = 1; // 0 = Following, 1 = For You (default)
   final RecipeRepository _recipeRepository = RecipeRepository();
+  final FollowRepository _followRepo = FollowRepository();
 
   List<RecipeModel> _recipes = [];
+  List<RecipeModel> _followingRecipes = [];
   bool _isLoading = true;
   bool _hasError = false;
-
-  /// Dummy Filipino usernames for visual variety in the feed.
-  static const _dummyUsernames = [
-    'Chef Maria',
-    'Lola Rosa',
-    'Kuya Ben',
-    'Ate Carla',
-    'Tita Joy',
-    'Nanay Luz',
-    'Chef Paolo',
-    'Inay Dina',
-    'Tito Romy',
-    'Manang Cely',
-    'Chef Andrei',
-    'Ate Bea',
-  ];
+  bool _followingLoaded = false;
 
   @override
   void initState() {
@@ -78,25 +67,46 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
     }
   }
 
-  /// Returns a shuffled/filtered subset depending on the active tab.
+  /// Loads recipes from authors the current user follows.
+  Future<void> _loadFollowingRecipes() async {
+    if (_followingLoaded) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => _followingLoaded = true);
+      return;
+    }
+    try {
+      final ids = await _followRepo.getFollowingIds(user.uid);
+      if (ids.isEmpty) {
+        if (mounted) setState(() => _followingLoaded = true);
+        return;
+      }
+      final recipes = await _recipeRepository.recipesFromFollowing(ids);
+      if (mounted) {
+        setState(() {
+          _followingRecipes = recipes;
+          _followingLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _followingLoaded = true);
+    }
+  }
+
+  /// Returns recipes depending on the active tab.
   List<RecipeModel> _getTabRecipes() {
-    if (_recipes.isEmpty) return [];
     if (_activeTab == 0) {
-      // "Following" — show a subset (simulate followed users' posts)
-      return _recipes
-          .where(
-            (r) =>
-                r.tags.contains('Comfort Food') ||
-                r.tags.contains('Traditional'),
-          )
-          .toList();
+      return _followingRecipes;
     }
     // "For You" — show all recipes
     return _recipes;
   }
 
-  String _getDummyUsername(int index) {
-    return _dummyUsernames[index % _dummyUsernames.length];
+  void _onTabChanged(int tab) {
+    setState(() => _activeTab = tab);
+    if (tab == 0 && !_followingLoaded) {
+      _loadFollowingRecipes();
+    }
   }
 
   void _onRecipeTap(RecipeModel recipe) {
@@ -142,11 +152,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 
                       const SizedBox(height: 12),
 
-                      // 2. Search Bar (hybrid element retained from old Home)
+                      // 2. Search Bar
                       SearchBarWidget(
                         onTap: () {
-                          // Navigate to Cook tab (former dashboard)
-                          widget.onNavigateToTab?.call(1);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UniversalSearchScreen(),
+                            ),
+                          );
                         },
                       ),
 
@@ -155,7 +169,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                       // 3. Following / For You tab switcher
                       _FeedTabSwitcher(
                         activeTab: _activeTab,
-                        onTabChanged: (tab) => setState(() => _activeTab = tab),
+                        onTabChanged: _onTabChanged,
                       ),
 
                       const SizedBox(height: 8),
@@ -205,6 +219,14 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                                 );
                               },
                             ),
+                            itemCount: tabRecipes.length,
+                            itemBuilder: (context, index) {
+                              final recipe = tabRecipes[index];
+                              return FeedRecipeCard(
+                                recipe: recipe,
+                                onTap: () => _onRecipeTap(recipe),
+                              );
+                            },
                           ),
                   ),
                 ),

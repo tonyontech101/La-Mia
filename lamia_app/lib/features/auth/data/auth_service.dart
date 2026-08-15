@@ -124,6 +124,9 @@ class AuthService {
   /// Creates a Firestore document in the `users` collection for [user] if
   /// one doesn't already exist. Called automatically after sign-up and
   /// first Google sign-in.
+  ///
+  /// Uses `merge: true` so existing users who re-authenticate don't lose
+  /// their accumulated stats (followerCount, recipeCount, etc.).
   Future<void> _ensureUserDocument(User user) async {
     final docRef = _firestore.collection('users').doc(user.uid);
     final snapshot = await docRef.get();
@@ -134,6 +137,9 @@ class AuthService {
         'photoUrl': user.photoURL,
         'recipeCount': 0,
         'totalLikesReceived': 0,
+        'followerCount': 0,
+        'followingCount': 0,
+        'savedCount': 0,
         'role': 'user',
         'createdAt': FieldValue.serverTimestamp(),
       });

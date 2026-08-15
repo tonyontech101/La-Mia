@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/widgets/fade_in_view.dart';
-import '../../../core/widgets/slide_tab_switcher.dart';
-import '../../../core/widgets/sliding_tab_bar.dart';
+import '../../auth/data/user_model.dart';
+import '../../auth/data/user_repository.dart';
+import '../../profile/presentation/profile_screen.dart';
 import 'widgets/chef_of_month_card.dart';
 import 'widgets/ranked_chef_tile.dart';
 import 'widgets/your_ranking_card.dart';
@@ -30,11 +30,14 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   int _activeTab = 0; // 0 = Top Contributors, 1 = Most Cooked
+  final UserRepository _userRepo = UserRepository();
 
-  /// Dummy leaderboard data — Filipino chef names for visual variety.
-  /// Marked clearly as demo: this is *not* real ranking data and should be
-  /// replaced by a Firestore query over `users` once stats ship.
-  static const _topContributors = [
+  List<UserModel> _topContributors = [];
+  List<UserModel> _mostLiked = [];
+  bool _isLoading = true;
+
+  /// Fallback demo data when Firestore has no registered users yet.
+  static const _demoChefs = [
     _ChefData('Chef Maria Santos', 42),
     _ChefData('Lola Rosa Reyes', 38),
     _ChefData('Kuya Ben Cruz', 35),
@@ -43,17 +46,29 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     _ChefData('Nanay Luz Garcia', 25),
   ];
 
-  static const _mostCooked = [
-    _ChefData('Chef Paolo Mendoza', 156),
-    _ChefData('Manang Cely Tan', 142),
-    _ChefData('Inay Dina Ramos', 128),
-    _ChefData('Tito Romy Bautista', 115),
-    _ChefData('Ate Bea Villanueva', 103),
-    _ChefData('Chef Andrei Lim', 97),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaderboard();
+  }
 
-  List<_ChefData> get _currentData =>
-      _activeTab == 0 ? _topContributors : _mostCooked;
+  Future<void> _loadLeaderboard() async {
+    try {
+      final results = await Future.wait([
+        _userRepo.topContributors(limit: 10),
+        _userRepo.mostLiked(limit: 10),
+      ]);
+      if (mounted) {
+        setState(() {
+          _topContributors = results[0];
+          _mostLiked = results[1];
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   void _showOptionsMenu(BuildContext context) {
     showModalBottomSheet(
@@ -138,7 +153,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = _currentData;
+    // Convert real user models to chef entry data, or fallback to demo list
+    final realUsers = _activeTab == 0 ? _topContributors : _mostLiked;
+    final List<_ChefData> data;
+
+    if (realUsers.isNotEmpty) {
+      data = realUsers
+          .map(
+            (u) => _ChefData(
+              u.displayName,
+              _activeTab == 0 ? u.recipeCount : u.totalLikesReceived,
+              uid: u.uid,
+            ),
+          )
+          .toList();
+    } else {
+      data = _demoChefs;
+    }
+
     final top3 = data.take(3).toList();
     final trending = data.skip(3).toList();
 
@@ -216,114 +248,68 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                 // ── Scrollable Content ──
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenH,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-
-                        // Demo-data banner — the leaderboard does not yet
-                        // read from Firestore. Make that visible so viewers
-                        // don't mistake dummy data for real rankings.
-                        Container(
-                          width: double.infinity,
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        )
+                      : SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: AppSpacing.screenH,
                           ),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentSoft,
-                            borderRadius: BorderRadius.circular(AppRadii.field),
-                            border: Border.all(
-                              color: AppColors.accent.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline_rounded,
-                                size: 16,
-                                color: AppColors.accent,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Demo rankings — real stats coming soon.',
-                                  style: AppTypography.caption(
-                                    color: AppColors.textPrimary,
-                                  ).copyWith(fontSize: 11),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // 1. Chef of the Month
-                        FadeInView(
-                          duration: const Duration(milliseconds: 450),
-                          offset: const Offset(0, 16),
-                          child: ChefOfMonthCard(
-                            chefName: data.first.name,
-                            dishName: 'Chicken Adobo sa Gata',
-                            likes: _mostCooked.first.count, // demo count
-                            onViewProfile: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Viewing ${data.first.name}\'s profile...',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // 2. Tab Switcher: Top Contributors / Most Cooked
-                        _LeaderboardTabSwitcher(
-                          activeTab: _activeTab,
-                          onTabChanged: (tab) =>
-                              setState(() => _activeTab = tab),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // 3-5. Ranked lists — slide horizontally in the
-                        // direction of the tapped tab between Top Contributors
-                        // and Most Cooked.
-                        SlideTabSwitcher(
-                          index: _activeTab,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 12),
+
+                              // 1. Chef of the Month
+                              ChefOfMonthCard(
+                                chefName: data.first.name,
+                                dishName: 'Chicken Adobo sa Gata',
+                                likes: data.first.count,
+                                onViewProfile: () {
+                                  if (data.first.uid != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProfileScreen(
+                                          targetUserId: data.first.uid,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // 2. Tab Switcher: Top Contributors / Most Cooked
+                              _LeaderboardTabSwitcher(
+                                activeTab: _activeTab,
+                                onTabChanged: (tab) =>
+                                    setState(() => _activeTab = tab),
+                              ),
+
+                              const SizedBox(height: 16),
+
                               // 3. Top 3 Ranked Chefs
                               for (int i = 0; i < top3.length; i++)
-                                FadeInView(
-                                  key: ValueKey<String>('top-${top3[i].name}'),
-                                  delay: Duration(milliseconds: 80 + i * 90),
-                                  duration: const Duration(milliseconds: 420),
-                                  offset: const Offset(0, 16),
-                                  child: RankedChefTile(
-                                    rank: i + 1,
-                                    chefName: top3[i].name,
-                                    recipesShared: top3[i].count,
-                                    isTopThree: true,
-                                    onTap: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Viewing ${top3[i].name}\'s profile...',
+                                RankedChefTile(
+                                  rank: i + 1,
+                                  chefName: top3[i].name,
+                                  recipesShared: top3[i].count,
+                                  isTopThree: true,
+                                  onTap: () {
+                                    if (top3[i].uid != null) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProfileScreen(
+                                            targetUserId: top3[i].uid,
                                           ),
                                         ),
                                       );
-                                    },
-                                  ),
+                                    }
+                                  },
                                 ),
 
                               const SizedBox(height: 20),
@@ -335,13 +321,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 children: [
                                   Text(
                                     'TRENDING COOKS',
-                                    style: AppTypography.caption(
-                                      color: AppColors.textSecondary,
-                                    ).copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                      letterSpacing: 0.8,
-                                    ),
+                                    style:
+                                        AppTypography.caption(
+                                          color: AppColors.textSecondary,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 11,
+                                          letterSpacing: 0.8,
+                                        ),
                                   ),
                                   GestureDetector(
                                     onTap: () {
@@ -355,12 +342,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     },
                                     child: Text(
                                       'See All',
-                                      style: AppTypography.caption(
-                                        color: AppColors.secondary,
-                                      ).copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 11,
-                                      ),
+                                      style:
+                                          AppTypography.caption(
+                                            color: AppColors.secondary,
+                                          ).copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -374,60 +362,47 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                               // 5. Trending Cooks rows (4, 5, 6...)
                               for (int i = 0; i < trending.length; i++)
-                                FadeInView(
-                                  key: ValueKey<String>(
-                                    'trend-${trending[i].name}',
-                                  ),
-                                  delay: Duration(milliseconds: 80 + i * 80),
-                                  duration: const Duration(milliseconds: 400),
-                                  offset: const Offset(0, 14),
-                                  child: RankedChefTile(
-                                    rank: i + 4,
-                                    chefName: trending[i].name,
-                                    recipesShared: trending[i].count,
-                                    isTopThree: false,
-                                    onTap: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Viewing ${trending[i].name}\'s profile...',
+                                RankedChefTile(
+                                  rank: i + 4,
+                                  chefName: trending[i].name,
+                                  recipesShared: trending[i].count,
+                                  isTopThree: false,
+                                  onTap: () {
+                                    if (trending[i].uid != null) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProfileScreen(
+                                            targetUserId: trending[i].uid,
                                           ),
                                         ),
                                       );
-                                    },
-                                  ),
+                                    }
+                                  },
                                 ),
+
+                              const SizedBox(height: 24),
+
+                              // 6. Your Ranking card
+                              YourRankingCard(
+                                rank: 0,
+                                title: 'Cooking Enthusiast',
+                                spotsChange: 0,
+                                onSeeFullRank: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Full ranking view coming soon!',
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(height: 32),
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // 6. Your Ranking card — demo values until real user stats ship.
-                        FadeInView(
-                          delay: const Duration(milliseconds: 120),
-                          duration: const Duration(milliseconds: 420),
-                          offset: const Offset(0, 16),
-                          child: YourRankingCard(
-                            rank: 0, // 0 = "unranked / demo"
-                            title: 'Cooking Enthusiast',
-                            spotsChange: 0,
-                            onSeeFullRank: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Full ranking view coming soon!',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -503,9 +478,10 @@ class _LeaderboardTabSwitcher extends StatelessWidget {
   }
 }
 
-/// Simple data class for dummy chef leaderboard entries.
+/// Simple data class for chef leaderboard entries.
 class _ChefData {
-  const _ChefData(this.name, this.count);
+  const _ChefData(this.name, this.count, {this.uid});
   final String name;
   final int count;
+  final String? uid;
 }
