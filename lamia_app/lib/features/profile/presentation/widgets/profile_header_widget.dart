@@ -172,10 +172,12 @@ class ProfileHeaderWidget extends StatelessWidget {
           ElevatedButton(
             onPressed: onFollowTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  isFollowing ? AppColors.surfaceAlt : AppColors.primary,
-              foregroundColor:
-                  isFollowing ? AppColors.textPrimary : AppColors.onPrimary,
+              backgroundColor: isFollowing
+                  ? AppColors.surfaceAlt
+                  : AppColors.primary,
+              foregroundColor: isFollowing
+                  ? AppColors.textPrimary
+                  : AppColors.onPrimary,
               shape: const StadiumBorder(),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               elevation: isFollowing ? 0 : 2,

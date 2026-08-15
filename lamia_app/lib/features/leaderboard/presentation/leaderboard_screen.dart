@@ -260,7 +260,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 Expanded(
                   child: _isLoading
                       ? const Center(
-                          child: CircularProgressIndicator(color: AppColors.primary),
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
                         )
                       : SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(
@@ -342,7 +344,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   ),
                                   GestureDetector(
                                     onTap: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
                                             'Full trending list coming soon!',

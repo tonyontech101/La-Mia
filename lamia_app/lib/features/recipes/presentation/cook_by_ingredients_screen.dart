@@ -630,182 +630,184 @@ class _CookMatchedRecipeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.card),
         child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          border: Border.all(color: AppColors.border, width: 1),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Recipe Cover Photo + Match Percentage Badge
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppRadii.card),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: CachedNetworkImage(
-                      imageUrl: recipe.coverPhotoUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(
-                        color: AppColors.surfaceAlt,
-                        child: const Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (_, _, _) => Container(
-                        color: AppColors.surfaceAlt,
-                        child: Center(
-                          child: Text(
-                            recipe.name,
-                            style: AppTypography.headline(
-                              color: AppColors.textSecondary,
-                            ).copyWith(fontSize: 18),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Match Percentage Badge
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: AppColors.cardShadow,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          matchItem.matchPercentage >= 80
-                              ? Icons.check_circle_rounded
-                              : Icons.local_fire_department_rounded,
-                          size: 14,
-                          color: badgeColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${matchItem.matchPercentage}% Match',
-                          style: AppTypography.caption(
-                            color: badgeColor,
-                          ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // Card Body Info
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Recipe Cover Photo + Match Percentage Badge
+              Stack(
                 children: [
-                  Text(
-                    recipe.name,
-                    style: AppTypography.headline(
-                      color: AppColors.textPrimary,
-                    ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${recipe.prepTime} prep • ${recipe.cookTime} cook',
-                        style: AppTypography.caption(
-                          color: AppColors.textSecondary,
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppRadii.card),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: CachedNetworkImage(
+                        imageUrl: recipe.coverPhotoUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          color: AppColors.surfaceAlt,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          color: AppColors.surfaceAlt,
+                          child: Center(
+                            child: Text(
+                              recipe.name,
+                              style: AppTypography.headline(
+                                color: AppColors.textSecondary,
+                              ).copyWith(fontSize: 18),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Icon(
-                        Icons.restaurant_outlined,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        recipe.difficulty,
-                        style: AppTypography.caption(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  if (matchItem.missingIngredients.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
+
+                  // Match Percentage Badge
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
-                        vertical: 6,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(AppRadii.field),
+                        color: AppColors.surface.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.cardShadow,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.shopping_basket_outlined,
+                          Icon(
+                            matchItem.matchPercentage >= 80
+                                ? Icons.check_circle_rounded
+                                : Icons.local_fire_department_rounded,
                             size: 14,
-                            color: AppColors.textSecondary,
+                            color: badgeColor,
                           ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Missing: ${matchItem.missingIngredients.take(3).join(", ")}${matchItem.missingIngredients.length > 3 ? "..." : ""}',
-                              style: AppTypography.caption(
-                                color: AppColors.textSecondary,
-                              ).copyWith(fontSize: 11),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${matchItem.matchPercentage}% Match',
+                            style: AppTypography.caption(color: badgeColor)
+                                .copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
+
+              // Card Body Info
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      recipe.name,
+                      style: AppTypography.headline(
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.prepTime} prep • ${recipe.cookTime} cook',
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.restaurant_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          recipe.difficulty,
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (matchItem.missingIngredients.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(AppRadii.field),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.shopping_basket_outlined,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Missing: ${matchItem.missingIngredients.take(3).join(", ")}${matchItem.missingIngredients.length > 3 ? "..." : ""}',
+                                style: AppTypography.caption(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

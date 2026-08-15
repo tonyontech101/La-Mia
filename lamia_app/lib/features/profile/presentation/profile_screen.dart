@@ -196,9 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     title: const Text('Edit Profile'),
                     subtitle: Text(
-                      widget.isGuest
-                          ? 'Guest user'
-                          : (user?.email ?? ''),
+                      widget.isGuest ? 'Guest user' : (user?.email ?? ''),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -235,9 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
                 ListTile(
                   leading: Icon(
-                    widget.isGuest
-                        ? Icons.login_rounded
-                        : Icons.logout_rounded,
+                    widget.isGuest ? Icons.login_rounded : Icons.logout_rounded,
                     color: AppColors.error,
                   ),
                   title: Text(
@@ -301,15 +297,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final displayName = _userModel?.displayName ??
+    final displayName =
+        _userModel?.displayName ??
         (widget.isGuest
             ? 'Guest Foodie'
             : (user?.displayName ??
-                user?.email?.split('@').first ??
-                'Chef Foodie'));
-    final photoUrl = _userModel?.photoUrl ??
-        (widget.isGuest ? null : user?.photoURL);
-    final bio = _userModel?.bio ??
+                  user?.email?.split('@').first ??
+                  'Chef Foodie'));
+    final photoUrl =
+        _userModel?.photoUrl ?? (widget.isGuest ? null : user?.photoURL);
+    final bio =
+        _userModel?.bio ??
         (widget.isGuest
             ? 'Browsing as guest foodie. Sign in to post family recipes!'
             : null);
@@ -380,7 +378,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     photoUrl: photoUrl,
                     bio: bio,
                     ranking: '— ranking',
-                    recipesCount: _userModel?.recipeCount.toString() ??
+                    recipesCount:
+                        _userModel?.recipeCount.toString() ??
                         (widget.isGuest ? '0' : '—'),
                     likesCount:
                         _userModel?.totalLikesReceived.toString() ??
@@ -432,10 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             label: 'Posts',
                             icon: Icons.mark_email_unread_outlined,
                           ),
-                          (
-                            label: 'Likes',
-                            icon: Icons.favorite_border_rounded,
-                          ),
+                          (label: 'Likes', icon: Icons.favorite_border_rounded),
                           if (_isOwnProfile)
                             (
                               label: 'Saved Recipes',
@@ -463,16 +459,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: AnimatedDefaultTextStyle(
                                   duration: const Duration(milliseconds: 240),
                                   curve: Curves.easeOutCubic,
-                                  style: AppTypography.caption(
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ).copyWith(
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    fontSize: 11,
-                                  ),
+                                  style:
+                                      AppTypography.caption(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                      ).copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        fontSize: 11,
+                                      ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   child: Text(tab.label),
@@ -535,4 +532,3 @@ class AnimatedIconColor extends StatelessWidget {
     );
   }
 }
-

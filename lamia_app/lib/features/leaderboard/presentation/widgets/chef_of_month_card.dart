@@ -60,7 +60,9 @@ class ChefOfMonthCard extends StatelessWidget {
                               child: SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                           ),
@@ -213,12 +215,13 @@ class ChefOfMonthCard extends StatelessWidget {
                           ),
                           child: Text(
                             'View Profile',
-                            style: AppTypography.caption(
-                              color: AppColors.onPrimary,
-                            ).copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
+                            style:
+                                AppTypography.caption(
+                                  color: AppColors.onPrimary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
                           ),
                         ),
                       ),

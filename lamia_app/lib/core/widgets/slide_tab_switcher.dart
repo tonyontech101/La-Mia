@@ -68,8 +68,9 @@ class _SlideTabSwitcherState extends State<SlideTabSwitcher> {
     // Tapping a tab further right (higher index) moves the strip left:
     // new content enters from the right edge while the old exits left.
     final movingRight = widget.index > _previousIndex;
-    final currentKey =
-        ValueKey<String>('${widget.index}|${widget.transitionKey}');
+    final currentKey = ValueKey<String>(
+      '${widget.index}|${widget.transitionKey}',
+    );
 
     return AnimatedSwitcher(
       duration: widget.duration,
@@ -85,12 +86,8 @@ class _SlideTabSwitcherState extends State<SlideTabSwitcher> {
         final Offset end;
         if (_indexChanged) {
           // Real tab switch — slide towards the tapped tab.
-          begin = isIncoming
-              ? Offset(movingRight ? 1 : -1, 0)
-              : Offset.zero;
-          end = isIncoming
-              ? Offset.zero
-              : Offset(movingRight ? -1 : 1, 0);
+          begin = isIncoming ? Offset(movingRight ? 1 : -1, 0) : Offset.zero;
+          end = isIncoming ? Offset.zero : Offset(movingRight ? -1 : 1, 0);
         } else {
           // Same-tab state swap — gentle fade and rise.
           begin = const Offset(0, 0.02);
@@ -104,10 +101,7 @@ class _SlideTabSwitcherState extends State<SlideTabSwitcher> {
           ),
         );
       },
-      child: KeyedSubtree(
-        key: currentKey,
-        child: widget.child,
-      ),
+      child: KeyedSubtree(key: currentKey, child: widget.child),
     );
   }
 }
