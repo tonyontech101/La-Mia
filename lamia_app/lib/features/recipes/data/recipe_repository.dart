@@ -187,4 +187,11 @@ class RecipeRepository {
     });
     return results.take(limit).toList();
   }
+
+  /// Adds a new user-submitted recipe to Firestore.
+  /// Returns the newly created document ID.
+  Future<String> addRecipe(RecipeModel recipe) async {
+    final ref = await _firestore.collection('recipes').add(recipe.toFirestore());
+    return ref.id;
+  }
 }
