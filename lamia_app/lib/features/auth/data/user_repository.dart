@@ -5,7 +5,6 @@ import 'user_model.dart';
 /// Repository for user profile operations against Firestore.
 ///
 /// Provides methods for fetching, streaming, and updating user profiles.
-/// Profile photo upload is deferred to a later phase.
 class UserRepository {
   UserRepository({this._firestore});
 
@@ -19,9 +18,11 @@ class UserRepository {
   // ── Read ─────────────────────────────────────────────────────────────────
 
   /// Fetches a user profile by [uid]. Returns `null` if the document
-  /// does not exist.
+  /// does not exist. Always reads from the server to avoid stale cache.
   Future<UserModel?> getUser(String uid) async {
-    final doc = await _usersRef.doc(uid).get();
+    final doc = await _usersRef.doc(uid).get(
+      const GetOptions(source: Source.server),
+    );
     if (!doc.exists || doc.data() == null) return null;
     return UserModel.fromFirestore(doc);
   }
@@ -37,18 +38,29 @@ class UserRepository {
 
   // ── Update ───────────────────────────────────────────────────────────────
 
-  /// Updates the current user's profile fields. Only the provided fields
-  /// are updated; `null` values are skipped.
+  /// Updates the current user's profile fields using [set] with merge.
+  /// This is more resilient than [update] because it works even if the
+  /// document is missing or fields don't exist yet.
   Future<void> updateProfile(
     String uid, {
     String? displayName,
     String? bio,
+    String? photoUrl,
   }) async {
     final updates = <String, dynamic>{};
     if (displayName != null) updates['displayName'] = displayName;
-    if (bio != null) updates['bio'] = bio;
+    if (bio != null) {
+      // An empty value is an intentional "clear bio" request.  Keeping the
+      // field absent also prevents the profile UI from rendering stale text.
+      updates['bio'] = bio.trim().isEmpty ? FieldValue.delete() : bio.trim();
+    }
+    if (photoUrl != null) {
+      // Empty string means clear the field
+      updates['photoUrl'] = photoUrl.isEmpty ? FieldValue.delete() : photoUrl;
+    }
     if (updates.isEmpty) return;
-    await _usersRef.doc(uid).update(updates);
+    // Use set with merge: true for maximum resilience
+    await _usersRef.doc(uid).set(updates, SetOptions(merge: true));
   }
 
   // ── Queries ──────────────────────────────────────────────────────────────

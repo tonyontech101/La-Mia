@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -38,28 +40,77 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   String? _selectedCategoryId;
 
   final RecipeRepository _recipeRepository = RecipeRepository();
-  late Future<List<RecipeModel>> _featuredFuture;
-  late Future<List<RecipeModel>> _popularFuture;
+
+  List<RecipeModel> _featuredRecipes = [];
+  List<RecipeModel> _popularRecipes = [];
+  bool _isLoadingFeatured = true;
+  bool _isLoadingPopular = true;
+  bool _hasFeaturedError = false;
+  bool _hasPopularError = false;
 
   @override
   void initState() {
     super.initState();
-    _featuredFuture = _recipeRepository.featuredRecipes();
-    _popularFuture = _recipeRepository.popularChoices();
+    _loadFeatured();
+    _loadPopular();
   }
 
-  /// Retries loading featured recipes after an error.
-  void _retryFeatured() {
-    setState(() {
-      _featuredFuture = _recipeRepository.featuredRecipes();
-    });
+  /// Shuffles [recipes] in place for randomized display.
+  void _shuffle(List<RecipeModel> recipes) {
+    recipes.shuffle(Random());
   }
 
-  /// Retries loading popular choices after an error.
-  void _retryPopular() {
+  Future<void> _loadFeatured() async {
     setState(() {
-      _popularFuture = _recipeRepository.popularChoices();
+      _isLoadingFeatured = true;
+      _hasFeaturedError = false;
     });
+    try {
+      final recipes = await _recipeRepository.featuredRecipes();
+      _shuffle(recipes);
+      if (mounted) {
+        setState(() {
+          _featuredRecipes = recipes;
+          _isLoadingFeatured = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoadingFeatured = false;
+          _hasFeaturedError = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadPopular() async {
+    setState(() {
+      _isLoadingPopular = true;
+      _hasPopularError = false;
+    });
+    try {
+      final recipes = await _recipeRepository.popularChoices();
+      _shuffle(recipes);
+      if (mounted) {
+        setState(() {
+          _popularRecipes = recipes;
+          _isLoadingPopular = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPopular = false;
+          _hasPopularError = true;
+        });
+      }
+    }
+  }
+
+  /// Pull-to-refresh: reloads all sections with a fresh random order.
+  Future<void> _onRefresh() async {
+    await Future.wait([_loadFeatured(), _loadPopular()]);
   }
 
   void _showRecipeDetailsDialog(RecipeModel recipe) {
@@ -86,153 +137,154 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             constraints: const BoxConstraints(
               maxWidth: AppSpacing.contentMaxWidth,
             ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenH,
-                vertical: 12,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Dashboard Top Header Bar
-                  DashboardHeader(
-                    displayName: displayName,
-                    onProfileTap: () => widget.onNavigateToTab?.call(3),
-                  ),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _onRefresh,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenH,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Dashboard Top Header Bar
+                    DashboardHeader(
+                      displayName: displayName,
+                      onProfileTap: () => widget.onNavigateToTab?.call(3),
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // 2. Search Bar Widget
-                  SearchBarWidget(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const UniversalSearchScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 3. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
-                  HeroActionCards(
-                    onCookByIngredientsTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CookByIngredientsScreen(),
-                        ),
-                      );
-                    },
-                    onAnoPongUlamTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AnoPongUlamScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // 4. Featured Recipes Section
-                  FutureBuilder<List<RecipeModel>>(
-                    future: _featuredFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const SectionLoadingSkeleton(height: 220);
-                      }
-                      if (snapshot.hasError) {
-                        return SectionErrorState(
-                          message:
-                              'Could not load featured recipes. Check your connection and try again.',
-                          onRetry: _retryFeatured,
+                    // 2. Search Bar Widget
+                    SearchBarWidget(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const UniversalSearchScreen(),
+                          ),
                         );
-                      }
-                      final recipes = snapshot.data ?? [];
-                      if (recipes.isEmpty) {
-                        return const SectionEmptyState(
-                          message: 'No featured recipes yet',
-                          subtitle:
-                              'Recipes will appear here once they are added.',
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 3. Hero Action Banners (Cook by Ingredients & Ano Pong Ulam?)
+                    HeroActionCards(
+                      onCookByIngredientsTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const CookByIngredientsScreen(),
+                          ),
                         );
-                      }
-                      return FadeInView(
-                        key: const ValueKey('featured-recipes'),
-                        duration: const Duration(milliseconds: 450),
-                        offset: const Offset(0, 14),
-                        child: FeaturedRecipesSection(
-                          recipes: recipes,
-                          onViewAllTap: () => widget.onNavigateToTab?.call(1),
-                          onRecipeTap: _showRecipeDetailsDialog,
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // 5. Recipe Categories Section
-                  CategoriesSection(
-                    categories: RecipeCategoryModel.defaultCategories,
-                    selectedCategoryId: _selectedCategoryId,
-                    onCategoryTap: (cat) {
-                      setState(() {
-                        _selectedCategoryId = _selectedCategoryId == cat.id
-                            ? null
-                            : cat.id;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // 6. Popular Choices Section
-                  FutureBuilder<List<RecipeModel>>(
-                    future: _popularFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const SectionLoadingSkeleton(
-                          height: 360,
-                          isHorizontal: false,
+                      },
+                      onAnoPongUlamTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AnoPongUlamScreen(),
+                          ),
                         );
-                      }
-                      if (snapshot.hasError) {
-                        return SectionErrorState(
-                          message:
-                              'Could not load popular choices. Check your connection and try again.',
-                          onRetry: _retryPopular,
-                        );
-                      }
-                      final recipes = snapshot.data ?? [];
-                      if (recipes.isEmpty) {
-                        return const SectionEmptyState(
-                          message: 'No popular choices yet',
-                          subtitle:
-                              'Popular recipes will appear here as more people cook.',
-                        );
-                      }
-                      return FadeInView(
-                        key: const ValueKey('popular-choices'),
-                        duration: const Duration(milliseconds: 450),
-                        offset: const Offset(0, 14),
-                        child: PopularChoicesSection(
-                          recipes: recipes,
-                          onRecipeTap: _showRecipeDetailsDialog,
-                        ),
-                      );
-                    },
-                  ),
+                      },
+                    ),
 
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 28),
+
+                    // 4. Featured Recipes Section
+                    _buildFeaturedSection(),
+
+                    const SizedBox(height: 28),
+
+                    // 5. Recipe Categories Section
+                    CategoriesSection(
+                      categories: RecipeCategoryModel.defaultCategories,
+                      selectedCategoryId: _selectedCategoryId,
+                      onCategoryTap: (cat) {
+                        setState(() {
+                          _selectedCategoryId = _selectedCategoryId == cat.id
+                              ? null
+                              : cat.id;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // 6. Popular Choices Section
+                    _buildPopularSection(),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedSection() {
+    if (_isLoadingFeatured) {
+      return const SectionLoadingSkeleton(height: 220);
+    }
+    if (_hasFeaturedError) {
+      return SectionErrorState(
+        message:
+            'Could not load featured recipes. Check your connection and try again.',
+        onRetry: _loadFeatured,
+      );
+    }
+    if (_featuredRecipes.isEmpty) {
+      return const SectionEmptyState(
+        message: 'No featured recipes yet',
+        subtitle: 'Recipes will appear here once they are added.',
+      );
+    }
+    return FadeInView(
+      key: ValueKey('featured-${_featuredRecipes.length}'),
+      duration: const Duration(milliseconds: 450),
+      offset: const Offset(0, 14),
+      child: FeaturedRecipesSection(
+        recipes: _featuredRecipes,
+        onViewAllTap: () => widget.onNavigateToTab?.call(1),
+        onRecipeTap: _showRecipeDetailsDialog,
+      ),
+    );
+  }
+
+  Widget _buildPopularSection() {
+    if (_isLoadingPopular) {
+      return const SectionLoadingSkeleton(
+        height: 360,
+        isHorizontal: false,
+      );
+    }
+    if (_hasPopularError) {
+      return SectionErrorState(
+        message:
+            'Could not load popular choices. Check your connection and try again.',
+        onRetry: _loadPopular,
+      );
+    }
+    if (_popularRecipes.isEmpty) {
+      return const SectionEmptyState(
+        message: 'No popular choices yet',
+        subtitle:
+            'Popular recipes will appear here as more people cook.',
+      );
+    }
+    return FadeInView(
+      key: ValueKey('popular-${_popularRecipes.length}'),
+      duration: const Duration(milliseconds: 450),
+      offset: const Offset(0, 14),
+      child: PopularChoicesSection(
+        recipes: _popularRecipes,
+        onRecipeTap: _showRecipeDetailsDialog,
       ),
     );
   }

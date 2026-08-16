@@ -84,14 +84,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      // Load user model + user's posted recipes in parallel.
-      final results = await Future.wait([
-        _userRepo.getUser(uid),
-        _recipeRepo.recipesByAuthor(uid),
-      ]);
+      // A recipe query must not hide the profile itself. In particular, a
+      // missing recipe index or a transient query error used to discard the
+      // freshly saved user document and leave the placeholder bio on screen.
+      final user = await _userRepo.getUser(uid);
 
-      final user = results[0] as UserModel?;
-      final recipes = results[1] as List<RecipeModel>;
+      if (mounted) {
+        setState(() {
+          _userModel = user;
+          _isLoading = false;
+        });
+      }
+
+      List<RecipeModel> recipes = [];
+      try {
+        recipes = await _recipeRepo.recipesByAuthor(uid);
+      } catch (_) {
+        // Keep the loaded profile usable even when posts cannot load.
+      }
 
       // Check follow status if viewing another user.
       bool following = false;
@@ -105,10 +115,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (mounted) {
         setState(() {
-          _userModel = user;
           _userRecipes = recipes;
           _isFollowing = following;
-          _isLoading = false;
         });
       }
     } catch (_) {
@@ -317,14 +325,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Center(
+        // Keep the profile anchored under the status bar. `Center` was also
+        // centering the scroll view vertically on taller phones, leaving the
+        // header noticeably too low.
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: AppSpacing.contentMaxWidth,
             ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenH,
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.sizeOf(context).width < 380
+                    ? AppSpacing.md
+                    : AppSpacing.screenH,
                 vertical: 12,
               ),
               child: Column(
