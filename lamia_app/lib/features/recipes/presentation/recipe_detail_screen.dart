@@ -373,7 +373,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       Text(
                         'A ${recipe.category.toLowerCase()} recipe'
                         '${recipe.region.isEmpty || recipe.region == 'Unknown' ? '' : ' from ${recipe.region}'}'
-                        '.',
+                        ' • ${recipe.budget ?? 'Budget friendly'}.',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,

@@ -9,8 +9,6 @@ import '../../leaderboard/presentation/leaderboard_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_feed_screen.dart';
 
-import '../../recipes/presentation/ano_pong_ulam_screen.dart';
-import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_creating_screen.dart';
 
 /// Redesigned Main Navigation Shell based on wireframe.
@@ -51,127 +49,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   }
 
   void _onPlusActionTap() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const RecipeCreatingScreen(),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Quick Culinary Actions',
-                  style: AppTypography.title(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 20),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.add_a_photo_rounded,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  title: const Text(
-                    'Post New Dish / Recipe',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Share your homemade dish & recipe step-by-step',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RecipeCreatingScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.soup_kitchen_rounded,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                  title: const Text(
-                    'Cook by Ingredients',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Find what to cook with available pantry items',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CookByIngredientsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.casino_rounded,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                  title: const Text(
-                    'Ano Pong Ulam? Randomizer',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Get instant meal suggestions for breakfast, lunch, or dinner',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AnoPongUlamScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
