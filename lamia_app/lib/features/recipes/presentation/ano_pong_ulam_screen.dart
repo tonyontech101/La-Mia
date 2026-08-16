@@ -180,15 +180,22 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
       var match = 100;
       final missing = <String>[];
 
-      // Budget placeholder proxy (kept from previous behavior): ingredient
-      // count standing in for cost. Graded, not a hard gate.
-      if (_selectedBudget == 'Budget friendly' &&
-          recipe.ingredients.length > 8) {
-        match -= 15;
-        missing.add('Special Spices');
-      } else if (_selectedBudget == 'Special' &&
-          recipe.ingredients.length <= 5) {
-        match -= 10;
+      // Budget matching: Use actual budget if present, otherwise fall back to proxy
+      if (recipe.budget != null) {
+        if (_selectedBudget != recipe.budget) {
+          match -= 15;
+        }
+      } else {
+        // Budget placeholder proxy (kept from previous behavior): ingredient
+        // count standing in for cost. Graded, not a hard gate.
+        if (_selectedBudget == 'Budget friendly' &&
+            recipe.ingredients.length > 8) {
+          match -= 15;
+          missing.add('Special Spices');
+        } else if (_selectedBudget == 'Special' &&
+            recipe.ingredients.length <= 5) {
+          match -= 10;
+        }
       }
 
       // Recipes that barely fit the time budget score slightly lower.

@@ -29,6 +29,7 @@ class RecipeModel {
     this.ratingCount = 0,
     this.status = 'approved',
     this.createdAt,
+    this.budget,
   });
 
   /// Firestore document ID — needed to reference recipes for likes/saves.
@@ -77,6 +78,8 @@ class RecipeModel {
 
   final DateTime? createdAt;
 
+  final String? budget;
+
   /// Creates a [RecipeModel] from the JSON stored in recipe `.txt` files.
   ///
   /// [coverPhotoUrl] must be supplied separately (from Firebase Storage)
@@ -104,6 +107,7 @@ class RecipeModel {
       isSystemRecipe: true,
       authorId: null,
       authorName: 'La Mia',
+      budget: json['budget'] as String? ?? 'Budget friendly',
     );
   }
 
@@ -153,6 +157,7 @@ class RecipeModel {
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as dynamic).toDate() as DateTime
           : null,
+      budget: data['budget'] as String?,
     );
   }
 
@@ -183,6 +188,7 @@ class RecipeModel {
       'ratingCount': ratingCount,
       'status': status,
       'createdAt': createdAt ?? DateTime.now(),
+      'budget': budget,
     };
   }
 }
