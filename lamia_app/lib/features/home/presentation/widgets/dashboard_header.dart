@@ -10,17 +10,15 @@ class DashboardHeader extends StatelessWidget {
     super.key,
     required this.displayName,
     this.userPhotoUrl,
-    this.onProfileTap,
+    this.onNotificationTap,
   });
 
   final String displayName;
   final String? userPhotoUrl;
-  final VoidCallback? onProfileTap;
+  final VoidCallback? onNotificationTap;
 
   @override
   Widget build(BuildContext context) {
-    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -56,9 +54,9 @@ class DashboardHeader extends StatelessWidget {
             ],
           ),
 
-          // Right: Profile avatar
+          // Right: Notification icon
           GestureDetector(
-            onTap: onProfileTap,
+            onTap: onNotificationTap,
             child: Container(
               width: 42,
               height: 42,
@@ -70,14 +68,11 @@ class DashboardHeader extends StatelessWidget {
                   width: 1.5,
                 ),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+              child: const Center(
+                child: Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.primary,
+                  size: 22,
                 ),
               ),
             ),
