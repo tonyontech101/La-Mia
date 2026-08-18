@@ -126,10 +126,9 @@ service cloud.firestore {
     // ── Users ──────────────────────────────────────────────────────────────
 
     match /users/{uid} {
-      // Own profile readable by authenticated user; admin reads anyone.
-      // During MVP, profile data shown back to the user themselves, so
-      // self-reads + admin reads suffice for current screens.
-      allow read: if isUser(uid) || isAdmin();
+      // Profiles are needed by search, recipe attribution, and other-user
+      // profile screens. Keep them visible to signed-in community members.
+      allow read: if isSignedIn();
 
       // First-creation on sign-up goes through AuthService, which forces
       // the role to 'user' and never lets clients elevate themselves.
@@ -140,7 +139,10 @@ service cloud.firestore {
       // and never the server-authoritative counters.
       allow update: if (
         (isUser(uid) && !request.resource.data.diff(resource.data)
-            .affectedKeys().hasAny(['role', 'recipeCount', 'totalLikesReceived']))
+            .affectedKeys().hasAny([
+              'role', 'recipeCount', 'totalLikesReceived',
+              'followerCount', 'followingCount', 'savedCount'
+            ]))
         || isAdmin()
       );
 

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -52,6 +54,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
     try {
       final recipes = await _recipeRepository.allRecipes(limit: 20);
       if (mounted) {
+        // Shuffle for a randomized feed on every refresh
+        final rng = Random();
+        recipes.shuffle(rng);
         setState(() {
           _recipes = recipes;
           _isLoading = false;
@@ -83,6 +88,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
       }
       final recipes = await _recipeRepository.recipesFromFollowing(ids);
       if (mounted) {
+        // Shuffle for a randomized feed
+        final rng = Random();
+        recipes.shuffle(rng);
         setState(() {
           _followingRecipes = recipes;
           _followingLoaded = true;
