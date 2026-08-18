@@ -325,27 +325,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        // Keep the profile anchored under the status bar. `Center` was also
-        // centering the scroll view vertically on taller phones, leaving the
-        // header noticeably too low.
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: AppSpacing.contentMaxWidth,
             ),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: MediaQuery.sizeOf(context).width < 380
-                    ? AppSpacing.md
-                    : AppSpacing.screenH,
-                vertical: 12,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Top App Bar (Back Arrow, Title "Profile", Hamburger Options)
-                  Row(
+            child: Column(
+              children: [
+                // 1. Top App Bar (Back Arrow, Title "Profile", Hamburger Options)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenH - 8,
+                    vertical: 4,
+                  ),
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
@@ -383,136 +377,149 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(width: 48),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 12),
-
-                  // 2. Profile Header (Avatar, Badge, Bio, Stats)
-                  ProfileHeaderWidget(
-                    displayName: displayName,
-                    photoUrl: photoUrl,
-                    bio: bio,
-                    ranking: '— ranking',
-                    recipesCount:
-                        _userModel?.recipeCount.toString() ??
-                        (widget.isGuest ? '0' : '—'),
-                    likesCount:
-                        _userModel?.totalLikesReceived.toString() ??
-                        (widget.isGuest ? '0' : '—'),
-                    followersCount:
-                        _userModel?.followerCount.toString() ??
-                        (widget.isGuest ? '0' : '—'),
-                    isGuest: widget.isGuest,
-                    isOwnProfile: _isOwnProfile,
-                    isFollowing: _isFollowing,
-                    onEditProfileTap: _isOwnProfile
-                        ? _navigateToEditProfile
-                        : null,
-                    onFollowTap: !_isOwnProfile ? _toggleFollow : null,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 3. Tab Bar (Posts | Likes | Saved Recipes) matching wireframe
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                      border: Border.all(color: AppColors.border),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.sizeOf(context).width < 380
+                          ? AppSpacing.md
+                          : AppSpacing.screenH,
+                      vertical: 8,
                     ),
-                    padding: const EdgeInsets.all(4),
-                    // The white active pill glides smoothly between
-                    // Posts / Likes / Saved Recipes.
-                    child: SlidingTabBar(
-                      index: _selectedTabIndex,
-                      itemCount: _isOwnProfile ? 3 : 2,
-                      highlight: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: AppColors.cardShadow,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 2. Profile Header (Avatar, Badge, Bio, Stats)
+                        ProfileHeaderWidget(
+                          displayName: displayName,
+                          photoUrl: photoUrl,
+                          bio: bio,
+                          ranking: '— ranking',
+                          recipesCount:
+                              _userModel?.recipeCount.toString() ??
+                              (widget.isGuest ? '0' : '—'),
+                          likesCount:
+                              _userModel?.totalLikesReceived.toString() ??
+                              (widget.isGuest ? '0' : '—'),
+                          followersCount:
+                              _userModel?.followerCount.toString() ??
+                              (widget.isGuest ? '0' : '—'),
+                          isGuest: widget.isGuest,
+                          isOwnProfile: _isOwnProfile,
+                          isFollowing: _isFollowing,
+                          onEditProfileTap: _isOwnProfile
+                              ? _navigateToEditProfile
+                              : null,
+                          onFollowTap: !_isOwnProfile ? _toggleFollow : null,
                         ),
-                      ),
-                      onChanged: _onTabSelected,
-                      builder: (context, i, isSelected) {
-                        final tabs = [
-                          (
-                            label: 'Posts',
-                            icon: Icons.mark_email_unread_outlined,
+
+                        const SizedBox(height: 24),
+
+                        // 3. Tab Bar (Posts | Likes | Saved Recipes) matching wireframe
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceAlt,
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            border: Border.all(color: AppColors.border),
                           ),
-                          (label: 'Likes', icon: Icons.favorite_border_rounded),
-                          if (_isOwnProfile)
-                            (
-                              label: 'Saved Recipes',
-                              icon: Icons.bookmark_border_rounded,
+                          padding: const EdgeInsets.all(4),
+                          // The white active pill glides smoothly between
+                          // Posts / Likes / Saved Recipes.
+                          child: SlidingTabBar(
+                            index: _selectedTabIndex,
+                            itemCount: _isOwnProfile ? 3 : 2,
+                            highlight: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(AppRadii.pill),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.cardShadow,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
                             ),
-                        ];
-                        final tab = tabs[i];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 4,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              AnimatedIconColor(
-                                icon: tab.icon,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 240),
-                                  curve: Curves.easeOutCubic,
-                                  style:
-                                      AppTypography.caption(
-                                        color: isSelected
-                                            ? AppColors.primary
-                                            : AppColors.textSecondary,
-                                      ).copyWith(
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        fontSize: 11,
-                                      ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  child: Text(tab.label),
+                            onChanged: _onTabSelected,
+                            builder: (context, i, isSelected) {
+                              final tabs = [
+                                (
+                                  label: 'Posts',
+                                  icon: Icons.mark_email_unread_outlined,
                                 ),
-                              ),
-                            ],
+                                (label: 'Likes', icon: Icons.favorite_border_rounded),
+                                if (_isOwnProfile)
+                                  (
+                                    label: 'Saved Recipes',
+                                    icon: Icons.bookmark_border_rounded,
+                                  ),
+                              ];
+                              final tab = tabs[i];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 4,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    AnimatedIconColor(
+                                      icon: tab.icon,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: AnimatedDefaultTextStyle(
+                                        duration: const Duration(milliseconds: 240),
+                                        curve: Curves.easeOutCubic,
+                                        style:
+                                            AppTypography.caption(
+                                              color: isSelected
+                                                  ? AppColors.primary
+                                                  : AppColors.textSecondary,
+                                            ).copyWith(
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              fontSize: 11,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        child: Text(tab.label),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        // 4. 2-Column Dish Cards Grid
+                        DishCardGrid(
+                          recipes: tabRecipes,
+                          isLoading: _isLoading,
+                          emptyMessage: _selectedTabIndex == 0
+                              ? 'No recipe posts created yet'
+                              : _selectedTabIndex == 1
+                              ? 'No liked recipes yet'
+                              : 'No saved recipes yet',
+                          onRecipeTap: _onRecipeTap,
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 18),
-
-                  // 4. 2-Column Dish Cards Grid
-                  DishCardGrid(
-                    recipes: tabRecipes,
-                    isLoading: _isLoading,
-                    emptyMessage: _selectedTabIndex == 0
-                        ? 'No recipe posts created yet'
-                        : _selectedTabIndex == 1
-                        ? 'No liked recipes yet'
-                        : 'No saved recipes yet',
-                    onRecipeTap: _onRecipeTap,
-                  ),
-
-                  const SizedBox(height: 24),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
