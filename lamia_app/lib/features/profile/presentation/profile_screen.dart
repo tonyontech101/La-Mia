@@ -17,6 +17,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import 'edit_profile_screen.dart';
+import 'settings_screen.dart';
 import 'widgets/dish_card_grid.dart';
 import 'widgets/profile_header_widget.dart';
 
@@ -232,14 +233,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                       Icons.settings_outlined,
                       color: AppColors.textSecondary,
                     ),
-                    title: const Text('Preferences & Dietary Settings'),
+                    title: const Text('Settings'),
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Preferences coming soon!'),
-                        ),
-                      );
+                      _navigateToSettings();
                     },
                   ),
                   const Divider(height: 24),
@@ -275,6 +272,18 @@ class ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (_) => const EditProfileScreen()),
     ).then((_) {
       // Reload profile data when returning from edit screen.
+      _loadProfileData();
+    });
+  }
+
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(isGuest: widget.isGuest),
+      ),
+    ).then((_) {
+      // Reload profile data when returning from settings.
       _loadProfileData();
     });
   }
