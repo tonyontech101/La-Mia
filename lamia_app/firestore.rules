@@ -87,13 +87,13 @@ service cloud.firestore {
         || isAdmin()
       );
 
-      // Create: signed-in user, must own the recipe, must start as pending.
+      // Create: signed-in user, must own the recipe, can be pending or approved.
       // Server-authoritative fields must NOT be set by the client.
       allow create: if isSignedIn()
           && request.resource.data.authorId == request.auth.uid
           && (
             !('status' in request.resource.data)
-            || request.resource.data.status == 'pending'
+            || request.resource.data.status in ['pending', 'approved']
           )
           && notSettingServerFields();
 

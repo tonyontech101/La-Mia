@@ -24,10 +24,10 @@ class HomeFeedScreen extends StatefulWidget {
   final ValueChanged<int>? onNavigateToTab;
 
   @override
-  State<HomeFeedScreen> createState() => _HomeFeedScreenState();
+  State<HomeFeedScreen> createState() => HomeFeedScreenState();
 }
 
-class _HomeFeedScreenState extends State<HomeFeedScreen> {
+class HomeFeedScreenState extends State<HomeFeedScreen> {
   int _activeTab = 1; // 0 = Following, 1 = For You (default)
   final RecipeRepository _recipeRepository = RecipeRepository();
   final FollowRepository _followRepo = FollowRepository();
@@ -37,6 +37,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   bool _isLoading = true;
   bool _hasError = false;
   bool _followingLoaded = false;
+
+  /// Public refresh method to reload feed data after recipe upload or external changes.
+  Future<void> refresh() async {
+    _followingLoaded = false;
+    _followingRecipes.clear();
+    await _loadRecipes();
+    if (_activeTab == 0) {
+      await _loadFollowingRecipes();
+    }
+  }
 
   @override
   void initState() {
