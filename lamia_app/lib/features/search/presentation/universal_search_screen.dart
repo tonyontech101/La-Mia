@@ -86,21 +86,8 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
         _userRepo.searchUsers(q),
       ]);
 
-      var recipes = results[0] as List<RecipeModel>;
+      final recipes = results[0] as List<RecipeModel>;
       final chefs = results[1] as List<UserModel>;
-
-      // Fallback: if Firestore prefix search on recipe name returns empty,
-      // search in-memory over category/tag names from allRecipes
-      if (recipes.isEmpty) {
-        final all = await _recipeRepo.allRecipes(limit: 50);
-        final lower = q.toLowerCase();
-        recipes = all.where((r) {
-          return r.name.toLowerCase().contains(lower) ||
-              r.category.toLowerCase().contains(lower) ||
-              r.tags.any((t) => t.toLowerCase().contains(lower)) ||
-              r.region.toLowerCase().contains(lower);
-        }).toList();
-      }
 
       if (mounted) {
         setState(() {
