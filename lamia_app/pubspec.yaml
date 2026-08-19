@@ -50,6 +50,7 @@ dependencies:
 
   # Image loading + caching for network cover photos.
   cached_network_image: ^3.4.1
+  # Image picking from gallery/camera
   image_picker: ^1.1.2
   logger: ^2.7.0
   firebase_crashlytics: ^4.3.10
