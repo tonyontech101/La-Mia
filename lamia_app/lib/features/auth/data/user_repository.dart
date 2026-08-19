@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/utils/app_logger.dart';
 import 'user_model.dart';
 
 /// Repository for user profile operations against Firestore.
@@ -67,26 +68,44 @@ class UserRepository {
 
   /// Fetches users sorted by [recipeCount] descending — "Top Contributors".
   Future<List<UserModel>> topContributors({int limit = 20}) async {
-    final snap = await _usersRef
-        .orderBy('recipeCount', descending: true)
-        .limit(limit)
-        .get();
-    return snap.docs
-        .where((d) => d.data()['recipeCount'] != null)
-        .map((d) => UserModel.fromFirestore(d))
-        .toList();
+    try {
+      final snap = await _usersRef
+          .orderBy('recipeCount', descending: true)
+          .limit(limit)
+          .get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        try {
+          if (d.data()['recipeCount'] != null) {
+            users.add(UserModel.fromFirestore(d));
+          }
+        } catch (_) {}
+      }
+      return users;
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Fetches users sorted by [totalLikesReceived] descending — "Most Liked".
   Future<List<UserModel>> mostLiked({int limit = 20}) async {
-    final snap = await _usersRef
-        .orderBy('totalLikesReceived', descending: true)
-        .limit(limit)
-        .get();
-    return snap.docs
-        .where((d) => d.data()['totalLikesReceived'] != null)
-        .map((d) => UserModel.fromFirestore(d))
-        .toList();
+    try {
+      final snap = await _usersRef
+          .orderBy('totalLikesReceived', descending: true)
+          .limit(limit)
+          .get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        try {
+          if (d.data()['totalLikesReceived'] != null) {
+            users.add(UserModel.fromFirestore(d));
+          }
+        } catch (_) {}
+      }
+      return users;
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Search users by display name or bio. Case-insensitive and safe.
@@ -95,15 +114,38 @@ class UserRepository {
     if (q.isEmpty) return [];
 
     try {
-      final snap = await _usersRef.limit(50).get();
-      return snap.docs
-          .map((d) => UserModel.fromFirestore(d))
+      final snap = await _usersRef.limit(100).get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        try {
+          users.add(UserModel.fromFirestore(d));
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to parse user doc ${d.id}: $e',
+            'UserRepository',
+          );
+        }
+      }
+
+      final results = users
           .where((u) =>
               u.displayName.toLowerCase().contains(q) ||
               (u.bio?.toLowerCase().contains(q) == true))
           .take(limit)
           .toList();
-    } catch (_) {
+
+      AppLogger.info(
+        'searchUsers found ${results.length} matches for "$query" out of ${snap.docs.length} user docs in Firestore.',
+        'UserRepository',
+      );
+      return results;
+    } catch (e, st) {
+      AppLogger.error(
+        'searchUsers failed for query "$query"',
+        error: e,
+        stackTrace: st,
+        category: 'UserRepository',
+      );
       return [];
     }
   }

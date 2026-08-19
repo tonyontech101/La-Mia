@@ -115,12 +115,14 @@ class RecipeRepository {
           (i) => i.toLowerCase().contains(q),
         );
         final descMatch = r.description.toLowerCase().contains(q);
+        final authorMatch = r.authorName.toLowerCase().contains(q);
         return nameMatch ||
             catMatch ||
             tagMatch ||
             regionMatch ||
             ingMatch ||
-            descMatch;
+            descMatch ||
+            authorMatch;
       }).take(limit).toList();
     } catch (_) {
       return [];

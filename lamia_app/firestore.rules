@@ -144,8 +144,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       // Profiles are needed by search, recipe attribution, and other-user
-      // profile screens. Keep them visible to signed-in community members.
-      allow read: if isSignedIn();
+      // profile screens. Keep them visible to all visitors (including guests).
+      allow read: if true;
 
       // First-creation on sign-up goes through AuthService, which forces
       // the role to 'user' and never lets clients elevate themselves.

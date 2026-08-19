@@ -33,21 +33,27 @@ class UserModel {
 
   /// Creates a [UserModel] from a Firestore document snapshot.
   factory UserModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+    final data = doc.data() ?? {};
     return UserModel(
       uid: doc.id,
-      displayName: data['displayName'] as String? ?? 'User',
+      displayName: (data['displayName'] as String?)?.trim().isNotEmpty == true
+          ? data['displayName'] as String
+          : 'User',
       bio: data['bio'] as String?,
       photoUrl: data['photoUrl'] as String?,
-      recipeCount: data['recipeCount'] as int? ?? 0,
-      totalLikesReceived: data['totalLikesReceived'] as int? ?? 0,
-      followerCount: data['followerCount'] as int? ?? 0,
-      followingCount: data['followingCount'] as int? ?? 0,
-      savedCount: data['savedCount'] as int? ?? 0,
+      recipeCount: (data['recipeCount'] as num?)?.toInt() ?? 0,
+      totalLikesReceived: (data['totalLikesReceived'] as num?)?.toInt() ?? 0,
+      followerCount: (data['followerCount'] as num?)?.toInt() ?? 0,
+      followingCount: (data['followingCount'] as num?)?.toInt() ?? 0,
+      savedCount: (data['savedCount'] as num?)?.toInt() ?? 0,
       role: data['role'] as String? ?? 'user',
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] as Timestamp).toDate()
-          : DateTime.now(),
+      createdAt: () {
+        final raw = data['createdAt'];
+        if (raw is Timestamp) return raw.toDate();
+        if (raw is DateTime) return raw;
+        if (raw is String) return DateTime.tryParse(raw) ?? DateTime.now();
+        return DateTime.now();
+      }(),
     );
   }
 

@@ -80,11 +80,15 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
     });
 
     try {
-      // Execute recipe and chef search in parallel
-      final results = await Future.wait([
-        _recipeRepo.searchRecipes(q),
-        _userRepo.searchUsers(q),
-      ]);
+      // Execute recipe and chef search in parallel with error isolation
+      final recipesFuture = _recipeRepo
+          .searchRecipes(q)
+          .catchError((_) => <RecipeModel>[]);
+      final chefsFuture = _userRepo
+          .searchUsers(q)
+          .catchError((_) => <UserModel>[]);
+
+      final results = await Future.wait([recipesFuture, chefsFuture]);
 
       final recipes = results[0] as List<RecipeModel>;
       final chefs = results[1] as List<UserModel>;
