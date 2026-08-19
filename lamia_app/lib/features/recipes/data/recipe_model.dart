@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Data model for a Filipino recipe.
 ///
 /// Maps between the local `.txt` JSON files, Dart objects, and Firestore
@@ -189,6 +191,36 @@ class RecipeModel {
       'status': status,
       'createdAt': createdAt ?? DateTime.now(),
       'budget': budget,
+    };
+  }
+
+  /// Converts this model to a Firestore map for newly created user recipes.
+  ///
+  /// Strips all server-authoritative fields (likeCount, commentCount,
+  /// favoriteCount, ratingAvg, ratingCount, trendingScore) to comply
+  /// with Firestore security rules.
+  Map<String, dynamic> toFirestoreForCreate() {
+    return {
+      'name': name,
+      'description': description,
+      'category': category,
+      'region': region,
+      'prepTime': prepTime,
+      'cookTime': cookTime,
+      'servings': servings,
+      'difficulty': difficulty,
+      'ingredients': ingredients,
+      'instructions': instructions,
+      'tags': tags,
+      'coverPhotoUrl': coverPhotoUrl,
+      'source': source,
+      'authorId': authorId,
+      'authorName': authorName,
+      'authorPhotoUrl': authorPhotoUrl,
+      'isSystemRecipe': false,
+      'status': status,
+      'createdAt': FieldValue.serverTimestamp(),
+      if (budget != null) 'budget': budget,
     };
   }
 }

@@ -125,12 +125,16 @@ class RecipeRepository {
     final snap = await _firestore
         .collection('recipes')
         .where('authorId', isEqualTo: authorId)
-        .orderBy('createdAt', descending: true)
-        .limit(limit)
         .get();
-    return snap.docs
+    final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
         .toList();
+    recipes.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    return recipes.take(limit).toList();
   }
 
   /// Batch-fetches recipes by their document IDs.
@@ -191,7 +195,9 @@ class RecipeRepository {
   /// Adds a new user-submitted recipe to Firestore.
   /// Returns the newly created document ID.
   Future<String> addRecipe(RecipeModel recipe) async {
-    final ref = await _firestore.collection('recipes').add(recipe.toFirestore());
+    final ref = await _firestore
+        .collection('recipes')
+        .add(recipe.toFirestoreForCreate());
     return ref.id;
   }
 }

@@ -35,6 +35,10 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   late int _currentIndex;
+  final GlobalKey<HomeFeedScreenState> _homeFeedKey =
+      GlobalKey<HomeFeedScreenState>();
+  final GlobalKey<ProfileScreenState> _profileKey =
+      GlobalKey<ProfileScreenState>();
 
   @override
   void initState() {
@@ -48,20 +52,32 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     });
   }
 
-  void _onPlusActionTap() {
-    Navigator.push(
+  Future<void> _onPlusActionTap() async {
+    final uploaded = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => const RecipeCreatingScreen(),
       ),
     );
+
+    if (uploaded == true) {
+      setState(() {
+        _currentIndex = 0;
+      });
+      _homeFeedKey.currentState?.refresh();
+      _profileKey.currentState?.refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final screens = [
       // 0: Home Feed (social-style recipe feed)
-      HomeFeedScreen(isGuest: widget.isGuest, onNavigateToTab: _onTabTapped),
+      HomeFeedScreen(
+        key: _homeFeedKey,
+        isGuest: widget.isGuest,
+        onNavigateToTab: _onTabTapped,
+      ),
 
       // 1: Cook (former Home Dashboard content)
       HomeDashboardScreen(
@@ -74,6 +90,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
       // 3: Me (Profile Screen matching wireframe)
       ProfileScreen(
+        key: _profileKey,
         isGuest: widget.isGuest,
         onNavigateHome: () => _onTabTapped(0),
       ),

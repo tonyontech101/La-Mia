@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
-import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -78,6 +81,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _selectedCoverPhotoUrl;
+  File? _selectedImageFile;
+  final ImagePicker _imagePicker = ImagePicker();
 
   // ── Step 2: Details & Times ─────────────────────────────────────────────────
   String? _selectedCategoryId;
@@ -122,35 +127,6 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     'Affordable',
     'Special',
     'Quite Expensive',
-  ];
-
-  // Predefined gorgeous Filipino photo presets for mock/instant selection
-  final List<Map<String, String>> _photoPresets = [
-    {
-      'name': 'Adobo',
-      'url':
-          'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60',
-    },
-    {
-      'name': 'Sinigang',
-      'url':
-          'https://images.unsplash.com/photo-1547592180-85f173990554?w=600&auto=format&fit=crop&q=60',
-    },
-    {
-      'name': 'Inihaw / BBQ',
-      'url':
-          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&auto=format&fit=crop&q=60',
-    },
-    {
-      'name': 'Gulay / Veggies',
-      'url':
-          'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&auto=format&fit=crop&q=60',
-    },
-    {
-      'name': 'Dessert / Sweets',
-      'url':
-          'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600&auto=format&fit=crop&q=60',
-    },
   ];
 
   @override
@@ -279,7 +255,28 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Photo Picker / Simulator ────────────────────────────────────────────────
+  // ── Photo Picker ───────────────────────────────────────────────────────────
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImageFile = File(pickedFile.path);
+          _selectedCoverPhotoUrl = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showToast('Failed to pick image: $e');
+      }
+    }
+  }
 
   void _showPhotoSelector() {
     showModalBottomSheet(
@@ -308,75 +305,29 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  'Select Dish Photo',
+                  'Add Dish Photo',
                   style: AppTypography.title().copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Pick a photo style or simulate a custom upload',
+                  'Take a photo or choose one from your gallery',
                   style: AppTypography.caption(),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 110,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _photoPresets.length,
-                    itemBuilder: (context, index) {
-                      final item = _photoPresets[index];
-                      return PressableScale(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedCoverPhotoUrl = item['url'];
-                            });
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CachedNetworkImage(
-                                    imageUrl: item['url']!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                  Container(
-                                    color: Colors.black38,
-                                    alignment: Alignment.bottomCenter,
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Text(
-                                      item['name']!,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.add_a_photo_rounded, color: AppColors.primary),
-                  title: const Text('Simulate Camera / Gallery Upload'),
+                  leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                  title: const Text('Take a Photo'),
                   onTap: () {
                     Navigator.pop(context);
-                    _simulateImageUpload();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
                   },
                 ),
               ],
@@ -385,40 +336,6 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         );
       },
     );
-  }
-
-  void _simulateImageUpload() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text('Uploading image from gallery...'),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      if (mounted) {
-        Navigator.pop(context);
-        setState(() {
-          _selectedCoverPhotoUrl = _photoPresets.first['url'];
-        });
-        _showToast('Image uploaded successfully!');
-      }
-    });
   }
 
   // ── Submit Recipe to Firestore ──────────────────────────────────────────────
@@ -439,10 +356,35 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showToast('Please sign in to upload a recipe');
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      String coverUrl = _selectedCoverPhotoUrl ?? '';
+
+      // Upload selected image file to Firebase Storage
+      if (_selectedImageFile != null) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('users/${user.uid}/recipes/recipe_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+        final uploadTask = await storageRef.putFile(
+          _selectedImageFile!,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        coverUrl = await uploadTask.ref.getDownloadURL();
+      }
+
+      if (coverUrl.isEmpty) {
+        coverUrl =
+            'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60';
+      }
+
       final categoryModel = RecipeCategoryModel.defaultCategories.firstWhere(
         (cat) => cat.id == _selectedCategoryId,
         orElse: () => RecipeCategoryModel.defaultCategories.first,
@@ -464,15 +406,16 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         ingredients: ingredients,
         instructions: instructions,
         tags: tags,
-        coverPhotoUrl: _selectedCoverPhotoUrl ??
-            'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60',
+        coverPhotoUrl: coverUrl,
         source: '',
-        authorId: user?.uid,
-        authorName: user?.displayName ?? 'Guest Chef',
-        authorPhotoUrl: user?.photoURL,
+        authorId: user.uid,
+        authorName: user.displayName ??
+            'Chef ${user.email?.split('@').first ?? 'Foodie'}',
+        authorPhotoUrl: user.photoURL,
         isSystemRecipe: false,
         createdAt: DateTime.now(),
         budget: _selectedBudget,
+        status: 'approved',
       );
 
       await _recipeRepo.addRecipe(newRecipe);
@@ -487,7 +430,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             ),
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -778,17 +721,24 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 borderRadius: BorderRadius.circular(12),
                 color: const Color(0xFFFAFAFA),
               ),
-              child: _selectedCoverPhotoUrl != null
+              child: (_selectedImageFile != null || _selectedCoverPhotoUrl != null)
                   ? Row(
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: _selectedCoverPhotoUrl!,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                          ),
+                          child: _selectedImageFile != null
+                              ? Image.file(
+                                  _selectedImageFile!,
+                                  width: 72,
+                                  height: 72,
+                                  fit: BoxFit.cover,
+                                )
+                              : CachedNetworkImage(
+                                  imageUrl: _selectedCoverPhotoUrl!,
+                                  width: 72,
+                                  height: 72,
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -817,7 +767,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                         IconButton(
                           icon: const Icon(Icons.close_rounded, color: Colors.grey),
                           onPressed: () {
-                            setState(() => _selectedCoverPhotoUrl = null);
+                            setState(() {
+                              _selectedImageFile = null;
+                              _selectedCoverPhotoUrl = null;
+                            });
                           },
                         ),
                       ],
@@ -1401,17 +1354,24 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
               ),
               
               // Cover Photo Banner
-              CachedNetworkImage(
-                imageUrl: tempRecipe.coverPhotoUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => Container(
-                  height: 200,
-                  color: Colors.grey.shade300,
-                  child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                ),
-              ),
+              _selectedImageFile != null
+                  ? Image.file(
+                      _selectedImageFile!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: tempRecipe.coverPhotoUrl,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) => Container(
+                        height: 200,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                      ),
+                    ),
               
               // Overlaid floating card
               Transform.translate(
@@ -1957,22 +1917,6 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildReviewMetric(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-        ),
-      ],
     );
   }
 

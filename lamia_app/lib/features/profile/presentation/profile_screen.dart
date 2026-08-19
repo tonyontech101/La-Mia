@@ -41,10 +41,10 @@ class ProfileScreen extends StatefulWidget {
   final String? targetUserId;
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends State<ProfileScreen> {
   int _selectedTabIndex = 0; // 0: Posts, 1: Likes, 2: Saved Recipes
 
   final UserRepository _userRepo = UserRepository();
@@ -59,6 +59,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<RecipeModel> _savedRecipes = [];
   bool _isLoading = true;
   bool _isFollowing = false;
+
+  /// Public method to reload profile data after recipe upload or profile edits.
+  Future<void> refresh() async {
+    await _loadProfileData();
+  }
 
   /// Whether we are viewing our own profile or another user's.
   bool get _isOwnProfile {
@@ -396,9 +401,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           photoUrl: photoUrl,
                           bio: bio,
                           ranking: '— ranking',
-                          recipesCount:
-                              _userModel?.recipeCount.toString() ??
-                              (widget.isGuest ? '0' : '—'),
+                          recipesCount: widget.isGuest
+                              ? '0'
+                              : (_userRecipes.isNotEmpty
+                                  ? _userRecipes.length.toString()
+                                  : (_userModel?.recipeCount.toString() ?? '0')),
                           likesCount:
                               _userModel?.totalLikesReceived.toString() ??
                               (widget.isGuest ? '0' : '—'),
