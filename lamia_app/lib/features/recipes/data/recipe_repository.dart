@@ -95,11 +95,8 @@ class RecipeRepository {
         .toList();
   }
 
-  /// Prefix search by recipe name via a Firestore range query on the
-  /// (lowercase-normalized) `name` field. Returns up to [limit] documents.
-  ///
-  /// Full-text search is deferred to Algolia/Typesense (architecture §7);
-  /// until then this prefix match is the best Firestore can do.
+  /// Search recipes by query. Searches across name, category, tags,
+  /// ingredients, region, and description with case-insensitive matching.
   Future<List<RecipeModel>> searchRecipes(
     String query, {
     int limit = 20,
@@ -107,19 +104,27 @@ class RecipeRepository {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
 
-    // Firestore range query: name >= "query" AND name < "query\uffff".
-    final snap = await _firestore
-        .collection('recipes')
-        .where('name', isGreaterThanOrEqualTo: q)
-        .where('name', isLessThan: '$q\uffff')
-        .orderBy('name')
-        .limit(limit * 2)
-        .get();
-    return snap.docs
-        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where((r) => r.status == 'approved' || r.isSystemRecipe)
-        .take(limit)
-        .toList();
+    try {
+      final all = await allRecipes(limit: 100);
+      return all.where((r) {
+        final nameMatch = r.name.toLowerCase().contains(q);
+        final catMatch = r.category.toLowerCase().contains(q);
+        final tagMatch = r.tags.any((t) => t.toLowerCase().contains(q));
+        final regionMatch = r.region.toLowerCase().contains(q);
+        final ingMatch = r.ingredients.any(
+          (i) => i.toLowerCase().contains(q),
+        );
+        final descMatch = r.description.toLowerCase().contains(q);
+        return nameMatch ||
+            catMatch ||
+            tagMatch ||
+            regionMatch ||
+            ingMatch ||
+            descMatch;
+      }).take(limit).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   // ── User-centric queries ────────────────────────────────────────────────

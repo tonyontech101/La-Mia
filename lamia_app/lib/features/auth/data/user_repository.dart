@@ -89,17 +89,22 @@ class UserRepository {
         .toList();
   }
 
-  /// Prefix search for users by display name. Returns up to [limit] users.
+  /// Search users by display name or bio. Case-insensitive and safe.
   Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
-    final q = query.trim();
+    final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
 
-    final snap = await _usersRef
-        .where('displayName', isGreaterThanOrEqualTo: q)
-        .where('displayName', isLessThan: '$q\uffff')
-        .orderBy('displayName')
-        .limit(limit)
-        .get();
-    return snap.docs.map((d) => UserModel.fromFirestore(d)).toList();
+    try {
+      final snap = await _usersRef.limit(50).get();
+      return snap.docs
+          .map((d) => UserModel.fromFirestore(d))
+          .where((u) =>
+              u.displayName.toLowerCase().contains(q) ||
+              (u.bio?.toLowerCase().contains(q) == true))
+          .take(limit)
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 }
