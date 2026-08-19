@@ -153,10 +153,9 @@ class ProfileHeaderWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            bio ??
-                (isGuest
-                    ? 'Browsing as guest foodie'
-                    : 'Bio of user contains here.'),
+            (bio?.trim().isNotEmpty ?? false)
+                ? bio!.trim()
+                : (isGuest ? 'Browsing as guest foodie' : 'No bio added yet.'),
             style: AppTypography.body(
               color: AppColors.textSecondary,
             ).copyWith(fontSize: 13),
