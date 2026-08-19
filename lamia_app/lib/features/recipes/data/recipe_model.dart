@@ -199,6 +199,9 @@ class RecipeModel {
   /// Strips all server-authoritative fields (likeCount, commentCount,
   /// favoriteCount, ratingAvg, ratingCount, trendingScore) to comply
   /// with Firestore security rules.
+  ///
+  /// Always forces `status: 'pending'` — user recipes must go through
+  /// the moderation queue before appearing publicly.
   Map<String, dynamic> toFirestoreForCreate() {
     return {
       'name': name,
@@ -218,7 +221,7 @@ class RecipeModel {
       'authorName': authorName,
       'authorPhotoUrl': authorPhotoUrl,
       'isSystemRecipe': false,
-      'status': status,
+      'status': 'pending', // Always pending — enforced by Firestore rules too
       'createdAt': FieldValue.serverTimestamp(),
       if (budget != null) 'budget': budget,
     };

@@ -72,4 +72,6 @@ macos/Runner/GoogleService-Info.plist
 # Android Manifest
 android/app/src/main/AndroidManifest.xml
 
-
+# Cloud Functions build output & dependencies
+functions/lib/
+functions/node_modules/

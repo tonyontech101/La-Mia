@@ -11,6 +11,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../auth/presentation/login_screen.dart';
+import 'ai_verification_screen.dart';
 import '../../auth/presentation/sign_up_screen.dart';
 import '../data/recipe_category_model.dart';
 import '../data/recipe_model.dart';
@@ -221,14 +222,14 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       }
       setState(() => _currentStep = 3);
     } else if (_currentStep == 3) {
-      if (_formattedIngredients.isEmpty) {
-        _showToast('Please add at least one ingredient');
+      if (_formattedIngredients.length < 2) {
+        _showToast('Please add at least 2 ingredients');
         return;
       }
       setState(() => _currentStep = 4);
     } else if (_currentStep == 4) {
-      if (_formattedInstructions.isEmpty) {
-        _showToast('Please add at least one instruction step');
+      if (_formattedInstructions.length < 2) {
+        _showToast('Please add at least 2 instruction steps');
         return;
       }
       setState(() => _currentStep = 5);
@@ -344,14 +345,14 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     final ingredients = _formattedIngredients;
     final instructions = _formattedInstructions;
 
-    if (ingredients.isEmpty) {
-      _showToast('Please add at least one ingredient');
+    if (ingredients.length < 2) {
+      _showToast('Please add at least 2 ingredients');
       setState(() => _currentStep = 3);
       return;
     }
 
-    if (instructions.isEmpty) {
-      _showToast('Please add at least one instruction step');
+    if (instructions.length < 2) {
+      _showToast('Please add at least 2 instruction steps');
       setState(() => _currentStep = 4);
       return;
     }
@@ -381,8 +382,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       }
 
       if (coverUrl.isEmpty) {
-        coverUrl =
-            'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60';
+        _showToast('Please add a cover photo of your dish');
+        setState(() => _currentStep = 1);
+        setState(() => _isSaving = false);
+        return;
       }
 
       final categoryModel = RecipeCategoryModel.defaultCategories.firstWhere(
@@ -415,22 +418,41 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         isSystemRecipe: false,
         createdAt: DateTime.now(),
         budget: _selectedBudget,
-        status: 'approved',
+        status: 'pending',
       );
 
-      await _recipeRepo.addRecipe(newRecipe);
+      final newDocId = await _recipeRepo.addRecipe(newRecipe);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.success,
-            content: Text(
-              'Successfully shared ${newRecipe.name}! Luto Na!',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+      if (!mounted) return;
+
+      // Navigate to the full-screen AI verification screen
+      final exitAction = await Navigator.push<VerificationExitAction>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AiVerificationScreen(
+            recipeDocId: newDocId,
+            recipeName: newRecipe.name,
           ),
-        );
-        Navigator.pop(context, true);
+        ),
+      );
+
+      if (!mounted) return;
+
+      switch (exitAction) {
+        case VerificationExitAction.editRecipe:
+          // Stay on the recipe editor — fields are still filled in
+          break;
+        case VerificationExitAction.startFresh:
+          // Pop back to the previous screen so the user can open a fresh editor
+          Navigator.pop(context, true);
+          break;
+        case VerificationExitAction.approved:
+        case VerificationExitAction.backToFeed:
+          Navigator.pop(context, true);
+          break;
+        case null:
+          // User pressed system back on a non-processing phase
+          break;
       }
     } catch (e) {
       if (mounted) {
@@ -1963,13 +1985,27 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 ],
               ),
               child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'AI Checking... 🍳',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     )
                   : Text(
                       isLastStep || isStep4 ? 'Luto Na! →' : 'Next →',
