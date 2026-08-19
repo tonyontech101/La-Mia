@@ -50,27 +50,21 @@ service cloud.firestore {
           .hasAny(['status']);
     }
 
-    /// Server-authoritative fields. Clients can never write these.
-    function isServerAuthoritativeField(key) {
-      return key in [
-        'status',
-        'approvedAt',
-        'likeCount',
-        'commentCount',
-        'favoriteCount',
-        'ratingAvg',
-        'ratingCount',
-        'trendingScore'
-      ];
+    /// Server-authoritative fields on CREATE. Clients can never set these fields on creation.
+    function notSettingServerFieldsOnCreate() {
+      return !request.resource.data.keys().hasAny([
+        'approvedAt', 'likeCount', 'commentCount',
+        'favoriteCount', 'ratingAvg', 'ratingCount', 'trendingScore'
+      ]);
     }
 
-    /// `true` when the request writes NO server-authoritative field.
-    function notSettingServerFields() {
-      return request.resource.data.diff(resource.data)
+    /// Server-authoritative fields on UPDATE. Clients can never update these.
+    function notSettingServerFieldsOnUpdate() {
+      return !request.resource.data.diff(resource.data)
           .affectedKeys().hasAny([
             'status', 'approvedAt', 'likeCount', 'commentCount',
             'favoriteCount', 'ratingAvg', 'ratingCount', 'trendingScore'
-          ]) == false;
+          ]);
     }
 
     // ── Recipes ────────────────────────────────────────────────────────────
@@ -87,15 +81,38 @@ service cloud.firestore {
         || isAdmin()
       );
 
-      // Create: signed-in user, must own the recipe, can be pending or approved.
+      // Create: signed-in user, must own the recipe, status forced to
+      // 'pending' (all user recipes enter moderation queue).
       // Server-authoritative fields must NOT be set by the client.
+      // Structural validation ensures the document resembles a real recipe.
       allow create: if isSignedIn()
           && request.resource.data.authorId == request.auth.uid
-          && (
-            !('status' in request.resource.data)
-            || request.resource.data.status in ['pending', 'approved']
-          )
-          && notSettingServerFields();
+          // ── Force pending status (no self-approval) ──
+          && request.resource.data.status == 'pending'
+          // ── Structural: required fields exist & have correct types ──
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 3
+          && request.resource.data.name.size() <= 150
+          && request.resource.data.description is string
+          && request.resource.data.category is string
+          && request.resource.data.category in [
+               'Almusal', 'Ulam', 'Sabaw', 'Merienda',
+               'Panghimagas', 'Gulay', 'Inihaw', 'Lamang Dagat'
+             ]
+          && request.resource.data.difficulty is string
+          && request.resource.data.difficulty in ['Easy', 'Medium', 'Hard']
+          && request.resource.data.ingredients is list
+          && request.resource.data.ingredients.size() >= 2
+          && request.resource.data.instructions is list
+          && request.resource.data.instructions.size() >= 2
+          && request.resource.data.servings is int
+          && request.resource.data.servings > 0
+          && request.resource.data.coverPhotoUrl is string
+          && request.resource.data.coverPhotoUrl.size() > 0
+          && request.resource.data.prepTime is string
+          && request.resource.data.cookTime is string
+          // ── Deny server-authoritative fields on create ──
+          && notSettingServerFieldsOnCreate();
 
       // Update: author may edit non-status fields of their own recipe;
       // admin may update anything (including status approval). Clients
@@ -104,7 +121,7 @@ service cloud.firestore {
         (
           isAuthor()
           && !changingStatus()
-          && notSettingServerFields()
+          && notSettingServerFieldsOnUpdate()
         )
         || isAdmin()
       );
@@ -147,6 +164,15 @@ service cloud.firestore {
       );
 
       allow delete: if isUser(uid);
+    }
+
+    // ── Moderation Logs (written by Cloud Functions, readable by admins) ────
+
+    match /moderationLogs/{logId} {
+      // Admins can read moderation logs from the admin dashboard.
+      // Cloud Functions write via Admin SDK (bypasses these rules).
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions can write
     }
 
     // ── Everything else: deny by default ─────────────────────────────────────

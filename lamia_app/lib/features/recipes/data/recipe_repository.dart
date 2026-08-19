@@ -46,10 +46,12 @@ class RecipeRepository {
     final snap = await _firestore
         .collection('recipes')
         .orderBy('trendingScore', descending: true)
-        .limit(limit)
+        .limit(limit * 2)
         .get();
     return snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .take(limit)
         .toList();
   }
 
@@ -68,6 +70,7 @@ class RecipeRepository {
         .get();
     return snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
         .toList();
   }
 
@@ -83,10 +86,12 @@ class RecipeRepository {
         .collection('recipes')
         .where('category', isEqualTo: category)
         .orderBy('createdAt', descending: true)
-        .limit(limit)
+        .limit(limit * 2)
         .get();
     return snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .take(limit)
         .toList();
   }
 
@@ -108,10 +113,12 @@ class RecipeRepository {
         .where('name', isGreaterThanOrEqualTo: q)
         .where('name', isLessThan: '$q\uffff')
         .orderBy('name')
-        .limit(limit)
+        .limit(limit * 2)
         .get();
     return snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .take(limit)
         .toList();
   }
 
@@ -128,6 +135,7 @@ class RecipeRepository {
         .get();
     final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
         .toList();
     recipes.sort((a, b) {
       final aTime = a.createdAt ?? DateTime(2000);
@@ -152,7 +160,9 @@ class RecipeRepository {
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
       results.addAll(
-        snap.docs.map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id)),
+        snap.docs
+            .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+            .where((r) => r.status == 'approved' || r.isSystemRecipe),
       );
     }
     return results;
@@ -180,7 +190,9 @@ class RecipeRepository {
           .limit(limit)
           .get();
       results.addAll(
-        snap.docs.map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id)),
+        snap.docs
+            .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+            .where((r) => r.status == 'approved' || r.isSystemRecipe),
       );
     }
     // Sort merged results by createdAt descending and cap at limit.
