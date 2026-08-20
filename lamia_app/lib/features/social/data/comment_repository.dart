@@ -36,7 +36,7 @@ class CommentRepository {
     });
   }
 
-  /// Adds a new comment to a recipe and increments the denormalized commentCount.
+  /// Adds a new comment to a recipe's comments subcollection.
   Future<void> addComment({
     required String recipeId,
     required String userId,
@@ -57,37 +57,15 @@ class CommentRepository {
       createdAt: DateTime.now(),
     );
 
-    final batch = _firestore.batch();
-    final newDoc = _commentsRef(recipeId).doc();
-    batch.set(newDoc, comment.toFirestore());
-
-    final recipeDoc = _firestore.collection('recipes').doc(recipeId);
-    batch.set(
-      recipeDoc,
-      {'commentCount': FieldValue.increment(1)},
-      SetOptions(merge: true),
-    );
-
-    await batch.commit();
+    await _commentsRef(recipeId).add(comment.toFirestore());
   }
 
-  /// Deletes a comment by ID and decrements the denormalized commentCount.
+  /// Deletes a comment by ID.
   Future<void> deleteComment({
     required String recipeId,
     required String commentId,
   }) async {
-    final batch = _firestore.batch();
-    final docRef = _commentsRef(recipeId).doc(commentId);
-    batch.delete(docRef);
-
-    final recipeDoc = _firestore.collection('recipes').doc(recipeId);
-    batch.set(
-      recipeDoc,
-      {'commentCount': FieldValue.increment(-1)},
-      SetOptions(merge: true),
-    );
-
-    await batch.commit();
+    await _commentsRef(recipeId).doc(commentId).delete();
   }
 
   /// Toggles like for a specific comment by [userId].
