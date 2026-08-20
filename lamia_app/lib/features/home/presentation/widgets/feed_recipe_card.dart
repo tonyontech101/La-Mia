@@ -156,7 +156,7 @@ class FeedRecipeCard extends StatelessWidget {
                         const Spacer(),
                         // Tag pills: cook time + category
                         _TagPill(
-                          label: recipe.cookTime,
+                          label: recipe.approximateCookTime,
                           color: AppColors.secondary,
                         ),
                         const SizedBox(width: 6),

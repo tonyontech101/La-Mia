@@ -67,5 +67,49 @@ void main() {
       final model = RecipeModel.fromLocalJson(json, coverPhotoUrl: 'http://lechon.jpg');
       expect(model.budget, 'Budget friendly'); // Default fallback
     });
+
+    test('approximation getters return formatted relational values', () {
+      final fastModel = RecipeModel(
+        name: 'Quick Egg',
+        category: 'Almusal',
+        region: 'Tagalog',
+        prepTime: '5 mins',
+        cookTime: '10 mins',
+        servings: 1,
+        difficulty: 'Easy',
+        ingredients: ['Egg'],
+        instructions: ['Fry'],
+        tags: ['egg'],
+        coverPhotoUrl: '',
+        source: '',
+        budget: 'Budget friendly',
+      );
+
+      expect(fastModel.approximatePrepTime, '< 10 mins');
+      expect(fastModel.approximateCookTime, '< 15 mins');
+      expect(fastModel.approximateServings, '< 2 servings');
+      expect(fastModel.approximateBudget, '< ₱150 (Budget friendly)');
+
+      final slowFeastModel = RecipeModel(
+        name: 'Slow Roast Pig',
+        category: 'Inihaw',
+        region: 'Cebuano',
+        prepTime: '45 mins',
+        cookTime: '180 mins',
+        servings: 10,
+        difficulty: 'Hard',
+        ingredients: ['Pork'],
+        instructions: ['Roast'],
+        tags: ['roast'],
+        coverPhotoUrl: '',
+        source: '',
+        budget: 'Quite Expensive',
+      );
+
+      expect(slowFeastModel.approximatePrepTime, '> 30 mins');
+      expect(slowFeastModel.approximateCookTime, '> 1 hr');
+      expect(slowFeastModel.approximateServings, '> 8 servings');
+      expect(slowFeastModel.approximateBudget, '> ₱500 (Quite Expensive)');
+    });
   });
 }
