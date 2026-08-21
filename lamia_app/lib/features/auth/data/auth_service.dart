@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_error_messages.dart';
@@ -116,6 +117,16 @@ class AuthService {
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(AuthErrorMessages.fromCode(e.code));
+    } on PlatformException catch (e) {
+      if (e.code == 'sign_in_failed' && (e.message?.contains('10') ?? false)) {
+        throw Exception(
+          'Google Sign-In configuration error (Code 10). Missing SHA-1 fingerprint in Firebase Console.',
+        );
+      }
+      if (e.code == 'sign_in_canceled') {
+        throw Exception('Google sign-in was cancelled.');
+      }
+      throw Exception(e.message ?? 'Google sign-in failed. Please try again.');
     }
   }
 
