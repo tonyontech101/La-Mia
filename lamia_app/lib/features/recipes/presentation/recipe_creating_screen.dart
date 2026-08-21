@@ -89,11 +89,34 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
   String? _selectedCategoryId;
   String _selectedRegion = 'Any region';
   String _selectedDifficulty = 'Easy';
-  String _selectedBudget = 'Budget friendly';
+  String _selectedBudget = '< ₱150 (Budget friendly)';
   int _servings = 4;
   int _prepTimeMin = 15;
   int _cookTimeMin = 30;
   final _tagsController = TextEditingController();
+
+  String get _servingsDisplay {
+    if (_servings <= 2) return '< 2 serves';
+    if (_servings <= 4) return '~ 3-4 serves';
+    if (_servings <= 6) return '~ 5-6 serves';
+    if (_servings <= 8) return '~ 7-8 serves';
+    return '> 8 serves';
+  }
+
+  String get _prepTimeDisplay {
+    if (_prepTimeMin <= 10) return '< 10 mins';
+    if (_prepTimeMin <= 20) return '~ 15 mins';
+    if (_prepTimeMin <= 30) return '~ 20-30 mins';
+    return '> 30 mins';
+  }
+
+  String get _cookTimeDisplay {
+    if (_cookTimeMin <= 15) return '< 15 mins';
+    if (_cookTimeMin <= 30) return '~ 30 mins';
+    if (_cookTimeMin <= 45) return '~ 45 mins';
+    if (_cookTimeMin <= 60) return '~ 60 mins';
+    return '> 1 hr';
+  }
 
   // ── Step 3: Ingredients ─────────────────────────────────────────────────────
   final List<_IngredientRowData> _ingredientItems = [];
@@ -124,10 +147,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
 
   // Budget options
   final List<String> _budgetOptions = [
-    'Budget friendly',
-    'Affordable',
-    'Special',
-    'Quite Expensive',
+    '< ₱150 (Budget friendly)',
+    '~ ₱150 - ₱300 (Affordable)',
+    '~ ₱300 - ₱500 (Special)',
+    '> ₱500 (Quite Expensive)',
   ];
 
   @override
@@ -943,10 +966,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         const SizedBox(height: 16),
 
         // Servings Counter
-        _buildFieldLabel('Servings'),
+        _buildFieldLabel('Servings (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: '$_servings',
+          value: _servingsDisplay,
           onMinus: () {
             if (_servings > 1) setState(() => _servings--);
           },
@@ -955,10 +978,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         const SizedBox(height: 16),
 
         // Prep Time Counter
-        _buildFieldLabel('Prep Time (min)'),
+        _buildFieldLabel('Prep Time (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: '$_prepTimeMin',
+          value: _prepTimeDisplay,
           onMinus: () {
             if (_prepTimeMin >= 5) {
               setState(() => _prepTimeMin -= 5);
@@ -971,10 +994,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         const SizedBox(height: 16),
 
         // Cook Time Counter
-        _buildFieldLabel('Cook Time (min)'),
+        _buildFieldLabel('Cook Time (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: '$_cookTimeMin',
+          value: _cookTimeDisplay,
           onMinus: () {
             if (_cookTimeMin >= 5) {
               setState(() => _cookTimeMin -= 5);

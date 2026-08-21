@@ -141,14 +141,17 @@ export const onRecipeCreate = onDocumentCreated(
       }
     }
 
-    // ── 3. Image Validation (Cloud Vision API) ───────────────────────────
+    // ── 3. Image Validation (Cloud Vision & Gemini Vision) ────────────────
 
     if (finalStatus === "approved") {
       try {
         const coverPhotoUrl = data.coverPhotoUrl as string | undefined;
 
         if (coverPhotoUrl && coverPhotoUrl.trim() !== "") {
-          const imageResult = await validateImageWithVision(coverPhotoUrl);
+          const imageResult = await validateImageWithVision(
+            coverPhotoUrl,
+            geminiApiKey.value()
+          );
 
           moderationLog.imageValidation = {
             isSafe: imageResult.isSafe,
@@ -161,6 +164,10 @@ export const onRecipeCreate = onDocumentCreated(
             finalStatus = "rejected";
             rejectionReason = `Image rejected: ${imageResult.reason}`;
             console.warn(`Image validation failed (unsafe content) for ${recipeId}: ${imageResult.reason}`);
+          } else if (!imageResult.isFood) {
+            finalStatus = "rejected";
+            rejectionReason = imageResult.reason || "The cover photo does not appear to show food. Please upload a clear photo of your dish.";
+            console.warn(`Image validation failed (not food) for ${recipeId}: ${imageResult.reason}`);
           }
         }
       } catch (err) {

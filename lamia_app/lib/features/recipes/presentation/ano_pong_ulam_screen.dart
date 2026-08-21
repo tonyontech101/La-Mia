@@ -45,7 +45,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
   // Committed filter states (applied to the suggestion list).
   String _selectedMealType = 'Lunch';
-  String _selectedBudget = 'Budget friendly';
+  String _selectedBudget = '< ₱150 (Budget friendly)';
   double _cookingTimeMinutes = 30.0;
   bool _isCustomTime = false;
   String _selectedDifficulty = 'Easy';
@@ -53,7 +53,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
   // Pending filter states (edited inside the sheet until Apply commits them).
   String _pendingMealType = 'Lunch';
-  String _pendingBudget = 'Budget friendly';
+  String _pendingBudget = '< ₱150 (Budget friendly)';
   double _pendingCookingTimeMinutes = 30.0;
   bool _pendingIsCustomTime = false;
   String _pendingDifficulty = 'Easy';
@@ -61,17 +61,34 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
   final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
   final List<String> _budgetOptions = [
-    'Budget friendly',
-    'Affordable',
-    'Special',
-    'Quite Expensive',
+    '< ₱150 (Budget friendly)',
+    '~ ₱150 - ₱300 (Affordable)',
+    '~ ₱300 - ₱500 (Special)',
+    '> ₱500 (Quite Expensive)',
   ];
 
   static const String _defaultMealType = 'Lunch';
-  static const String _defaultBudget = 'Budget friendly';
+  static const String _defaultBudget = '< ₱150 (Budget friendly)';
   static const double _defaultCookingTime = 30.0;
   static const String _defaultDifficulty = 'Easy';
   static const int _defaultServings = 12;
+
+  static String formatApproximateCookingTime(double minutes) {
+    final m = minutes.round();
+    if (m <= 15) return '< 15m';
+    if (m <= 30) return '~ 30m';
+    if (m <= 45) return '~ 45m';
+    if (m <= 60) return '~ 60m';
+    return '> 1h';
+  }
+
+  static String formatApproximateServings(int servings) {
+    if (servings <= 2) return '< 2 serves';
+    if (servings <= 4) return '~ 3-4 serves';
+    if (servings <= 6) return '~ 5-6 serves';
+    if (servings <= 8) return '~ 7-8 serves';
+    return '> 8 serves';
+  }
 
   @override
   void initState() {
@@ -118,7 +135,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
   String get _filtersSummary {
     if (_committedFilterCount == 0) return 'All dishes';
     return '$_selectedMealType · $_selectedBudget · '
-        '${_cookingTimeMinutes.round()}m · $_selectedDifficulty · $_selectedServings';
+        '${formatApproximateCookingTime(_cookingTimeMinutes)} · $_selectedDifficulty · ${formatApproximateServings(_selectedServings)}';
   }
 
   bool _passesMealType(RecipeModel recipe) {
@@ -182,18 +199,21 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
 
       // Budget matching: Use actual budget if present, otherwise fall back to proxy
       if (recipe.budget != null) {
-        if (_selectedBudget != recipe.budget) {
+        final rb = recipe.budget!.toLowerCase();
+        final sb = _selectedBudget.toLowerCase();
+        final isBudgetMatch = (sb.contains('150') && (rb.contains('150') || rb.contains('budget'))) ||
+            (sb.contains('300') && (rb.contains('300') || rb.contains('affordable'))) ||
+            (sb.contains('500') && (rb.contains('500') || rb.contains('special'))) ||
+            (sb.contains('expensive') && (rb.contains('expensive') || rb.contains('>')));
+        if (!isBudgetMatch && sb != rb) {
           match -= 15;
         }
       } else {
-        // Budget placeholder proxy (kept from previous behavior): ingredient
-        // count standing in for cost. Graded, not a hard gate.
-        if (_selectedBudget == 'Budget friendly' &&
-            recipe.ingredients.length > 8) {
+        // Budget placeholder proxy: ingredient count standing in for cost.
+        if (_selectedBudget.contains('150') && recipe.ingredients.length > 8) {
           match -= 15;
           missing.add('Special Spices');
-        } else if (_selectedBudget == 'Special' &&
-            recipe.ingredients.length <= 5) {
+        } else if (_selectedBudget.contains('500') && recipe.ingredients.length <= 5) {
           match -= 10;
         }
       }
@@ -390,11 +410,11 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Slider Row with 4m & 45m labels as shown in wireframe
+                                    // Slider Row with approximate time labels
                                     Row(
                                       children: [
                                         Text(
-                                          '4m',
+                                          '< 15m',
                                           style:
                                               AppTypography.caption(
                                                 color: AppColors.textSecondary,
@@ -421,9 +441,9 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                             ),
                                             child: Slider(
                                               value: _pendingCookingTimeMinutes
-                                                  .clamp(4.0, 45.0),
+                                                  .clamp(4.0, 60.0),
                                               min: 4.0,
-                                              max: 45.0,
+                                              max: 60.0,
                                               onChanged: (val) {
                                                 setSheetState(() {
                                                   _pendingCookingTimeMinutes =
@@ -434,7 +454,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '${_pendingCookingTimeMinutes.round()}m',
+                                          formatApproximateCookingTime(_pendingCookingTimeMinutes),
                                           style:
                                               AppTypography.caption(
                                                 color: AppColors.primary,
@@ -488,7 +508,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                             ),
                                             child: Text(
                                               _pendingIsCustomTime
-                                                  ? 'Custom: ${_pendingCookingTimeMinutes.round()}m'
+                                                  ? 'Custom: ${formatApproximateCookingTime(_pendingCookingTimeMinutes)}'
                                                   : 'Custom Time',
                                               style:
                                                   AppTypography.caption(
@@ -572,7 +592,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          '1',
+                                          '< 2',
                                           style:
                                               AppTypography.caption(
                                                 color: AppColors.textSecondary,
@@ -613,7 +633,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '12',
+                                          '> 8',
                                           style:
                                               AppTypography.caption(
                                                 color: AppColors.textSecondary,
@@ -627,7 +647,7 @@ class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          'Max $_pendingServings servings',
+                                          formatApproximateServings(_pendingServings),
                                           style:
                                               AppTypography.caption(
                                                 color: AppColors.primary,

@@ -82,6 +82,69 @@ class RecipeModel {
 
   final String? budget;
 
+  /// Approximate cooking time formatted using relational & approximation terms (<, ~, >).
+  String get approximateCookTime {
+    if (cookTime.contains('<') || cookTime.contains('>') || cookTime.contains('~')) {
+      return cookTime;
+    }
+    final digits = int.tryParse(cookTime.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (digits == null) {
+      if (cookTime.toLowerCase().contains('hr') || cookTime.toLowerCase().contains('hour')) {
+        return '> 1 hr';
+      }
+      return '~ $cookTime';
+    }
+    if (digits <= 15) return '< 15 mins';
+    if (digits <= 30) return '~ 20-30 mins';
+    if (digits <= 45) return '~ 30-45 mins';
+    if (digits <= 60) return '~ 45-60 mins';
+    return '> 1 hr';
+  }
+
+  /// Approximate prep time formatted using relational & approximation terms (<, ~, >).
+  String get approximatePrepTime {
+    if (prepTime.contains('<') || prepTime.contains('>') || prepTime.contains('~')) {
+      return prepTime;
+    }
+    final digits = int.tryParse(prepTime.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (digits == null) return '~ $prepTime';
+    if (digits <= 10) return '< 10 mins';
+    if (digits <= 20) return '~ 15 mins';
+    if (digits <= 30) return '~ 20-30 mins';
+    return '> 30 mins';
+  }
+
+  /// Approximate servings formatted using relational & approximation terms (<, ~, >).
+  String get approximateServings {
+    if (servings <= 2) return '< 2 servings';
+    if (servings <= 4) return '~ 3-4 servings';
+    if (servings <= 6) return '~ 5-6 servings';
+    if (servings <= 8) return '~ 7-8 servings';
+    return '> 8 servings';
+  }
+
+  /// Approximate budget formatted with relational & approximation symbols (<, ~, >).
+  String get approximateBudget {
+    final b = budget ?? 'Budget friendly';
+    if (b.contains('<') || b.contains('>') || b.contains('~') || b.contains('₱')) {
+      return b;
+    }
+    final lower = b.toLowerCase();
+    if (lower.contains('budget') || lower.contains('cheap') || lower.contains('sulit')) {
+      return '< ₱150 (Budget friendly)';
+    }
+    if (lower.contains('affordable') || lower.contains('sakto')) {
+      return '~ ₱150 - ₱300 (Affordable)';
+    }
+    if (lower.contains('special') || lower.contains('moderate')) {
+      return '~ ₱300 - ₱500 (Special)';
+    }
+    if (lower.contains('expensive') || lower.contains('quite expensive') || lower.contains('premium')) {
+      return '> ₱500 (Quite Expensive)';
+    }
+    return '~ $b';
+  }
+
   /// Creates a [RecipeModel] from the JSON stored in recipe `.txt` files.
   ///
   /// [coverPhotoUrl] must be supplied separately (from Firebase Storage)
