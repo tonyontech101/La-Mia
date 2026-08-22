@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../profile/presentation/widgets/app_right_sidebar.dart';
 
 /// Top header bar matching the wireframe in image.png.
 /// Shows brand logo "LaMia" with amber accent on the left, profile avatar on the right.
@@ -11,11 +12,13 @@ class DashboardHeader extends StatelessWidget {
     required this.displayName,
     this.userPhotoUrl,
     this.onNotificationTap,
+    this.onHamburgerTap,
   });
 
   final String displayName;
   final String? userPhotoUrl;
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onHamburgerTap;
 
   @override
   Widget build(BuildContext context) {
@@ -54,28 +57,40 @@ class DashboardHeader extends StatelessWidget {
             ],
           ),
 
-          // Right: Notification icon
-          GestureDetector(
-            onTap: onNotificationTap,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  width: 1.5,
+          // Right: Notification icon + Hamburger Button
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: onNotificationTap,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.notifications_none_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
                 ),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: AppColors.primary,
-                  size: 22,
+              if (onHamburgerTap != null) ...[
+                const SizedBox(width: 8),
+                HamburgerButton(
+                  size: 38,
+                  onTap: onHamburgerTap!,
                 ),
-              ),
-            ),
+              ],
+            ],
           ),
         ],
       ),

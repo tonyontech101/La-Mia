@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/utils/page_transitions.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
-import '../../auth/data/auth_service.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/login_screen.dart';
@@ -19,7 +17,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import 'edit_profile_screen.dart';
-import 'settings_screen.dart';
+import 'widgets/app_right_sidebar.dart';
 import 'widgets/dish_card_grid.dart';
 import 'widgets/profile_header_widget.dart';
 
@@ -154,14 +152,6 @@ class ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {}
   }
 
-  Future<void> _onSignOut() async {
-    await AuthService().signOut();
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushAndRemoveUntil(fadePageRoute(const LoginScreen()), (_) => false);
-  }
-
   Future<void> _toggleFollow() async {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     final targetUid = _displayedUid;
@@ -174,97 +164,9 @@ class ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showOptionsMenu(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    showModalBottomSheet(
+    showAppRightSidebar(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Profile Options',
-                  style: AppTypography.title(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                if (_isOwnProfile) ...[
-                  ListTile(
-                    leading: const Icon(
-                      Icons.person_outline_rounded,
-                      color: AppColors.primary,
-                    ),
-                    title: const Text('Edit Profile'),
-                    subtitle: Text(
-                      widget.isGuest ? 'Guest user' : (user?.email ?? ''),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToEditProfile();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.bookmark_border_rounded,
-                      color: AppColors.secondary,
-                    ),
-                    title: const Text('Saved Collections'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _onTabSelected(2);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.settings_outlined,
-                      color: AppColors.textSecondary,
-                    ),
-                    title: const Text('Settings'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToSettings();
-                    },
-                  ),
-                  const Divider(height: 24),
-                ],
-                ListTile(
-                  leading: Icon(
-                    widget.isGuest ? Icons.login_rounded : Icons.logout_rounded,
-                    color: AppColors.error,
-                  ),
-                  title: Text(
-                    widget.isGuest ? 'Sign In / Register' : 'Sign Out',
-                    style: const TextStyle(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _onSignOut();
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      isGuest: widget.isGuest,
     );
   }
 
@@ -274,18 +176,6 @@ class ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (_) => const EditProfileScreen()),
     ).then((_) {
       // Reload profile data when returning from edit screen.
-      _loadProfileData();
-    });
-  }
-
-  void _navigateToSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SettingsScreen(isGuest: widget.isGuest),
-      ),
-    ).then((_) {
-      // Reload profile data when returning from settings.
       _loadProfileData();
     });
   }
@@ -360,14 +250,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.textPrimary,
                         ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
                       ),
-                      IconButton(
-                        onPressed: () => _showOptionsMenu(context),
-                        icon: const Icon(
-                          Icons.menu_rounded,
-                          color: AppColors.textPrimary,
-                          size: 26,
-                        ),
-                        tooltip: 'Menu Options',
+                      HamburgerButton(
+                        onTap: () => _showOptionsMenu(context),
                       ),
                     ],
                   ),
@@ -650,17 +534,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                         ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
                       ),
                       if (_isOwnProfile)
-                        IconButton(
-                          onPressed: () => _showOptionsMenu(context),
-                          icon: const Icon(
-                            Icons.menu_rounded,
-                            color: AppColors.textPrimary,
-                            size: 26,
-                          ),
-                          tooltip: 'Menu Options',
+                        HamburgerButton(
+                          onTap: () => _showOptionsMenu(context),
                         )
                       else
-                        const SizedBox(width: 48),
+                        const SizedBox(width: 40),
                     ],
                   ),
                 ),

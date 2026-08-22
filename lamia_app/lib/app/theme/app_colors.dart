@@ -26,6 +26,7 @@ abstract final class AppColors {
   // Text
   static const Color textPrimary = Color(0xFF2B211B); // Toasted brown-black
   static const Color textSecondary = Color(0xFF6E6259); // Warm taupe
+  static const Color textDisabled = Color(0xFFA89D93); // Muted / disabled text
   static const Color onPrimary = Color(0xFFFFFFFF);
 
   // Lines
