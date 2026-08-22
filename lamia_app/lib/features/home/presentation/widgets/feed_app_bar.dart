@@ -11,10 +11,12 @@ class FeedAppBar extends StatelessWidget {
     super.key,
     required this.displayName,
     this.isGuest = false,
+    this.onProfileTap,
   });
 
   final String displayName;
   final bool isGuest;
+  final VoidCallback? onProfileTap;
 
   void _showNotificationsMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -33,24 +35,27 @@ class FeedAppBar extends StatelessWidget {
       child: Row(
         children: [
           // Left: Small circular avatar
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.12),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                width: 1.5,
+          GestureDetector(
+            onTap: onProfileTap,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
               ),
-            ),
-            child: Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),

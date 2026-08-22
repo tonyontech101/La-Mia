@@ -5,11 +5,13 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/auth_service.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/login_screen.dart';
+import '../../auth/presentation/sign_up_screen.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -316,8 +318,278 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Widget _buildGuestView(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
+            child: Column(
+              children: [
+                // 1. Top App Bar (Back Arrow, Title "Profile", Hamburger Options)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenH - 8,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else {
+                            widget.onNavigateHome?.call();
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppColors.textPrimary,
+                          size: 24,
+                        ),
+                        tooltip: 'Back',
+                      ),
+                      Text(
+                        'Profile',
+                        style: AppTypography.headline(
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
+                      ),
+                      IconButton(
+                        onPressed: () => _showOptionsMenu(context),
+                        icon: const Icon(
+                          Icons.menu_rounded,
+                          color: AppColors.textPrimary,
+                          size: 26,
+                        ),
+                        tooltip: 'Menu Options',
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 2. Scrollable Create Account / Guest View
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenH,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 16),
+                        // Prominent Visual Icon / Badge
+                        Center(
+                          child: Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withValues(alpha: 0.15),
+                                  AppColors.accent.withValues(alpha: 0.22),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.35),
+                                width: 2.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.cardShadow,
+                                  blurRadius: 16,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.person_add_rounded,
+                              size: 40,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Title & Subtitle
+                        Text(
+                          'Create an Account',
+                          style: AppTypography.headline(
+                            color: AppColors.textPrimary,
+                          ).copyWith(fontWeight: FontWeight.w800, fontSize: 24),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'Join La Mia to share your family recipes, bookmark favorites, follow top chefs, and compete on the leaderboard.',
+                            style: AppTypography.body(
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontSize: 14, height: 1.45),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Perks / Features list
+                        _buildFeatureTile(
+                          icon: Icons.soup_kitchen_rounded,
+                          iconColor: AppColors.primary,
+                          title: 'Publish Secret Recipes',
+                          subtitle:
+                              'Upload step-by-step cooking guides, ingredients, and mouthwatering photos.',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFeatureTile(
+                          icon: Icons.bookmark_added_rounded,
+                          iconColor: AppColors.secondary,
+                          title: 'Save & Collect Favorites',
+                          subtitle:
+                              'Bookmark irresistible recipes to cook anytime from your personalized collection.',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFeatureTile(
+                          icon: Icons.workspace_premium_rounded,
+                          iconColor: AppColors.accent,
+                          title: 'Earn Chef Rankings',
+                          subtitle:
+                              'Receive likes from fellow foodies and get featured on the community leaderboard.',
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        // Main Call to Action: Create an Account button
+                        PrimaryButton(
+                          label: 'Create an Account',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SignUpScreen(),
+                              ),
+                            ).then((_) => _loadProfileData());
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Secondary Action: Log In button
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            ).then((_) => _loadProfileData());
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            side: const BorderSide(
+                              color: AppColors.border,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadii.button),
+                            ),
+                            backgroundColor: AppColors.surface,
+                          ),
+                          child: Text(
+                            'Already have an account? Log In',
+                            style: AppTypography.button(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyStrong(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 12, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isOwnProfile && widget.isGuest) {
+      return _buildGuestView(context);
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     final displayName =
         _userModel?.displayName ??
