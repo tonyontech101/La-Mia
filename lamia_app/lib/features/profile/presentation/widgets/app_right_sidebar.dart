@@ -153,14 +153,10 @@ class AppRightSidebar extends StatelessWidget {
 
   void _onLeaderboardTap(BuildContext context) {
     Navigator.of(context).pop(); // Close sidebar
-    if (onNavigateToTab != null) {
-      onNavigateToTab!(2); // Switch to Leaderboard tab
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+    );
   }
 
   @override
