@@ -661,8 +661,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                 ),
                                 // Share popping button
                                 VerticalPoppingButton(
-                                  activeIcon: Icons.share_rounded,
-                                  inactiveIcon: Icons.share_rounded,
+                                  activeIcon: Icons.more_horiz_rounded,
+                                  inactiveIcon: Icons.more_horiz_rounded,
                                   isActive: _shareCount > 0,
                                   activeColor: AppColors.textPrimary,
                                   inactiveColor: const Color(0xFF80756C),

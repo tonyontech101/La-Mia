@@ -35,6 +35,12 @@ class LikeRepository {
         .collection('users')
         .doc(userId);
 
+    final userLikeRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('likes')
+        .doc(recipeId);
+
     final likeDoc = await likeRef.get();
     final isCurrentlyLiked = likeDoc.exists;
 
@@ -44,6 +50,7 @@ class LikeRepository {
     if (isCurrentlyLiked) {
       // Unlike
       batch.delete(likeRef);
+      batch.delete(userLikeRef);
       batch.update(recipeRef, {'likeCount': FieldValue.increment(-1)});
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
@@ -53,7 +60,12 @@ class LikeRepository {
       }
     } else {
       // Like
-      batch.set(likeRef, {'likedAt': FieldValue.serverTimestamp()});
+      final now = FieldValue.serverTimestamp();
+      batch.set(likeRef, {'likedAt': now});
+      batch.set(userLikeRef, {
+        'recipeId': recipeId,
+        'likedAt': now,
+      });
       batch.update(recipeRef, {'likeCount': FieldValue.increment(1)});
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
@@ -83,28 +95,13 @@ class LikeRepository {
 
   /// Returns the IDs of all recipes liked by [userId].
   Future<List<String>> getLikedRecipeIds(String userId) async {
-    // Query across all likes subcollections via a collection group query.
-    // This requires a Firestore index on the `users` collection group.
-    // Alternative: maintain a user-level subcollection. For now we use
-    // a simpler approach: query all `likes` docs and check the user subcol.
-    //
-    // Simpler approach: We store likes as likes/{recipeId}/users/{userId}.
-    // To get all liked recipe IDs for a user, we use a collectionGroup query.
     final snap = await _firestore
-        .collectionGroup('users')
-        .where(FieldPath.documentId, isEqualTo: userId)
+        .collection('users')
+        .doc(userId)
+        .collection('likes')
+        .orderBy('likedAt', descending: true)
         .get();
-
-    // Filter to only docs whose parent collection is named 'users' under 'likes'.
-    final ids = <String>[];
-    for (final doc in snap.docs) {
-      final parentPath = doc.reference.parent.parent?.id;
-      final grandparentPath = doc.reference.parent.parent?.parent.id;
-      if (grandparentPath == 'likes' && parentPath != null) {
-        ids.add(parentPath);
-      }
-    }
-    return ids;
+    return snap.docs.map((d) => d.id).toList();
   }
 
   /// Returns the full recipe objects for all recipes liked by [userId].
