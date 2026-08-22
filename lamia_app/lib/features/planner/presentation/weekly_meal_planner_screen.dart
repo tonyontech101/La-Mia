@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -11,6 +12,77 @@ import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import '../data/meal_plan_model.dart';
 import '../data/meal_plan_repository.dart';
+
+// ── Banig Weave Divider ─────────────────────────────────────────────────────
+
+class BanigDivider extends StatelessWidget {
+  const BanigDivider({super.key, this.height = 14, this.opacity = 0.45});
+
+  final double height;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: CustomPaint(
+        size: Size(double.infinity, height),
+        painter: _BanigWeavePainter(opacity: opacity),
+      ),
+    );
+  }
+}
+
+class _BanigWeavePainter extends CustomPainter {
+  const _BanigWeavePainter({required this.opacity});
+
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokePaint = Paint()
+      ..color = AppColors.border.withValues(alpha: opacity)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+
+    final knotPaint = Paint()
+      ..color = AppColors.textSecondary.withValues(alpha: opacity * 0.6)
+      ..style = PaintingStyle.fill;
+
+    const cellW = 6.0;
+    const cellH = 5.0;
+    final cols = (size.width / cellW).ceil();
+
+    for (var row = 0; row < 2; row++) {
+      final y = row * cellH;
+      for (var col = 0; col < cols; col++) {
+        final x = col * cellW;
+        final rect = Rect.fromLTWH(x, y, cellW, cellH);
+        canvas.drawRect(rect, strokePaint);
+
+        if (col % 4 == 0 && row == (col ~/ 4) % 2) {
+          canvas.drawCircle(
+            Offset(x + cellW / 2, y + cellH / 2),
+            1.2,
+            knotPaint,
+          );
+        }
+      }
+    }
+
+    canvas.drawLine(
+      Offset(0, cellH),
+      Offset(size.width, cellH),
+      Paint()
+        ..color = AppColors.border.withValues(alpha: opacity * 0.7)
+        ..strokeWidth = 0.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BanigWeavePainter oldDelegate) =>
+      oldDelegate.opacity != opacity;
+}
 
 /// Full-featured Weekly Meal Planner Screen for home cooks and meal preppers.
 ///
@@ -173,9 +245,8 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
             setState(() => _currentPlan = updated);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Added "${recipe.name}" to $slotTitle!'),
+                content: Text('"${recipe.name}" added to $slotTitle.'),
                 duration: const Duration(seconds: 2),
-                backgroundColor: AppColors.primary,
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -201,34 +272,38 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.auto_awesome_rounded, color: Color(0xFFD97706)),
-            SizedBox(width: 8),
-            Text('Auto-Fill Week?'),
-          ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.field),
         ),
-        content: const Text(
-          'This will generate a balanced 7-day Filipino meal plan with Breakfast, Lunch, Dinner, and Meryenda.',
-          style: TextStyle(height: 1.4),
+        title: Text(
+          'Auto-Fill Week?',
+          style: AppTypography.title(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'We\'ll suggest a Filipino week \u2014 Almusal, Tanghalian, Hapunan, and Meryenda for all 7 days. Swap any dish after.',
+          style: AppTypography.body(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: AppTypography.label(color: AppColors.textSecondary),
+            ),
           ),
-          ElevatedButton.icon(
+          ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD97706),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadii.button),
               ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.auto_awesome, size: 16),
-            label: const Text('Generate Plan'),
+            child: Text(
+              'Suggest week',
+              style: AppTypography.button(color: AppColors.onPrimary),
+            ),
           ),
         ],
       ),
@@ -244,8 +319,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✨ 7-Day Meal Plan generated successfully!'),
-            backgroundColor: Color(0xFF16A34A),
+            content: Text('Week filled in.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -281,7 +355,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         leading: widget.onNavigateHome != null
@@ -290,36 +364,18 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                 onPressed: widget.onNavigateHome,
               )
             : null,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.calendar_month_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Weekly Planner',
-              style: AppTypography.title(color: AppColors.textPrimary).copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
-            ),
-          ],
+        title: Text(
+          'Weekly Planner',
+          style: GoogleFonts.fraunces(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
         centerTitle: true,
         actions: [
-          // Grocery list button
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: AppSpacing.xs),
             child: IconButton(
               icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textPrimary),
               tooltip: 'Grocery List',
@@ -329,11 +385,11 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
         ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+          child: Divider(height: 1, thickness: 1, color: AppColors.border),
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary))
           : RefreshIndicator(
               onRefresh: _loadWeekPlan,
               color: AppColors.primary,
@@ -343,90 +399,48 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Week Selector Banner
                     _buildWeekNavigator(),
-
-                    // 2. 7-Day Horizontal Strip
+                    const BanigDivider(),
                     _buildDayStrip(),
-
-                    const SizedBox(height: 16),
-
-                    // 3. Active Day Header & Quick Actions
+                    const SizedBox(height: AppSpacing.md),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
                       child: _buildDaySubHeader(),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // 4. The 4 Meal Slots
+                    const SizedBox(height: AppSpacing.sm),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
                       child: Column(
                         children: [
-                          // Almusal (Breakfast)
                           _buildMealSlotCard(
-                            slotTitle: 'Almusal (Breakfast)',
-                            slotSubtitle: 'Morning comfort & energy',
+                            slotTitle: 'Almusal',
+                            slotSubtitle: 'Breakfast',
                             slotKey: 'breakfast',
                             icon: Icons.wb_twilight_rounded,
-                            accentColor: const Color(0xFFEA580C), // Vivid Orange
-                            bgGradient: const LinearGradient(
-                              colors: [Color(0xFFFFF7ED), Color(0xFFFFFBEB)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             item: _currentSelectedDay.breakfast,
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // Tanghalian (Lunch)
+                          const SizedBox(height: AppSpacing.sm),
                           _buildMealSlotCard(
-                            slotTitle: 'Tanghalian (Lunch)',
-                            slotSubtitle: 'Hearty midday signature ulam',
+                            slotTitle: 'Tanghalian',
+                            slotSubtitle: 'Lunch',
                             slotKey: 'lunch',
                             icon: Icons.wb_sunny_rounded,
-                            accentColor: const Color(0xFFD97706), // Warm Gold
-                            bgGradient: const LinearGradient(
-                              colors: [Color(0xFFFEFCE8), Color(0xFFFFF7ED)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             item: _currentSelectedDay.lunch,
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // Hapunan (Dinner)
+                          const SizedBox(height: AppSpacing.sm),
                           _buildMealSlotCard(
-                            slotTitle: 'Hapunan (Dinner)',
-                            slotSubtitle: 'Warm soups & family favorites',
+                            slotTitle: 'Hapunan',
+                            slotSubtitle: 'Dinner',
                             slotKey: 'dinner',
                             icon: Icons.nightlight_round,
-                            accentColor: const Color(0xFF9333EA), // Purple / Evening
-                            bgGradient: const LinearGradient(
-                              colors: [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             item: _currentSelectedDay.dinner,
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // Meryenda (Snacks)
+                          const SizedBox(height: AppSpacing.sm),
                           _buildMealSlotCard(
-                            slotTitle: 'Meryenda (Snacks / Dessert)',
-                            slotSubtitle: 'Afternoon delight & sweets',
+                            slotTitle: 'Meryenda',
+                            slotSubtitle: 'Snack',
                             slotKey: 'snack',
                             icon: Icons.bakery_dining_rounded,
-                            accentColor: const Color(0xFF059669), // Emerald
-                            bgGradient: const LinearGradient(
-                              colors: [Color(0xFFECFDF5), Color(0xFFF0FDF4)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             item: _currentSelectedDay.snack,
                           ),
                         ],
@@ -447,56 +461,47 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
 
     return Container(
       width: double.infinity,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Prev Week
           IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 28),
+            icon: const Icon(Icons.chevron_left_rounded, size: 28, color: AppColors.textPrimary),
             onPressed: () => _changeWeek(-1),
             tooltip: 'Previous Week',
           ),
-
-          // Week Range Display
           GestureDetector(
             onTap: _resetToThisWeek,
             child: Column(
               children: [
                 Text(
                   _formatWeekRangeHeader(),
-                  style: const TextStyle(
+                  style: GoogleFonts.fraunces(
                     fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF111827),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: AppSpacing.xxs),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isThisWeek
-                        ? AppColors.primary.withValues(alpha: 0.12)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
+                    color: isThisWeek ? AppColors.accentSoft : AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
                   ),
                   child: Text(
-                    isThisWeek ? 'Current Week' : 'Tap to jump to This Week',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isThisWeek ? AppColors.primary : Colors.grey.shade600,
+                    isThisWeek ? 'This week' : 'Back to this week',
+                    style: AppTypography.caption(
+                      color: isThisWeek ? AppColors.primary : AppColors.textSecondary,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-          // Next Week
           IconButton(
-            icon: const Icon(Icons.chevron_right_rounded, size: 28),
+            icon: const Icon(Icons.chevron_right_rounded, size: 28, color: AppColors.textPrimary),
             onPressed: () => _changeWeek(1),
             tooltip: 'Next Week',
           ),
@@ -509,11 +514,11 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
 
   Widget _buildDayStrip() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.only(bottom: 12),
+      color: AppColors.surface,
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         child: Row(
           children: List.generate(7, (i) {
             final dayDate = _currentMonday.add(Duration(days: i));
@@ -540,26 +545,22 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                   width: 54,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : isToday
-                            ? AppColors.primary.withValues(alpha: 0.1)
-                            : const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(16),
+                    color: isSelected ? AppColors.primary : AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadii.field),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
                           : isToday
                               ? AppColors.primary.withValues(alpha: 0.4)
-                              : const Color(0xFFE5E7EB),
+                              : AppColors.border,
                       width: isSelected ? 1.5 : 1.0,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
                           ]
                         : null,
@@ -569,22 +570,22 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                       Text(
                         _shortDayOfWeek(dayDate.weekday).toUpperCase(),
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? Colors.white70 : Colors.grey.shade500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                          color: isSelected ? Colors.white70 : AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xxs),
                       Text(
                         '${dayDate.day}',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: isSelected ? Colors.white : const Color(0xFF111827),
+                        style: GoogleFonts.fraunces(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      // Meal dots / counter
+                      const SizedBox(height: AppSpacing.xs),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -596,10 +597,10 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: d < mealsCount
-                                    ? (isSelected ? Colors.white : const Color(0xFF16A34A))
+                                    ? (isSelected ? Colors.white : AppColors.primary)
                                     : (isSelected
                                         ? Colors.white.withValues(alpha: 0.25)
-                                        : Colors.grey.shade300),
+                                        : AppColors.border),
                               ),
                             ),
                         ],
@@ -624,58 +625,50 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              dayName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111827),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                dayName,
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '$count of 4 meals planned',
-              style: TextStyle(
-                fontSize: 12.5,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                '$count of 4 meals planned',
+                style: AppTypography.label(color: AppColors.textSecondary),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        // Smart auto-fill button
-        PressableScale(
+        GestureDetector(
           onTap: _handleAutoFillWeek,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xxs + 1),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD97706).withValues(alpha: 0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(color: AppColors.border),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.auto_awesome, color: Colors.white, size: 14),
-                SizedBox(width: 5),
-                Text(
-                  'Auto-Fill Week',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accent,
                   ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Suggest week',
+                  style: AppTypography.label(color: AppColors.primary),
                 ),
               ],
             ),
@@ -692,76 +685,55 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     required String slotSubtitle,
     required String slotKey,
     required IconData icon,
-    required Color accentColor,
-    required Gradient bgGradient,
     required MealPlanItem? item,
   }) {
     final hasMeal = item != null && item.recipeName.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: hasMeal
-              ? accentColor.withValues(alpha: 0.3)
-              : const Color(0xFFE5E7EB),
-          width: 1.2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Card Header Slot
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: bgGradient,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
             child: Row(
               children: [
-                Icon(icon, color: accentColor, size: 18),
-                const SizedBox(width: 8),
+                Icon(icon, color: AppColors.textSecondary, size: 16),
+                const SizedBox(width: AppSpacing.xs),
                 Text(
                   slotTitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: accentColor,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  slotSubtitle,
+                  style: AppTypography.caption(color: AppColors.textSecondary),
                 ),
                 const Spacer(),
                 if (hasMeal)
                   GestureDetector(
-                    onTap: () => _openRecipeSelector(slotTitle, slotKey),
+                    onTap: () => _openRecipeSelector('$slotTitle ($slotSubtitle)', slotKey),
                     child: Text(
                       'Change',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: accentColor,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: AppTypography.caption(color: AppColors.primary),
                     ),
                   ),
               ],
             ),
           ),
-
-          // Card Body (Assigned meal OR Add Button)
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: hasMeal
                 ? _buildAssignedMealView(item, slotKey)
-                : _buildEmptySlotButton(slotTitle, slotKey, accentColor),
+                : _buildEmptySlotButton('$slotTitle ($slotSubtitle)', slotKey),
           ),
         ],
       ),
@@ -771,77 +743,54 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
   Widget _buildAssignedMealView(MealPlanItem item, String slotKey) {
     return Row(
       children: [
-        // Recipe image thumbnail
         ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadii.field),
           child: item.coverPhotoUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: item.coverPhotoUrl,
-                  width: 72,
-                  height: 72,
+                  width: 64,
+                  height: 64,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => Container(
-                    width: 72,
-                    height: 72,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.restaurant, color: Colors.grey),
+                    width: 64,
+                    height: 64,
+                    color: AppColors.surfaceAlt,
+                    child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
                   ),
                 )
               : Container(
-                  width: 72,
-                  height: 72,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.restaurant, color: Colors.grey),
+                  width: 64,
+                  height: 64,
+                  color: AppColors.surfaceAlt,
+                  child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
                 ),
         ),
-
-        const SizedBox(width: 12),
-
-        // Info & Title
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 item.recipeName,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
-                ),
+                style: AppTypography.bodyStrong(color: AppColors.textPrimary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xxs),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      item.category,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
+                  Text(
+                    item.category,
+                    style: AppTypography.caption(color: AppColors.textSecondary),
                   ),
-                  if (item.cookTime.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade500),
-                    const SizedBox(width: 2),
+                  if (item.cookTime.isNotEmpty)
                     Text(
-                      item.cookTime,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ' \u00B7 ${item.cookTime}',
+                      style: AppTypography.caption(color: AppColors.textSecondary),
                     ),
-                  ],
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs),
               GestureDetector(
                 onTap: () {
                   final matched = _cachedRecipes.firstWhere(
@@ -868,55 +817,44 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                     ),
                   );
                 },
-                child: const Text(
-                  'View Recipe →',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
+                child: Text(
+                  'View recipe \u2192',
+                  style: AppTypography.label(color: AppColors.primary),
                 ),
               ),
             ],
           ),
         ),
-
-        // Remove button
-        IconButton(
-          icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
-          onPressed: () => _removeMeal(slotKey),
-          tooltip: 'Remove from slot',
+        GestureDetector(
+          onTap: () => _removeMeal(slotKey),
+          child: Text(
+            'Remove',
+            style: AppTypography.caption(color: AppColors.textDisabled),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildEmptySlotButton(String slotTitle, String slotKey, Color accentColor) {
+  Widget _buildEmptySlotButton(String slotTitle, String slotKey) {
     return InkWell(
       onTap: () => _openRecipeSelector(slotTitle, slotKey),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadii.field),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFE5E7EB),
-            style: BorderStyle.solid,
-          ),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadii.field),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline_rounded, color: accentColor, size: 20),
-            const SizedBox(width: 8),
+            const Icon(Icons.add_rounded, color: AppColors.textSecondary, size: 18),
+            const SizedBox(width: AppSpacing.xs),
             Text(
-              '+ Add dish to $slotTitle',
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
-              ),
+              'Add dish',
+              style: AppTypography.label(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -973,26 +911,24 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.82,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
       ),
       child: Column(
         children: [
-          // Drag Handle
           const SizedBox(height: 12),
           Container(
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppColors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 14),
 
-          // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Row(
               children: [
                 Expanded(
@@ -1001,65 +937,61 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                     children: [
                       Text(
                         'Select Recipe for ${widget.slotTitle}',
-                        style: const TextStyle(
+                        style: GoogleFonts.fraunces(
                           fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: AppSpacing.xxs),
                       Text(
                         'Pick from classic and community Filipino dishes',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.grey.shade600,
-                        ),
+                        style: AppTypography.caption(color: AppColors.textSecondary),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
 
-          // Search Field
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: TextField(
               controller: _searchController,
               onChanged: (_) => setState(() {}),
+              style: AppTypography.body(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Search recipe or category...',
-                hintStyle: TextStyle(fontSize: 13.5, color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                hintStyle: AppTypography.body(color: AppColors.textDisabled),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
                 filled: true,
-                fillColor: const Color(0xFFF3F4F6),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                fillColor: AppColors.surfaceAlt,
+                contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadii.field),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.xs),
 
-          // Category Chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: categories.map((cat) {
                 final isSelected = _selectedCategory == cat;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.only(right: AppSpacing.xxs),
                   child: ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
@@ -1067,14 +999,15 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                       if (val) setState(() => _selectedCategory = cat);
                     },
                     selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? Colors.white : const Color(0xFF374151),
+                    labelStyle: AppTypography.caption(
+                      color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
                     ),
-                    backgroundColor: const Color(0xFFF3F4F6),
+                    backgroundColor: AppColors.surface,
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
                     ),
                     showCheckmark: false,
                   ),
@@ -1083,83 +1016,70 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
             ),
           ),
 
-          const Divider(height: 16, color: Color(0xFFEEEEEE)),
+          const Divider(height: 16, color: AppColors.border),
 
-          // Recipe List
           Expanded(
             child: _filteredRecipes.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off_rounded, size: 48, color: Colors.grey.shade400),
-                        const SizedBox(height: 8),
+                        Icon(Icons.search_off_rounded, size: 48, color: AppColors.textDisabled),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'No recipes found',
-                          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                          'No recipes match',
+                          style: AppTypography.label(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                     itemCount: _filteredRecipes.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final recipe = _filteredRecipes[index];
                       return InkWell(
                         onTap: () => widget.onRecipeSelected(recipe),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppRadii.field),
                                 child: recipe.coverPhotoUrl.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: recipe.coverPhotoUrl,
-                                        width: 58,
-                                        height: 58,
+                                        width: 52,
+                                        height: 52,
                                         fit: BoxFit.cover,
                                         errorWidget: (_, _, _) => Container(
-                                          width: 58,
-                                          height: 58,
-                                          color: Colors.grey.shade200,
-                                          child: const Icon(Icons.restaurant, color: Colors.grey),
+                                          width: 52,
+                                          height: 52,
+                                          color: AppColors.surfaceAlt,
+                                          child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
                                         ),
                                       )
                                     : Container(
-                                        width: 58,
-                                        height: 58,
-                                        color: Colors.grey.shade200,
-                                        child: const Icon(Icons.restaurant, color: Colors.grey),
+                                        width: 52,
+                                        height: 52,
+                                        color: AppColors.surfaceAlt,
+                                        child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
                                       ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       recipe.name,
-                                      style: const TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF111827),
-                                      ),
+                                      style: AppTypography.bodyStrong(color: AppColors.textPrimary),
                                     ),
-                                    const SizedBox(height: 3),
+                                    const SizedBox(height: AppSpacing.xxs),
                                     Text(
-                                      '${recipe.category} • ${recipe.approximateCookTime}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
+                                      '${recipe.category} \u00B7 ${recipe.approximateCookTime}',
+                                      style: AppTypography.caption(color: AppColors.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -1167,7 +1087,7 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                               const Icon(
                                 Icons.add_circle_rounded,
                                 color: AppColors.primary,
-                                size: 28,
+                                size: 26,
                               ),
                             ],
                           ),
@@ -1202,7 +1122,7 @@ class _GroceryListModalState extends State<_GroceryListModal> {
 
   void _copyToClipboard() {
     final buffer = StringBuffer();
-    buffer.writeln('🛒 La Mia Grocery List (${widget.weekDateRange}):');
+    buffer.writeln('La Mia grocery list \u2014 ${widget.weekDateRange}:');
     for (final item in widget.items) {
       final check = _checkedItems.contains(item) ? '[x]' : '[ ]';
       buffer.writeln('$check $item');
@@ -1210,7 +1130,7 @@ class _GroceryListModalState extends State<_GroceryListModal> {
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Grocery list copied to clipboard!'),
+        content: Text('Grocery list copied.'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -1221,50 +1141,42 @@ class _GroceryListModalState extends State<_GroceryListModal> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
       ),
       child: Column(
         children: [
-          // Drag Handle
           const SizedBox(height: 12),
           Container(
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppColors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 14),
 
-          // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 20),
-                          SizedBox(width: 6),
-                          Text(
-                            'Weekly Grocery List',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
                       Text(
-                        'Consolidated ingredients for ${widget.weekDateRange}',
-                        style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                        'Weekly Grocery List',
+                        style: GoogleFonts.fraunces(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Everything you need for ${widget.weekDateRange}',
+                        style: AppTypography.caption(color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -1275,82 +1187,69 @@ class _GroceryListModalState extends State<_GroceryListModal> {
                   onPressed: _copyToClipboard,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 16, color: Color(0xFFEEEEEE)),
+          const Divider(height: 16, color: AppColors.border),
 
-          // Items Count Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xxs),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${widget.items.length} Ingredients needed',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF374151),
-                  ),
+                  '${widget.items.length} ingredients',
+                  style: AppTypography.label(color: AppColors.textPrimary),
                 ),
                 Text(
-                  '${_checkedItems.length} checked',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  '${_checkedItems.length} in the cart',
+                  style: AppTypography.caption(color: AppColors.textSecondary),
                 ),
               ],
             ),
           ),
 
-          // Checklist
           Expanded(
             child: widget.items.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.kitchen_outlined, size: 54, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No meals planned yet for this week.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF374151),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
+                        Icon(Icons.kitchen_outlined, size: 48, color: AppColors.textDisabled),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Add dishes to your meal slots to generate a grocery list.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          'No meals this week yet.',
+                          style: AppTypography.label(color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          'Add dishes to see the ingredients here.',
+                          style: AppTypography.caption(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                     itemCount: widget.items.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                    separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final item = widget.items[index];
                       final isChecked = _checkedItems.contains(item);
                       return CheckboxListTile(
                         value: isChecked,
-                        activeColor: const Color(0xFF16A34A),
+                        activeColor: AppColors.success,
                         controlAffinity: ListTileControlAffinity.leading,
                         title: Text(
                           item,
-                          style: TextStyle(
-                            fontSize: 13.5,
+                          style: AppTypography.body(
+                            color: isChecked ? AppColors.textDisabled : AppColors.textPrimary,
+                          ).copyWith(
                             decoration: isChecked ? TextDecoration.lineThrough : null,
-                            color: isChecked ? Colors.grey.shade400 : const Color(0xFF1F2937),
                           ),
                         ),
                         onChanged: (val) {
