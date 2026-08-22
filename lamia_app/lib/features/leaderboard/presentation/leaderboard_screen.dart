@@ -7,6 +7,7 @@ import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../profile/presentation/widgets/app_right_sidebar.dart';
 import 'widgets/chef_of_month_card.dart';
 import 'widgets/ranked_chef_tile.dart';
 import 'widgets/your_ranking_card.dart';
@@ -81,83 +82,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   void _showOptionsMenu(BuildContext context) {
-    showModalBottomSheet(
+    showAppRightSidebar(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Leaderboard Options',
-                  style: AppTypography.title(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.filter_list_rounded,
-                    color: AppColors.primary,
-                  ),
-                  title: const Text('Filter by Category'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Category filter coming soon!'),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.calendar_month_rounded,
-                    color: AppColors.secondary,
-                  ),
-                  title: const Text('View Past Rankings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Past rankings coming soon!'),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.share_rounded,
-                    color: AppColors.textSecondary,
-                  ),
-                  title: const Text('Share Leaderboard'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sharing coming soon!')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      onNavigateToTab: widget.onNavigateHome != null
+          ? (_) => widget.onNavigateHome!()
+          : null,
     );
   }
 
@@ -236,21 +165,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       ),
 
                       // Hamburger menu
-                      GestureDetector(
+                      HamburgerButton(
+                        size: 36,
                         onTap: () => _showOptionsMenu(context),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.surfaceAlt,
-                          ),
-                          child: const Icon(
-                            Icons.menu_rounded,
-                            color: AppColors.textPrimary,
-                            size: 20,
-                          ),
-                        ),
                       ),
                     ],
                   ),
