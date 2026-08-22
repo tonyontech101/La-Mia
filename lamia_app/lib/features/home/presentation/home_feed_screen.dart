@@ -166,6 +166,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                       FeedAppBar(
                         displayName: displayName,
                         isGuest: widget.isGuest,
+                        onProfileTap: () => widget.onNavigateToTab?.call(3),
                       ),
 
                       const SizedBox(height: 12),

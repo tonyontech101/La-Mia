@@ -38,6 +38,22 @@ class AuthScaffold extends StatelessWidget {
           child: Stack(
             children: [
               HeroHeader(height: heroHeight),
+              if (Navigator.of(context).canPop())
+                Positioned(
+                  top: media.padding.top + 8,
+                  left: 12,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: 'Back',
+                    ),
+                  ),
+                ),
               // The floating card rises and fades in just after the hero so
               // the auth screens feel alive on entry.
               FadeInView(

@@ -231,8 +231,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         text: text,
       );
       _commentController.clear();
-      FocusScope.of(context).unfocus();
       if (mounted) {
+        FocusScope.of(context).unfocus();
         AppSnackbar.show(context, message: 'Comment shared!');
       }
     } catch (e) {
