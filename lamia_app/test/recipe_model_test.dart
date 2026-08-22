@@ -112,4 +112,74 @@ void main() {
       expect(slowFeastModel.approximateBudget, '> ₱500 (Quite Expensive)');
     });
   });
+
+  group('RecipeModel ChefsTips Serialization Tests', () {
+    test('fromFirestore parses chefsTips correctly', () {
+      final docData = {
+        'name': 'Kare-Kare',
+        'category': 'Ulam',
+        'region': 'Kapampangan',
+        'prepTime': '20 mins',
+        'cookTime': '60 mins',
+        'servings': 6,
+        'difficulty': 'Medium',
+        'ingredients': ['Oxtail', 'Peanut Butter'],
+        'instructions': ['Simmer oxtail until tender'],
+        'chefsTips': [
+          'Toast the rice powder until fragrant before mixing.',
+          'Serve with warm bagoong on the side.',
+        ],
+        'tags': ['kare-kare'],
+        'coverPhotoUrl': 'http://karekare.jpg',
+        'source': '',
+      };
+
+      final model = RecipeModel.fromFirestore(docData, docId: 'recipe_kare');
+      expect(model.chefsTips.length, 2);
+      expect(model.chefsTips[0], 'Toast the rice powder until fragrant before mixing.');
+      expect(model.chefsTips[1], 'Serve with warm bagoong on the side.');
+    });
+
+    test('toFirestore and toFirestoreForCreate serialize chefsTips correctly', () {
+      final model = RecipeModel(
+        name: 'Adobo',
+        category: 'Ulam',
+        region: 'Tagalog',
+        prepTime: '15 mins',
+        cookTime: '30 mins',
+        servings: 4,
+        difficulty: 'Easy',
+        ingredients: ['Pork'],
+        instructions: ['Cook'],
+        chefsTips: ['Marinate overnight for richer flavor.'],
+        tags: ['adobo'],
+        coverPhotoUrl: '',
+        source: '',
+      );
+
+      final data = model.toFirestore();
+      expect(data['chefsTips'], ['Marinate overnight for richer flavor.']);
+
+      final createData = model.toFirestoreForCreate();
+      expect(createData['chefsTips'], ['Marinate overnight for richer flavor.']);
+    });
+
+    test('fromLocalJson parses chefs_tips with fallback', () {
+      final json = {
+        'name': 'Pancit',
+        'category': 'Meryenda',
+        'prep_time': '15 mins',
+        'cook_time': '20 mins',
+        'servings': 4,
+        'difficulty': 'Easy',
+        'ingredients': ['Noodles'],
+        'instructions': ['Stir fry'],
+        'chefs_tips': ['Use calamansi juice to brighten the flavor.'],
+        'tags': ['noodles'],
+      };
+
+      final model = RecipeModel.fromLocalJson(json, coverPhotoUrl: 'http://pancit.jpg');
+      expect(model.chefsTips, ['Use calamansi juice to brighten the flavor.']);
+    });
+  });
 }

@@ -340,7 +340,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final recipe = widget.recipe;
-    final chefsTips = _defaultChefsTips;
+    final chefsTips = recipe.chefsTips.isNotEmpty
+        ? recipe.chefsTips
+        : _defaultChefsTips;
 
     return Scaffold(
       backgroundColor: AppColors.background,
