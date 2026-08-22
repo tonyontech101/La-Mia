@@ -6,5 +6,6 @@
  */
 
 import { onRecipeCreate } from "./onRecipeCreate";
+import { onRecipeLikeWrite } from "./onRecipeLikeWrite";
 
-export { onRecipeCreate };
+export { onRecipeCreate, onRecipeLikeWrite };

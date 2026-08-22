@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
@@ -41,10 +42,16 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   List<RecipeModel> _featuredRecipes = [];
   List<RecipeModel> _popularRecipes = [];
+  List<RecipeModel> _categoryRecipes = [];
   bool _isLoadingFeatured = true;
   bool _isLoadingPopular = true;
+  bool _isLoadingCategory = false;
   bool _hasFeaturedError = false;
   bool _hasPopularError = false;
+  bool _hasCategoryError = false;
+
+  /// Generation counter to discard stale category load results.
+  int _categoryLoadGeneration = 0;
 
   @override
   void initState() {
@@ -108,7 +115,69 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   /// Pull-to-refresh: reloads all sections with a fresh random order.
   Future<void> _onRefresh() async {
-    await Future.wait([_loadFeatured(), _loadPopular()]);
+    await Future.wait([
+      _loadFeatured(),
+      _loadPopular(),
+      if (_selectedCategoryId != null) _loadCategoryRecipes(_selectedCategoryId!),
+    ]);
+  }
+
+  /// Loads recipes for the selected category with race-condition protection.
+  ///
+  /// A generation counter ensures that if the user taps categories rapidly,
+  /// only the most recent request writes its results to state — stale
+  /// responses from earlier requests are silently discarded.
+  Future<void> _loadCategoryRecipes(String categoryId) async {
+    final generation = ++_categoryLoadGeneration;
+    final alreadyLoaded = [..._featuredRecipes, ..._popularRecipes]
+        .where(
+          (recipe) => RecipeRepository.isVisibleInCategory(recipe, categoryId),
+        )
+        .toList();
+    setState(() {
+      _isLoadingCategory = true;
+      _hasCategoryError = false;
+      _categoryRecipes = _uniqueRecipes(alreadyLoaded);
+    });
+    try {
+      final recipes = await _recipeRepository.recipesByCategory(
+        categoryId,
+        limit: 20,
+      );
+      // Discard if a newer request has started since we began.
+      if (mounted && generation == _categoryLoadGeneration) {
+        setState(() {
+          _categoryRecipes = _uniqueRecipes([..._categoryRecipes, ...recipes]);
+          _isLoadingCategory = false;
+        });
+      }
+    } catch (_) {
+      if (mounted && generation == _categoryLoadGeneration) {
+        setState(() {
+          _isLoadingCategory = false;
+          _hasCategoryError = true;
+        });
+      }
+    }
+  }
+
+  List<RecipeModel> _uniqueRecipes(List<RecipeModel> recipes) {
+    final seen = <String>{};
+    return recipes.where((recipe) {
+      final key = recipe.id ?? '${recipe.name}|${recipe.category}';
+      return seen.add(key);
+    }).toList();
+  }
+
+  /// Handles category tap: toggles selection and loads filtered recipes.
+  void _onCategoryTap(RecipeCategoryModel cat) {
+    final newId = _selectedCategoryId == cat.id ? null : cat.id;
+    setState(() {
+      _selectedCategoryId = newId;
+    });
+    if (newId != null) {
+      _loadCategoryRecipes(newId);
+    }
   }
 
   void _showRecipeDetailsDialog(RecipeModel recipe) {
@@ -193,18 +262,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     CategoriesSection(
                       categories: RecipeCategoryModel.defaultCategories,
                       selectedCategoryId: _selectedCategoryId,
-                      onCategoryTap: (cat) {
-                        setState(() {
-                          _selectedCategoryId = _selectedCategoryId == cat.id
-                              ? null
-                              : cat.id;
-                        });
-                      },
+                      onCategoryTap: _onCategoryTap,
                     ),
 
                     const SizedBox(height: 28),
 
-                    // 6. Popular Choices Section
+                    // 6. Category Filtered Results (shown when a category is selected)
+                    if (_selectedCategoryId != null) ...[
+                      _buildCategoryFilteredSection(),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // 7. Popular Choices Section (always shown)
                     _buildPopularSection(),
 
                     const SizedBox(height: 24),
@@ -214,6 +283,80 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilteredSection() {
+    final categoryName = RecipeCategoryModel.defaultCategories
+        .where((c) => c.id == _selectedCategoryId)
+        .map((c) => c.name)
+        .firstOrNull;
+
+    if (_isLoadingCategory && _categoryRecipes.isEmpty) {
+      return const SectionLoadingSkeleton(height: 360, isHorizontal: false);
+    }
+    if (_hasCategoryError) {
+      return SectionErrorState(
+        message: 'Could not load $categoryName recipes. Try again.',
+        onRetry: () => _loadCategoryRecipes(_selectedCategoryId!),
+      );
+    }
+    if (_categoryRecipes.isEmpty) {
+      return SectionEmptyState(
+        message: 'No $categoryName recipes yet',
+        subtitle: 'Recipes in this category will appear here.',
+      );
+    }
+    return FadeInView(
+      key: ValueKey('category-$_selectedCategoryId-${_categoryRecipes.length}'),
+      duration: const Duration(milliseconds: 450),
+      offset: const Offset(0, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '$categoryName Recipes',
+                  style: AppTypography.title(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _selectedCategoryId = null;
+                }),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Clear',
+                      style: AppTypography.caption(
+                        color: AppColors.textSecondary,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          PopularChoicesSection(
+            recipes: _categoryRecipes,
+            onRecipeTap: _showRecipeDetailsDialog,
+            showTitle: false,
+          ),
+        ],
       ),
     );
   }

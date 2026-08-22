@@ -50,6 +50,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     setState(() {
       _currentIndex = index;
     });
+    if (index == 0) {
+      _homeFeedKey.currentState?.refresh();
+    } else if (index == 3) {
+      _profileKey.currentState?.refresh();
+    }
   }
 
   Future<void> _onPlusActionTap() async {

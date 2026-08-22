@@ -39,27 +39,33 @@ class LikeRepository {
     final isCurrentlyLiked = likeDoc.exists;
 
     final batch = _firestore.batch();
-    final recipeRef = _firestore.collection('recipes').doc(recipeId);
 
     if (isCurrentlyLiked) {
       // Unlike
       batch.delete(likeRef);
-      batch.update(recipeRef, {'likeCount': FieldValue.increment(-1)});
+      // NOTE: recipe.likeCount is server-authoritative; we do NOT update it
+      // from the client (blocked by Firestore rules). A Cloud Function or
+      // scheduled job maintains the denormalized counter.
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
-        batch.update(authorRef, {
-          'totalLikesReceived': FieldValue.increment(-1),
-        });
+        // Use set+merge so missing counter fields don't cause NOT_FOUND.
+        batch.set(
+          authorRef,
+          {'totalLikesReceived': FieldValue.increment(-1)},
+          SetOptions(merge: true),
+        );
       }
     } else {
       // Like
       batch.set(likeRef, {'likedAt': FieldValue.serverTimestamp()});
-      batch.update(recipeRef, {'likeCount': FieldValue.increment(1)});
+      // NOTE: recipe.likeCount is server-authoritative; skip client update.
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
-        batch.update(authorRef, {
-          'totalLikesReceived': FieldValue.increment(1),
-        });
+        batch.set(
+          authorRef,
+          {'totalLikesReceived': FieldValue.increment(1)},
+          SetOptions(merge: true),
+        );
       }
     }
 

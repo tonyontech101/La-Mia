@@ -29,6 +29,7 @@ class RecipeModel {
     this.favoriteCount = 0,
     this.ratingAvg = 0.0,
     this.ratingCount = 0,
+    this.trendingScore = 0,
     this.status = 'approved',
     this.createdAt,
     this.budget,
@@ -72,6 +73,7 @@ class RecipeModel {
   final int favoriteCount;
   final double ratingAvg;
   final int ratingCount;
+  final int trendingScore;
 
   // ── Moderation ──────────────────────────────────────────────────────────
 
@@ -218,6 +220,7 @@ class RecipeModel {
       favoriteCount: (data['favoriteCount'] as num?)?.toInt() ?? 0,
       ratingAvg: (data['ratingAvg'] as num?)?.toDouble() ?? 0.0,
       ratingCount: (data['ratingCount'] as num?)?.toInt() ?? 0,
+      trendingScore: (data['trendingScore'] as num?)?.toInt() ?? 0,
       status: data['status'] as String? ?? 'approved',
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as dynamic).toDate() as DateTime

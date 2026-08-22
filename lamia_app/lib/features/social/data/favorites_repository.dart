@@ -37,22 +37,30 @@ class FavoritesRepository {
     final isCurrentlySaved = favDoc.exists;
 
     final batch = _firestore.batch();
-    final recipeRef = _firestore.collection('recipes').doc(recipeId);
     final userRef = _firestore.collection('users').doc(userId);
 
     if (isCurrentlySaved) {
       // Unsave
       batch.delete(favRef);
-      batch.update(recipeRef, {'favoriteCount': FieldValue.increment(-1)});
-      batch.update(userRef, {'savedCount': FieldValue.increment(-1)});
+      // NOTE: recipe.favoriteCount is server-authoritative and blocked by
+      // Firestore rules. Only update the user's own savedCount.
+      batch.set(
+        userRef,
+        {'savedCount': FieldValue.increment(-1)},
+        SetOptions(merge: true),
+      );
     } else {
       // Save
       batch.set(favRef, {
         'recipeId': recipeId,
         'savedAt': FieldValue.serverTimestamp(),
       });
-      batch.update(recipeRef, {'favoriteCount': FieldValue.increment(1)});
-      batch.update(userRef, {'savedCount': FieldValue.increment(1)});
+      // NOTE: recipe.favoriteCount is server-authoritative; skip client update.
+      batch.set(
+        userRef,
+        {'savedCount': FieldValue.increment(1)},
+        SetOptions(merge: true),
+      );
     }
 
     await batch.commit();

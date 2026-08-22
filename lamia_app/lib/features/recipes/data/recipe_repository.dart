@@ -14,6 +14,15 @@ class RecipeRepository {
 
   final FirebaseFirestore _firestore;
 
+  /// Watches a recipe document so counters such as [RecipeModel.likeCount]
+  /// remain current anywhere a recipe is already open on screen.
+  Stream<RecipeModel?> watchRecipe(String recipeId) {
+    return _firestore.collection('recipes').doc(recipeId).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
+    });
+  }
+
   /// Fetches recipes flagged as featured by editors/seed data.
   ///
   /// Queries `isFeatured == true` and returns up to [limit] recipes,
@@ -74,25 +83,109 @@ class RecipeRepository {
         .toList();
   }
 
-  /// Returns recipes matching [category] (exact match on the Firestore
-  /// `category` field), ordered by `createdAt` descending, up to [limit].
+  /// Returns visible recipes assigned to [category].
   ///
-  /// Cursor pagination is not yet implemented.
+  /// The [category] param may be either a category ID (e.g. `'lamang_dagat'`)
+  /// or a category display name (e.g. `'Lamang Dagat'`). The method normalizes
+  /// both sides before comparing. This also supports legacy English category
+  /// labels, so a dish saved as `Breakfast` is included under `Almusal`.
   Future<List<RecipeModel>> recipesByCategory(
     String category, {
     int limit = 20,
   }) async {
-    final snap = await _firestore
-        .collection('recipes')
-        .where('category', isEqualTo: category)
-        .orderBy('createdAt', descending: true)
-        .limit(limit * 2)
-        .get();
-    return snap.docs
+    final target = _canonicalCategory(category);
+
+    // Fetch a larger set (no server-side category filter to support both the
+    // current Filipino labels and legacy labels without an index migration).
+    final snap = await _firestore.collection('recipes').limit(500).get();
+    final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where((r) => r.status == 'approved' || r.isSystemRecipe)
-        .take(limit)
+        .where((r) {
+          return isVisibleInCategory(r, target);
+        })
         .toList();
+
+    // Sort by createdAt descending (newest first), system recipes (no date) last.
+    recipes.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    return recipes.take(limit).toList();
+  }
+
+  /// Whether a recipe is visible and belongs to [category]. Kept public so
+  /// dashboard sections can immediately reuse recipes they have already loaded.
+  static bool isVisibleInCategory(RecipeModel recipe, String category) {
+    final isVisible = recipe.status == 'approved' || recipe.isSystemRecipe;
+    return isVisible &&
+        _canonicalCategory(recipe.category) == _canonicalCategory(category);
+  }
+
+  /// Maps current IDs, Filipino display labels, and legacy English labels to
+  /// the category users see in the dashboard.
+  static String _canonicalCategory(String value) {
+    final normalized = value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[_-]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
+
+    const aliases = <String, String>{
+      'breakfast': 'almusal',
+      'almusal': 'almusal',
+      'main course': 'ulam',
+      'lunch': 'ulam',
+      'dinner': 'ulam',
+      'chicken': 'ulam',
+      'pork': 'ulam',
+      'beef': 'ulam',
+      'ulam': 'ulam',
+      'soup': 'sabaw',
+      'soups': 'sabaw',
+      'sabaw': 'sabaw',
+      'snack': 'merienda',
+      'snacks': 'merienda',
+      'merienda': 'merienda',
+      'dessert': 'panghimagas',
+      'desserts': 'panghimagas',
+      'panghimagas': 'panghimagas',
+      'vegetable': 'gulay',
+      'vegetables': 'gulay',
+      'gulay': 'gulay',
+      'grilled': 'inihaw',
+      'inihaw': 'inihaw',
+      'seafood': 'lamang dagat',
+      'lamang dagat': 'lamang dagat',
+    };
+    if (aliases.containsKey(normalized)) return aliases[normalized]!;
+
+    // Some of the imported dataset uses longer category labels, e.g.
+    // "Filipino Main Dishes". Treat those as the same categories shown in
+    // the dashboard rather than leaving their category chip empty.
+    if (normalized.contains('breakfast')) return 'almusal';
+    if (normalized.contains('soup') || normalized.contains('broth')) {
+      return 'sabaw';
+    }
+    if (normalized.contains('dessert') || normalized.contains('sweet')) {
+      return 'panghimagas';
+    }
+    if (normalized.contains('snack') || normalized.contains('pastry')) {
+      return 'merienda';
+    }
+    if (normalized.contains('vegetable')) return 'gulay';
+    if (normalized.contains('seafood') || normalized.contains('fish')) {
+      return 'lamang dagat';
+    }
+    if (normalized.contains('grill') || normalized.contains('barbecue')) {
+      return 'inihaw';
+    }
+    if (normalized.contains('main') ||
+        normalized.contains('dish') ||
+        normalized.contains('meat')) {
+      return 'ulam';
+    }
+    return normalized;
   }
 
   /// Search recipes by query. Searches across name, category, tags,
@@ -132,9 +225,14 @@ class RecipeRepository {
   // ── User-centric queries ────────────────────────────────────────────────
 
   /// Returns recipes authored by [authorId], ordered by creation date.
+  ///
+  /// When [includePending] is `true` (for the user's own profile), recipes
+  /// with any status are returned so the author can see their submissions
+  /// including those still in the moderation queue.
   Future<List<RecipeModel>> recipesByAuthor(
     String authorId, {
     int limit = 50,
+    bool includePending = false,
   }) async {
     final snap = await _firestore
         .collection('recipes')
@@ -142,7 +240,12 @@ class RecipeRepository {
         .get();
     final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .where(
+          (r) =>
+              includePending ||
+              r.status == 'approved' ||
+              r.isSystemRecipe,
+        )
         .toList();
     recipes.sort((a, b) {
       final aTime = a.createdAt ?? DateTime(2000);
@@ -176,9 +279,11 @@ class RecipeRepository {
   }
 
   /// Returns recipes from the given [authorIds] — used for the "Following"
-  /// feed tab. Ordered by `createdAt` descending.
+  /// feed tab.
   ///
   /// Firestore `whereIn` caps at 30 elements; this chunks the list.
+  /// No Firestore `orderBy` to avoid requiring a composite index on
+  /// `(authorId, createdAt)` — sorting is done in memory.
   Future<List<RecipeModel>> recipesFromFollowing(
     List<String> authorIds, {
     int limit = 30,
@@ -193,8 +298,6 @@ class RecipeRepository {
       final snap = await _firestore
           .collection('recipes')
           .where('authorId', whereIn: chunk)
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
           .get();
       results.addAll(
         snap.docs
@@ -209,6 +312,56 @@ class RecipeRepository {
       return bTime.compareTo(aTime);
     });
     return results.take(limit).toList();
+  }
+
+  /// Returns all approved user-submitted recipes created in the current
+  /// calendar month.
+  ///
+  /// Used by the leaderboard to compute "Chef of the Month" — the author
+  /// whose recipes received the most combined likes + favorites this month.
+  ///
+  /// Filters in-memory to avoid Firestore composite index requirements
+  /// and to handle recipes where `createdAt` may be null or missing.
+  Future<List<RecipeModel>> recipesCreatedThisMonth({int limit = 500}) async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final startOfNextMonth = DateTime(now.year, now.month + 1, 1);
+
+    final snap = await _firestore
+        .collection('recipes')
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+        )
+        .where('createdAt', isLessThan: Timestamp.fromDate(startOfNextMonth))
+        .limit(limit)
+        .get();
+    final monthRecipes = snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) {
+          // Only user-submitted recipes (not system/seeded) count for
+          // Chef of the Month.
+          if (r.authorId == null || r.isSystemRecipe) return false;
+          return r.createdAt != null;
+        })
+        .toList();
+    // Popularity is live: Cloud Functions update trendingScore as engagement
+    // changes. Fall back to likes/favorites for legacy recipes without it.
+    monthRecipes.sort((a, b) {
+      final aPopularity = a.trendingScore > 0
+          ? a.trendingScore
+          : a.likeCount + a.favoriteCount;
+      final bPopularity = b.trendingScore > 0
+          ? b.trendingScore
+          : b.likeCount + b.favoriteCount;
+      if (bPopularity != aPopularity) {
+        return bPopularity.compareTo(aPopularity);
+      }
+      return (b.createdAt ?? DateTime(2000)).compareTo(
+        a.createdAt ?? DateTime(2000),
+      );
+    });
+    return monthRecipes.take(limit).toList();
   }
 
   /// Adds a new user-submitted recipe to Firestore.

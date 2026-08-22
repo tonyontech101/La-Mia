@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -16,6 +22,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import '../data/recipe_model.dart';
+import '../data/recipe_repository.dart';
 
 /// Parses a raw instruction string into a `(title, body)` pair.
 ///
@@ -69,12 +76,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   final FavoritesRepository _favoritesRepo = FavoritesRepository();
   final FollowRepository _followRepo = FollowRepository();
   final CommentRepository _commentRepo = CommentRepository();
+  final RecipeRepository _recipeRepo = RecipeRepository();
 
   bool _isLiked = false;
   bool _isBookmarked = false;
   bool _isFollowing = false;
   bool _socialLoading = true;
   int _localLikeCount = 0;
+  StreamSubscription<RecipeModel?>? _recipeSubscription;
 
   // ── Comments State ──────────────────────────────────────────────────────
   final TextEditingController _commentController = TextEditingController();
@@ -84,11 +93,20 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   void initState() {
     super.initState();
     _localLikeCount = widget.recipe.likeCount;
+    final recipeId = widget.recipe.id;
+    if (recipeId != null) {
+      _recipeSubscription = _recipeRepo.watchRecipe(recipeId).listen((recipe) {
+        if (mounted && recipe != null) {
+          setState(() => _localLikeCount = recipe.likeCount);
+        }
+      });
+    }
     _loadSocialState();
   }
 
   @override
   void dispose() {
+    _recipeSubscription?.cancel();
     _commentController.dispose();
     super.dispose();
   }
@@ -203,6 +221,173 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
+  /// Shares a human-readable text summary of the recipe via the OS share sheet.
+  Future<void> _shareRecipe() async {
+    final recipe = widget.recipe;
+    final ingredients = recipe.ingredients
+        .asMap()
+        .entries
+        .map((e) => '  ${e.key + 1}. ${e.value}')
+        .join('\n');
+    final instructions = recipe.instructions
+        .asMap()
+        .entries
+        .map((e) => '  Step ${e.key + 1}: ${e.value}')
+        .join('\n');
+
+    final text = '''
+🍽️ ${recipe.name}
+By ${recipe.authorName} on La Mia
+
+📝 ${recipe.description.isNotEmpty ? recipe.description : 'A delicious ${recipe.category} recipe.'}
+
+⏱ Prep: ${recipe.approximatePrepTime}  •  Cook: ${recipe.approximateCookTime}  •  Serves: ${recipe.approximateServings}
+🔥 Difficulty: ${recipe.difficulty}  •  ${recipe.approximateBudget}
+
+🛒 INGREDIENTS
+$ingredients
+
+👨‍🍳 INSTRUCTIONS
+$instructions
+
+Discovered on La Mia — Filipino Recipes App 🇵🇭
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: recipe.name),
+    );
+  }
+
+  /// Generates a PDF of the recipe and opens the system print/share dialog.
+  Future<void> _printRecipe() async {
+    final recipe = widget.recipe;
+    await Printing.layoutPdf(
+      name: recipe.name,
+      onLayout: (PdfPageFormat format) async {
+        final doc = pw.Document();
+
+        doc.addPage(
+          pw.MultiPage(
+            pageFormat: format,
+            margin: const pw.EdgeInsets.all(36),
+            build: (pw.Context ctx) {
+              return [
+                // Title
+                pw.Text(
+                  recipe.name,
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'By ${recipe.authorName}  •  ${recipe.category}  •  ${recipe.difficulty}',
+                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Prep: ${recipe.approximatePrepTime}  •  Cook: ${recipe.approximateCookTime}  •  Serves: ${recipe.approximateServings}  •  ${recipe.approximateBudget}',
+                  style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+                ),
+                pw.Divider(height: 16),
+
+                // Description
+                if (recipe.description.isNotEmpty) ...[
+                  pw.Text(
+                    recipe.description,
+                    style: const pw.TextStyle(fontSize: 11),
+                  ),
+                  pw.SizedBox(height: 12),
+                ],
+
+                // Ingredients
+                pw.Text(
+                  'INGREDIENTS',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.orange800,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                ...recipe.ingredients.map(
+                  (ing) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 3),
+                    child: pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('• ', style: const pw.TextStyle(fontSize: 11)),
+                        pw.Expanded(
+                          child: pw.Text(ing, style: const pw.TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+
+                // Instructions
+                pw.Text(
+                  'INSTRUCTIONS',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.orange800,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                ...recipe.instructions.asMap().entries.map(
+                  (entry) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 6),
+                    child: pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const pw.BoxDecoration(
+                            color: PdfColors.orange800,
+                            shape: pw.BoxShape.circle,
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              '${entry.key + 1}',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        pw.SizedBox(width: 8),
+                        pw.Expanded(
+                          child: pw.Text(
+                            entry.value,
+                            style: const pw.TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 16),
+                pw.Divider(),
+                pw.Text(
+                  'La Mia — Filipino Recipes App',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+                ),
+              ];
+            },
+          ),
+        );
+
+        return doc.save();
+      },
+    );
+  }
+
   Future<void> _handleSubmitComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
@@ -231,8 +416,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         text: text,
       );
       _commentController.clear();
-      FocusScope.of(context).unfocus();
       if (mounted) {
+        FocusScope.of(context).unfocus();
         AppSnackbar.show(context, message: 'Comment shared!');
       }
     } catch (e) {
@@ -661,12 +846,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           const SizedBox(width: 4),
                           // Print, Share, Bookmark Actions
                           IconButton(
-                            onPressed: () {
-                              AppSnackbar.show(
-                                context,
-                                message: 'Recipe sent to printer',
-                              );
-                            },
+                            onPressed: _printRecipe,
                             tooltip: 'Print recipe',
                             icon: const Icon(
                               Icons.print_outlined,
@@ -680,12 +860,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           IconButton(
-                            onPressed: () {
-                              AppSnackbar.show(
-                                context,
-                                message: 'Recipe link copied to clipboard',
-                              );
-                            },
+                            onPressed: _shareRecipe,
                             tooltip: 'Share recipe',
                             icon: const Icon(
                               Icons.share_outlined,

@@ -8,6 +8,8 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
+import '../../auth/data/user_model.dart';
+import '../../auth/data/user_repository.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -33,17 +35,23 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
   int _activeTab = 1; // 0 = Following, 1 = For You (default)
   final RecipeRepository _recipeRepository = RecipeRepository();
   final FollowRepository _followRepo = FollowRepository();
+  final UserRepository _userRepo = UserRepository();
 
   List<RecipeModel> _recipes = [];
   List<RecipeModel> _followingRecipes = [];
+  UserModel? _currentUserModel;
   bool _isLoading = true;
   bool _hasError = false;
   bool _followingLoaded = false;
+
+  /// Generation counter to discard stale feed loads.
+  int _feedLoadGeneration = 0;
 
   /// Public refresh method to reload feed data after recipe upload or external changes.
   Future<void> refresh() async {
     _followingLoaded = false;
     _followingRecipes.clear();
+    await _loadCurrentUser();
     await _loadRecipes();
     if (_activeTab == 0) {
       await _loadFollowingRecipes();
@@ -53,17 +61,30 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _loadRecipes();
   }
 
+  Future<void> _loadCurrentUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || widget.isGuest) return;
+    try {
+      final userModel = await _userRepo.getUser(user.uid);
+      if (mounted) {
+        setState(() => _currentUserModel = userModel);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadRecipes() async {
+    final generation = ++_feedLoadGeneration;
     setState(() {
       _isLoading = true;
       _hasError = false;
     });
     try {
       final recipes = await _recipeRepository.allRecipes(limit: 20);
-      if (mounted) {
+      if (mounted && generation == _feedLoadGeneration) {
         // Shuffle for a randomized feed on every refresh
         final rng = Random();
         recipes.shuffle(rng);
@@ -73,7 +94,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
         });
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && generation == _feedLoadGeneration) {
         setState(() {
           _isLoading = false;
           _hasError = true;
@@ -141,7 +162,13 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = widget.isGuest
         ? 'Guest'
-        : (user?.displayName ?? user?.email?.split('@').first ?? 'Foodie');
+        : (_currentUserModel?.displayName ??
+            user?.displayName ??
+            user?.email?.split('@').first ??
+            'Foodie');
+    final photoUrl = widget.isGuest
+        ? null
+        : (_currentUserModel?.photoUrl ?? user?.photoURL);
 
     final tabRecipes = _getTabRecipes();
 
@@ -165,7 +192,9 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                       // 1. App Bar (avatar, La Mia, hamburger)
                       FeedAppBar(
                         displayName: displayName,
+                        photoUrl: photoUrl,
                         isGuest: widget.isGuest,
+                        onAvatarTap: () => widget.onNavigateToTab?.call(3),
                       ),
 
                       const SizedBox(height: 12),

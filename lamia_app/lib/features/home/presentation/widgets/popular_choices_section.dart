@@ -14,23 +14,27 @@ class PopularChoicesSection extends StatelessWidget {
     super.key,
     required this.recipes,
     this.onRecipeTap,
+    this.showTitle = true,
   });
 
   final List<RecipeModel> recipes;
   final ValueChanged<RecipeModel>? onRecipeTap;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Popular Choices',
-          style: AppTypography.title(
-            color: AppColors.textPrimary,
-          ).copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
+        if (showTitle) ...[
+          Text(
+            'Popular Choices',
+            style: AppTypography.title(
+              color: AppColors.textPrimary,
+            ).copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+        ],
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
