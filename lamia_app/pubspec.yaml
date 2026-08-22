@@ -55,6 +55,9 @@ dependencies:
   logger: ^2.7.0
   firebase_crashlytics: ^4.3.10
 
+  # Share recipes via system share sheet.
+  share_plus: ^10.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

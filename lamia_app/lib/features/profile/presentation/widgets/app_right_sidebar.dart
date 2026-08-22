@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/utils/page_transitions.dart';
+import '../../../../core/widgets/banig_divider.dart';
 import '../../../../core/widgets/pressable_scale.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../auth/presentation/login_screen.dart';
@@ -130,8 +132,10 @@ class HamburgerButton extends StatelessWidget {
   }
 }
 
-/// The right-side sidebar containing Settings, Achievements, Rank/Leaderboard,
-/// kitchen shortcuts, and account controls.
+/// The right-side sidebar — household ledger aesthetic.
+///
+/// Monochrome icons, Fraunces chapter headings, BanigDivider at the hinge,
+/// no rainbow chips, no emoji, no Tailwind literals.
 class AppRightSidebar extends StatelessWidget {
   const AppRightSidebar({
     super.key,
@@ -153,23 +157,19 @@ class AppRightSidebar extends StatelessWidget {
 
   void _onLeaderboardTap(BuildContext context) {
     Navigator.of(context).pop(); // Close sidebar
-    if (onNavigateToTab != null) {
-      onNavigateToTab!(2); // Switch to Leaderboard tab
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = isGuest
-        ? 'Guest Foodie'
-        : (user?.displayName ?? user?.email?.split('@').first ?? 'Chef Foodie');
-    final email = isGuest ? 'Browsing Mode' : (user?.email ?? '');
+        ? 'Guest'
+        : (user?.displayName ?? user?.email?.split('@').first ?? 'Chef');
+    final email = isGuest ? 'Browsing mode' : (user?.email ?? '');
     final photoUrl = isGuest ? null : user?.photoURL;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final drawerWidth = (screenWidth * 0.84).clamp(280.0, 360.0);
@@ -194,13 +194,13 @@ class AppRightSidebar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Top Header with User Info and Close Button
+              // 1. Header — avatar, name (Fraunces), email, status, close
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar
+                    // Avatar — ring in border (guest) or primary (signed-in)
                     Container(
                       width: 52,
                       height: 52,
@@ -208,16 +208,11 @@ class AppRightSidebar extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: AppColors.surfaceAlt,
                         border: Border.all(
-                          color: AppColors.primary,
-                          width: 2,
+                          color: isGuest
+                              ? AppColors.border
+                              : AppColors.primary,
+                          width: isGuest ? 1 : 1.5,
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.cardShadow,
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: ClipOval(
                         child: photoUrl != null && photoUrl.isNotEmpty
@@ -229,16 +224,16 @@ class AppRightSidebar extends StatelessWidget {
                                     strokeWidth: 2,
                                   ),
                                 ),
-                                errorWidget: (_, _, _) => _buildAvatarInitial(
+                                errorWidget: (_, _, _) => _avatarInitial(
                                   displayName,
                                 ),
                               )
-                            : _buildAvatarInitial(displayName),
+                            : _avatarInitial(displayName),
                       ),
                     ),
                     const SizedBox(width: 14),
 
-                    // Name & Email/Badge
+                    // Name + email + status
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,11 +241,10 @@ class AppRightSidebar extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             displayName,
-                            style: AppTypography.title(
-                              color: AppColors.textPrimary,
-                            ).copyWith(
+                            style: GoogleFonts.fraunces(
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
-                              fontSize: 16,
+                              color: AppColors.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -260,47 +254,61 @@ class AppRightSidebar extends StatelessWidget {
                             email,
                             style: AppTypography.caption(
                               color: AppColors.textSecondary,
-                            ).copyWith(fontSize: 12),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 6),
-                          // Status Pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isGuest
-                                  ? AppColors.surfaceAlt
-                                  : AppColors.accentSoft,
-                              borderRadius: BorderRadius.circular(
-                                AppRadii.pill,
+                          if (isGuest)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2.5,
                               ),
-                              border: Border.all(
-                                color: isGuest
-                                    ? AppColors.border
-                                    : AppColors.accent.withValues(alpha: 0.4),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceAlt,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadii.pill),
+                                border: Border.all(color: AppColors.border),
                               ),
-                            ),
-                            child: Text(
-                              isGuest ? 'Guest User' : '🌟 Active Cook',
-                              style: AppTypography.caption(
-                                color: isGuest
-                                    ? AppColors.textSecondary
-                                    : AppColors.textPrimary,
-                              ).copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 10,
+                              child: Text(
+                                'Guest',
+                                style: AppTypography.caption(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                ),
                               ),
+                            )
+                          else
+                            Row(
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.success,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Active',
+                                  style: AppTypography.caption(
+                                    color: AppColors.textSecondary,
+                                  ).copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
                         ],
                       ),
                     ),
 
-                    // Close Button
+                    // Close
                     IconButton(
                       icon: const Icon(
                         Icons.close_rounded,
@@ -308,31 +316,25 @@ class AppRightSidebar extends StatelessWidget {
                         size: 24,
                       ),
                       onPressed: () => Navigator.of(context).pop(),
-                      tooltip: 'Close Menu',
+                      tooltip: 'Close',
                     ),
                   ],
                 ),
               ),
 
-              const Divider(height: 1, color: AppColors.border),
+              // BanigDivider — the app's signature ornament at the hinge
+              const BanigDivider(),
 
-              // 2. Scrollable Navigation Menu Items
+              // 2. Nav list — ledger tiles, hairline dividers
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   children: [
-                    _buildSectionHeader('PRIMARY NAVIGATION'),
-                    const SizedBox(height: 6),
-
-                    // 1. Settings
-                    _SidebarTile(
+                    const SizedBox(height: 14),
+                    _sectionLabel('Account'),
+                    _ledgerTile(
                       icon: Icons.settings_outlined,
-                      iconColor: AppColors.primary,
                       title: 'Settings',
-                      subtitle: 'Preferences & account security',
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.push(
@@ -343,53 +345,32 @@ class AppRightSidebar extends StatelessWidget {
                         );
                       },
                     ),
-
-                    const SizedBox(height: 6),
-
-                    // 2. Achievements
-                    _SidebarTile(
+                    _ledgerTile(
                       icon: Icons.emoji_events_outlined,
-                      iconColor: const Color(0xFFD97706), // Warm Amber
                       title: 'Achievements',
-                      subtitle: 'Badges, cooking milestones & XP',
-                      badgeText: isGuest ? null : '4 Badges',
-                      badgeColor: AppColors.accentSoft,
+                      badge: isGuest ? null : '4 badges',
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AchievementsScreen(
-                              isGuest: isGuest,
-                            ),
+                            builder: (_) =>
+                                AchievementsScreen(isGuest: isGuest),
                           ),
                         );
                       },
                     ),
-
-                    const SizedBox(height: 6),
-
-                    // 3. Rank / Leaderboard
-                    _SidebarTile(
+                    _ledgerTile(
                       icon: Icons.leaderboard_rounded,
-                      iconColor: AppColors.secondary,
-                      title: 'Rank / Leaderboard',
-                      subtitle: 'Top contributors & community stats',
-                      badgeText: isGuest ? null : '#34 Rank',
-                      badgeColor: AppColors.primary.withValues(alpha: 0.12),
+                      title: 'Rank',
+                      badge: isGuest ? null : '#34',
                       onTap: () => _onLeaderboardTap(context),
                     ),
-
-                    const SizedBox(height: 18),
-                    _buildSectionHeader('KITCHEN TOOLS'),
-                    const SizedBox(height: 6),
-
-                    // Ano Pong Ulam?
-                    _SidebarTile(
+                    const SizedBox(height: 14),
+                    _sectionLabel('Kitchen tools'),
+                    _ledgerTile(
                       icon: Icons.soup_kitchen_rounded,
-                      iconColor: const Color(0xFF16A34A),
                       title: 'Ano Pong Ulam?',
-                      subtitle: 'Daily meal recommendation assistant',
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.push(
@@ -400,15 +381,9 @@ class AppRightSidebar extends StatelessWidget {
                         );
                       },
                     ),
-
-                    const SizedBox(height: 6),
-
-                    // Cook by Ingredients
-                    _SidebarTile(
+                    _ledgerTile(
                       icon: Icons.kitchen_rounded,
-                      iconColor: const Color(0xFF8B5CF6),
                       title: 'Cook by Ingredients',
-                      subtitle: 'Match what is in your pantry',
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.push(
@@ -425,7 +400,7 @@ class AppRightSidebar extends StatelessWidget {
 
               const Divider(height: 1, color: AppColors.border),
 
-              // 3. Bottom Action Bar (Sign In / Register for Guest or Sign Out for User)
+              // 3. Bottom auth bar
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -446,17 +421,15 @@ class AppRightSidebar extends StatelessWidget {
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: AppColors.border,
-                                ),
+                                side:
+                                    const BorderSide(color: AppColors.border),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
                                     AppRadii.button,
                                   ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                               child: const Text('Log In'),
                             ),
@@ -481,9 +454,8 @@ class AppRightSidebar extends StatelessWidget {
                                     AppRadii.button,
                                   ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                               child: const Text('Register'),
                             ),
@@ -509,11 +481,11 @@ class AppRightSidebar extends StatelessWidget {
                             color: AppColors.error.withValues(alpha: 0.35),
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.button,
-                            ),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.button),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
               ),
@@ -524,7 +496,7 @@ class AppRightSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarInitial(String name) {
+  Widget _avatarInitial(String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Container(
       color: AppColors.surfaceAlt,
@@ -540,124 +512,84 @@ class AppRightSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  /// Fraunces section label — the chapter heading of the ledger.
+  static Widget _sectionLabel(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title,
-        style: AppTypography.caption(
+        style: GoogleFonts.fraunces(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
           color: AppColors.textSecondary,
-        ).copyWith(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
         ),
       ),
     );
   }
-}
 
-class _SidebarTile extends StatelessWidget {
-  const _SidebarTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.badgeText,
-    this.badgeColor,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final String? badgeText;
-  final Color? badgeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        hoverColor: AppColors.surfaceAlt,
-        splashColor: iconColor.withValues(alpha: 0.10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              // Icon
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-
-              // Title + Subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+  /// Single ledger tile — monochrome icon, no subtitle, border hairline above.
+  static Widget _ledgerTile({
+    required IconData icon,
+    required String title,
+    String? badge,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        const Divider(height: 1, color: AppColors.border),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            hoverColor: AppColors.surfaceAlt,
+            splashColor: AppColors.textSecondary.withValues(alpha: 0.08),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(icon, color: AppColors.textSecondary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
                       title,
                       style: AppTypography.bodyStrong(
                         color: AppColors.textPrimary,
-                      ).copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
                     ),
-                    const SizedBox(height: 1.5),
-                    Text(
-                      subtitle,
-                      style: AppTypography.caption(
-                        color: AppColors.textSecondary,
-                      ).copyWith(fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                  if (badge != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppRadii.pill),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        badge,
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ).copyWith(fontSize: 10),
+                      ),
                     ),
                   ],
-                ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textDisabled,
+                    size: 18,
+                  ),
+                ],
               ),
-
-              if (badgeText != null) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor ?? AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(AppRadii.pill),
-                  ),
-                  child: Text(
-                    badgeText!,
-                    style: AppTypography.caption(
-                      color: AppColors.textPrimary,
-                    ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textDisabled,
-                size: 20,
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

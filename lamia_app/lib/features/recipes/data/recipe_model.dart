@@ -19,6 +19,7 @@ class RecipeModel {
     required this.tags,
     required this.coverPhotoUrl,
     required this.source,
+    this.chefsTips = const [],
     this.description = '',
     this.authorId,
     this.authorName = 'La Mia',
@@ -47,6 +48,7 @@ class RecipeModel {
   final String difficulty;
   final List<String> ingredients;
   final List<String> instructions;
+  final List<String> chefsTips;
   final List<String> tags;
   final String coverPhotoUrl;
   final String source;
@@ -165,6 +167,10 @@ class RecipeModel {
       difficulty: json['difficulty'] as String,
       ingredients: List<String>.from(json['ingredients'] as List),
       instructions: List<String>.from(json['instructions'] as List),
+      chefsTips: (json['chefs_tips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          (json['chefsTips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          (json['tips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          const [],
       tags: List<String>.from(json['tags'] as List),
       coverPhotoUrl: coverPhotoUrl,
       source: json['source'] as String? ?? '',
@@ -206,6 +212,10 @@ class RecipeModel {
           )
           .toList(),
       instructions: List<String>.from(data['instructions'] as List),
+      chefsTips: (data['chefsTips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          (data['chefs_tips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          (data['tips'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          const [],
       tags: List<String>.from(data['tags'] as List),
       coverPhotoUrl: data['coverPhotoUrl'] as String? ?? '',
       source: data['source'] as String? ?? '',
@@ -239,6 +249,7 @@ class RecipeModel {
       'difficulty': difficulty,
       'ingredients': ingredients,
       'instructions': instructions,
+      'chefsTips': chefsTips,
       'tags': tags,
       'coverPhotoUrl': coverPhotoUrl,
       'source': source,
@@ -277,6 +288,7 @@ class RecipeModel {
       'difficulty': difficulty,
       'ingredients': ingredients,
       'instructions': instructions,
+      'chefsTips': chefsTips,
       'tags': tags,
       'coverPhotoUrl': coverPhotoUrl,
       'source': source,

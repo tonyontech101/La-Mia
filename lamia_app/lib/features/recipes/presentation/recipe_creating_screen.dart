@@ -124,6 +124,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
   // ── Step 4: Instructions ────────────────────────────────────────────────────
   final List<_InstructionStepData> _instructionItems = [];
 
+  // ── Chef's Tips ─────────────────────────────────────────────────────────────
+  final List<TextEditingController> _chefsTipControllers = [];
+
   // Region options
   final List<String> _regionOptions = [
     'Any region',
@@ -160,6 +163,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     _ingredientItems.add(_IngredientRowData());
     // Initialize default instruction step
     _instructionItems.add(_InstructionStepData());
+    // Initialize default chef's tip field
+    _chefsTipControllers.add(TextEditingController());
   }
 
   @override
@@ -173,10 +178,24 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     for (final item in _instructionItems) {
       item.dispose();
     }
+    for (final controller in _chefsTipControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  List<String> get _formattedChefsTips {
+    final list = <String>[];
+    for (final controller in _chefsTipControllers) {
+      final text = controller.text.trim();
+      if (text.isNotEmpty) {
+        list.add(text);
+      }
+    }
+    return list;
+  }
 
   List<String> get _formattedIngredients {
     final list = <String>[];
@@ -431,6 +450,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         difficulty: _selectedDifficulty,
         ingredients: ingredients,
         instructions: instructions,
+        chefsTips: _formattedChefsTips,
         tags: tags,
         coverPhotoUrl: coverUrl,
         source: '',
@@ -1279,6 +1299,192 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             );
           },
         ),
+        const SizedBox(height: 28),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+        const SizedBox(height: 20),
+
+        // Chef's Tips Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: const Icon(
+                    Icons.tips_and_updates_outlined,
+                    size: 18,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Chef\'s Tips',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Optional',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _chefsTipControllers.add(TextEditingController());
+                });
+              },
+              child: const Text(
+                '+ Add Tip',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFF59E0B),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Share your secret techniques, ingredient substitutes, or serving advice for home cooks.',
+          style: TextStyle(
+            fontSize: 12.5,
+            color: Colors.grey.shade600,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Chef's Tips List
+        if (_chefsTipControllers.isEmpty) ...[
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _chefsTipControllers.add(TextEditingController());
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFDF5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.add_circle_outline_rounded, color: Color(0xFFD97706), size: 20),
+                  SizedBox(width: 10),
+                  Text(
+                    'Tap to add your first Chef\'s Tip...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _chefsTipControllers.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final controller = _chefsTipControllers[index];
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                    ),
+                    child: const Icon(
+                      Icons.lightbulb_rounded,
+                      size: 15,
+                      color: Color(0xFFD97706),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: controller,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: index == 0
+                            ? 'e.g. Marinate pork overnight for richer flavor...'
+                            : index == 1
+                                ? 'e.g. Squeeze fresh calamansi right before serving...'
+                                : 'Add another cooking tip...',
+                        hintStyle: TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.grey.shade400,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444), size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    onPressed: () {
+                      setState(() {
+                        controller.dispose();
+                        _chefsTipControllers.removeAt(index);
+                      });
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ],
     );
   }
@@ -1310,6 +1516,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       difficulty: _selectedDifficulty,
       ingredients: _formattedIngredients,
       instructions: _formattedInstructions,
+      chefsTips: _formattedChefsTips,
       tags: tags,
       coverPhotoUrl: _selectedCoverPhotoUrl ??
           'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60',
@@ -1618,40 +1825,56 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
 
       case 2:
         // Tab 3: Chef's Tips
-        const tips = [
-          'Use fresh, high-quality ingredients for optimal taste and aroma.',
-          'Adjust seasoning gradually to suit your personal preference.',
-          'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
-        ];
+        final tips = recipe.chefsTips.isNotEmpty
+            ? recipe.chefsTips
+            : const [
+                'Use fresh, high-quality ingredients for optimal taste and aroma.',
+                'Adjust seasoning gradually to suit your personal preference.',
+                'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
+              ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: tips.map((tip) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 18,
-                    color: Color(0xFFF59E0B),
+          children: [
+            if (recipe.chefsTips.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Default Chef\'s Tips (None added yet):',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey.shade500,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      tip,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF374151),
-                        height: 1.4,
+                ),
+              ),
+            ...tips.map((tip) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.lightbulb_rounded,
+                      size: 18,
+                      color: Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        tip,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF374151),
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+                  ],
+                ),
+              );
+            }),
+          ],
         );
 
       default:
