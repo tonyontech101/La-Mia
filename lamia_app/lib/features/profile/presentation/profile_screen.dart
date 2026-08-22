@@ -33,6 +33,7 @@ class ProfileScreen extends StatefulWidget {
     this.isGuest = false,
     this.onNavigateHome,
     this.targetUserId,
+    this.initialTabIndex = 0,
   });
 
   final bool isGuest;
@@ -41,12 +42,14 @@ class ProfileScreen extends StatefulWidget {
   /// When set, displays another user's profile instead of the logged-in user.
   final String? targetUserId;
 
+  final int initialTabIndex;
+
   @override
   State<ProfileScreen> createState() => ProfileScreenState();
 }
 
 class ProfileScreenState extends State<ProfileScreen> {
-  int _selectedTabIndex = 0; // 0: Posts, 1: Likes, 2: Saved Recipes
+  late int _selectedTabIndex; // 0: Posts, 1: Likes, 2: Saved Recipes
 
   final UserRepository _userRepo = UserRepository();
   final RecipeRepository _recipeRepo = RecipeRepository();
@@ -59,11 +62,21 @@ class ProfileScreenState extends State<ProfileScreen> {
   List<RecipeModel> _likedRecipes = [];
   List<RecipeModel> _savedRecipes = [];
   bool _isLoading = true;
+  bool _isLoadingLikes = false;
+  bool _isLoadingSaved = false;
   bool _isFollowing = false;
 
   /// Public method to reload profile data after recipe upload or profile edits.
   Future<void> refresh() async {
+    if (mounted) {
+      setState(() {
+        _likedRecipes = [];
+        _savedRecipes = [];
+      });
+    }
     await _loadProfileData();
+    if (_selectedTabIndex == 1) await _loadLikedRecipes();
+    if (_selectedTabIndex == 2) await _loadSavedRecipes();
   }
 
   /// Whether we are viewing our own profile or another user's.
@@ -79,7 +92,10 @@ class ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
     _loadProfileData();
+    if (_selectedTabIndex == 1) _loadLikedRecipes();
+    if (_selectedTabIndex == 2) _loadSavedRecipes();
   }
 
   Future<void> _loadProfileData() async {
@@ -135,10 +151,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (_likedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
+    if (mounted) setState(() => _isLoadingLikes = true);
     try {
       final recipes = await _likeRepo.getLikedRecipes(uid);
-      if (mounted) setState(() => _likedRecipes = recipes);
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _likedRecipes = recipes;
+          _isLoadingLikes = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingLikes = false);
+    }
   }
 
   /// Lazily loads saved recipes when the Saved tab is first selected.
@@ -146,10 +170,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (_savedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
+    if (mounted) setState(() => _isLoadingSaved = true);
     try {
       final recipes = await _favoritesRepo.getSavedRecipes(uid);
-      if (mounted) setState(() => _savedRecipes = recipes);
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _savedRecipes = recipes;
+          _isLoadingSaved = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingSaved = false);
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -671,7 +703,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                         // 4. 2-Column Dish Cards Grid
                         DishCardGrid(
                           recipes: tabRecipes,
-                          isLoading: _isLoading,
+                          isLoading: _isLoading ||
+                              (_selectedTabIndex == 1 && _isLoadingLikes) ||
+                              (_selectedTabIndex == 2 && _isLoadingSaved),
                           emptyMessage: _selectedTabIndex == 0
                               ? 'No recipe posts created yet'
                               : _selectedTabIndex == 1
