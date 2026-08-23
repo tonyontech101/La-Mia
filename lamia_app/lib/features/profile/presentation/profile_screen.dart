@@ -20,6 +20,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import 'edit_profile_screen.dart';
+import 'followers_screen.dart';
 import 'widgets/app_right_sidebar.dart';
 import 'widgets/dish_card_grid.dart';
 import 'widgets/profile_header_widget.dart';
@@ -68,6 +69,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingLikes = false;
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
+  int? _userRank;
 
   /// Generation counter to discard stale profile loads when navigating
   /// between different users rapidly.
@@ -146,11 +148,18 @@ class ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
+      // Fetch leaderboard ranking for this user (null if unranked).
+      int? rank;
+      try {
+        rank = await _userRepo.getUserLeaderboardRank(uid);
+      } catch (_) {}
+
       // Discard if a newer profile load has started.
       if (mounted && generation == _profileLoadGeneration) {
         setState(() {
           _userRecipes = recipes;
           _isFollowing = following;
+          _userRank = rank;
         });
       }
     } catch (_) {
@@ -236,6 +245,22 @@ class ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isGuest: widget.isGuest,
     );
+  }
+
+  void _navigateToFollowersScreen() {
+    final uid = _displayedUid;
+    if (uid == null) return;
+    final name = _userModel?.displayName ?? 'User';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FollowersScreen(
+          userId: uid,
+          displayName: name,
+        ),
+      ),
+    ).then((_) => _loadProfileData());
   }
 
   void _navigateToEditProfile() {
@@ -635,18 +660,18 @@ class ProfileScreenState extends State<ProfileScreen> {
                           displayName: displayName,
                           photoUrl: photoUrl,
                           bio: bio,
-                          ranking: '— ranking',
+                          ranking: _userRank != null ? '#$_userRank ranking' : null,
                           recipesCount: widget.isGuest
                               ? '0'
                               : (_userRecipes.isNotEmpty
                                   ? _userRecipes.length.toString()
                                   : (_userModel?.recipeCount.toString() ?? '0')),
-                          likesCount:
-                              _userModel?.totalLikesReceived.toString() ??
-                              (widget.isGuest ? '0' : '—'),
                           followersCount:
                               _userModel?.followerCount.toString() ??
-                              (widget.isGuest ? '0' : '—'),
+                              (widget.isGuest ? '0' : '0'),
+                          likesCount:
+                              _userModel?.totalLikesReceived.toString() ??
+                              (widget.isGuest ? '0' : '0'),
                           isGuest: widget.isGuest,
                           isOwnProfile: _isOwnProfile,
                           isFollowing: _isFollowing,
@@ -654,6 +679,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                               ? _navigateToEditProfile
                               : null,
                           onFollowTap: !_isOwnProfile ? _toggleFollow : null,
+                          onFollowersTap: _navigateToFollowersScreen,
+                          onRecipesTap: () => _onTabSelected(0),
+                          onLikesTap: () => _onTabSelected(1),
                         ),
 
                         const SizedBox(height: 24),
@@ -797,3 +825,4 @@ class AnimatedIconColor extends StatelessWidget {
     );
   }
 }
+

@@ -258,4 +258,20 @@ class UserRepository {
       return [];
     }
   }
+
+  /// Returns the 1-based leaderboard ranking for [uid] across top contributors,
+  /// or `null` if the user is not in the rankings (e.g., 0 followers or unranked).
+  Future<int?> getUserLeaderboardRank(String uid) async {
+    try {
+      final contributors = await topContributorsByFollowers(limit: 100);
+      for (var i = 0; i < contributors.length; i++) {
+        if (contributors[i].uid == uid && contributors[i].followerCount > 0) {
+          return i + 1;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 }
