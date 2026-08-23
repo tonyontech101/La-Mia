@@ -3,23 +3,26 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../profile/presentation/widgets/app_right_sidebar.dart';
 
 /// Wireframe-matching app bar for the Home Feed screen.
 ///
-/// Layout: [Avatar]  —  [La Mia + subtitle]  —  [Notification Icon]
+/// Layout: [Avatar]  —  [La Mia + subtitle]  —  [Notification Icon + Hamburger]
 class FeedAppBar extends StatelessWidget {
   const FeedAppBar({
     super.key,
     required this.displayName,
     this.photoUrl,
     this.isGuest = false,
-    this.onAvatarTap,
+    this.onProfileTap,
+    this.onHamburgerTap,
   });
 
   final String displayName;
   final String? photoUrl;
   final bool isGuest;
-  final VoidCallback? onAvatarTap;
+  final VoidCallback? onProfileTap;
+  final VoidCallback? onHamburgerTap;
 
   void _showNotificationsMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -39,16 +42,26 @@ class FeedAppBar extends StatelessWidget {
         children: [
           // Left: Small circular avatar
           GestureDetector(
-            onTap: onAvatarTap,
+            onTap: onProfileTap,
             child: Container(
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primary.withValues(alpha: 0.12),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.3),
                   width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               child: ClipOval(
@@ -106,22 +119,34 @@ class FeedAppBar extends StatelessWidget {
             ),
           ),
 
-          // Right: Notifications icon
-          GestureDetector(
-            onTap: () => _showNotificationsMessage(context),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceAlt,
+          // Right: Notifications icon + Hamburger Button
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () => _showNotificationsMessage(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surfaceAlt,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: AppColors.textPrimary,
+                    size: 20,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.textPrimary,
-                size: 20,
-              ),
-            ),
+              if (onHamburgerTap != null) ...[
+                const SizedBox(width: 8),
+                HamburgerButton(
+                  size: 36,
+                  onTap: onHamburgerTap!,
+                ),
+              ],
+            ],
           ),
         ],
       ),

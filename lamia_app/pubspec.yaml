@@ -58,6 +58,9 @@ dependencies:
   printing: ^5.15.0
   pdf: ^3.13.0
 
+  # Share recipes via system share sheet.
+  share_plus: ^10.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

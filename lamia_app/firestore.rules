@@ -117,11 +117,19 @@ service cloud.firestore {
       // Update: author may edit non-status fields of their own recipe;
       // admin may update anything (including status approval). Clients
       // can never mutate the server-authoritative counters via either path.
+      // Update: author may edit non-status fields of their own recipe;
+      // admin may update anything (including status approval). Clients
+      // can never mutate the server-authoritative counters via either path,
+      // EXCEPT signed-in users can update only `likeCount` and `favoriteCount` (for likes and saves).
       allow update: if (
         (
           isAuthor()
           && !changingStatus()
           && notSettingServerFieldsOnUpdate()
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'favoriteCount'])
         )
         || isAdmin()
       );
@@ -166,13 +174,22 @@ service cloud.firestore {
       allow create: if isUser(uid)
           && request.resource.data.role == 'user';
 
-      // Update profile:
-      // - Signed-in user can update their own profile fields (role cannot be changed).
-      // - Signed-in users can also update counters (recipeCount, followerCount,
-      //   followingCount, totalLikesReceived, savedCount) via client transactions/batches.
-      // - Admin may update anything.
+      // Update own profile — but never the role or recipeCount fields, and only
+      // allow owner to modify savedCount/followingCount. Other authenticated users
+      // are permitted to modify totalLikesReceived/followerCount.
       allow update: if (
-        (isSignedIn() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+        (
+          isUser(uid)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'role', 'recipeCount', 'totalLikesReceived', 'followerCount'
+          ])
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'totalLikesReceived', 'followerCount'
+          ])
+        )
         || isAdmin()
       );
 
@@ -210,6 +227,34 @@ service cloud.firestore {
       // Cloud Functions write via Admin SDK (bypasses these rules).
       allow read: if isAdmin();
       allow write: if false; // Only Cloud Functions can write
+    }
+
+    // ── Likes & Favorites ──────────────────────────────────────────────────
+
+    match /likes/{recipeId}/users/{userId} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/likes/{recipeId} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/saved/{recipeId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ── Follow / Followers ─────────────────────────────────────────────────
+
+    match /following/{userId}/users/{targetUid} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /followers/{userId}/users/{followerUid} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == followerUid;
     }
 
     // ── Everything else: deny by default ─────────────────────────────────────

@@ -6,6 +6,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../leaderboard/presentation/leaderboard_screen.dart';
+import '../../planner/presentation/weekly_meal_planner_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_feed_screen.dart';
 
@@ -17,7 +18,7 @@ import '../../recipes/presentation/recipe_creating_screen.dart';
 /// 1. Home
 /// 2. Cook
 /// 3. Prominent Floating Center Action Button (`+`)
-/// 4. Leaderboard
+/// 4. Weekly Meal Planner
 /// 5. Me (Profile Screen)
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({
@@ -90,8 +91,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         onNavigateToTab: _onTabTapped,
       ),
 
-      // 2: Leaderboard
-      LeaderboardScreen(onNavigateHome: () => _onTabTapped(0)),
+      // 2: Weekly Meal Planner
+      WeeklyMealPlannerScreen(
+        isGuest: widget.isGuest,
+        onNavigateHome: () => _onTabTapped(0),
+      ),
 
       // 3: Me (Profile Screen matching wireframe)
       ProfileScreen(
@@ -174,10 +178,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                     // 3. Center Space reserved for Floating '+' Action Button
                     const SizedBox(width: 48),
 
-                    // 4. Leaderboard
+                    // 4. Weekly Meal Planner
                     _NavItem(
-                      icon: Icons.leaderboard_rounded,
-                      label: 'Rank',
+                      icon: Icons.calendar_month_rounded,
+                      label: 'Planner',
                       isSelected: _currentIndex == 2,
                       onTap: () => _onTabTapped(2),
                     ),

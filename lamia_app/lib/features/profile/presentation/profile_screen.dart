@@ -6,13 +6,12 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/utils/page_transitions.dart';
-import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
-import '../../auth/data/auth_service.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/login_screen.dart';
+import '../../auth/presentation/sign_up_screen.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -20,7 +19,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import 'edit_profile_screen.dart';
-import 'settings_screen.dart';
+import 'widgets/app_right_sidebar.dart';
 import 'widgets/dish_card_grid.dart';
 import 'widgets/profile_header_widget.dart';
 
@@ -36,6 +35,7 @@ class ProfileScreen extends StatefulWidget {
     this.isGuest = false,
     this.onNavigateHome,
     this.targetUserId,
+    this.initialTabIndex = 0,
   });
 
   final bool isGuest;
@@ -44,12 +44,14 @@ class ProfileScreen extends StatefulWidget {
   /// When set, displays another user's profile instead of the logged-in user.
   final String? targetUserId;
 
+  final int initialTabIndex;
+
   @override
   State<ProfileScreen> createState() => ProfileScreenState();
 }
 
 class ProfileScreenState extends State<ProfileScreen> {
-  int _selectedTabIndex = 0; // 0: Posts, 1: Likes, 2: Saved Recipes
+  late int _selectedTabIndex; // 0: Posts, 1: Likes, 2: Saved Recipes
 
   final UserRepository _userRepo = UserRepository();
   final RecipeRepository _recipeRepo = RecipeRepository();
@@ -62,6 +64,8 @@ class ProfileScreenState extends State<ProfileScreen> {
   List<RecipeModel> _likedRecipes = [];
   List<RecipeModel> _savedRecipes = [];
   bool _isLoading = true;
+  bool _isLoadingLikes = false;
+  bool _isLoadingSaved = false;
   bool _isFollowing = false;
   StreamSubscription<UserModel?>? _profileSubscription;
 
@@ -71,7 +75,15 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   /// Public method to reload profile data after recipe upload or profile edits.
   Future<void> refresh() async {
+    if (mounted) {
+      setState(() {
+        _likedRecipes = [];
+        _savedRecipes = [];
+      });
+    }
     await _loadProfileData();
+    if (_selectedTabIndex == 1) await _loadLikedRecipes();
+    if (_selectedTabIndex == 2) await _loadSavedRecipes();
   }
 
   /// Whether we are viewing our own profile or another user's.
@@ -87,19 +99,10 @@ class ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
     _loadProfileData();
-    final uid = _displayedUid;
-    if (uid != null) {
-      _profileSubscription = _userRepo.getUserStream(uid).listen((user) {
-        if (mounted && user != null) setState(() => _userModel = user);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _profileSubscription?.cancel();
-    super.dispose();
+    if (_selectedTabIndex == 1) _loadLikedRecipes();
+    if (_selectedTabIndex == 2) _loadSavedRecipes();
   }
 
   Future<void> _loadProfileData() async {
@@ -162,10 +165,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (_likedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
+    if (mounted) setState(() => _isLoadingLikes = true);
     try {
       final recipes = await _likeRepo.getLikedRecipes(uid);
-      if (mounted) setState(() => _likedRecipes = recipes);
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _likedRecipes = recipes;
+          _isLoadingLikes = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingLikes = false);
+    }
   }
 
   /// Lazily loads saved recipes when the Saved tab is first selected.
@@ -173,18 +184,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (_savedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
+    if (mounted) setState(() => _isLoadingSaved = true);
     try {
       final recipes = await _favoritesRepo.getSavedRecipes(uid);
-      if (mounted) setState(() => _savedRecipes = recipes);
-    } catch (_) {}
-  }
-
-  Future<void> _onSignOut() async {
-    await AuthService().signOut();
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushAndRemoveUntil(fadePageRoute(const LoginScreen()), (_) => false);
+      if (mounted) {
+        setState(() {
+          _savedRecipes = recipes;
+          _isLoadingSaved = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingSaved = false);
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -221,97 +232,9 @@ class ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showOptionsMenu(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    showModalBottomSheet(
+    showAppRightSidebar(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Profile Options',
-                  style: AppTypography.title(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                if (_isOwnProfile) ...[
-                  ListTile(
-                    leading: const Icon(
-                      Icons.person_outline_rounded,
-                      color: AppColors.primary,
-                    ),
-                    title: const Text('Edit Profile'),
-                    subtitle: Text(
-                      widget.isGuest ? 'Guest user' : (user?.email ?? ''),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToEditProfile();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.bookmark_border_rounded,
-                      color: AppColors.secondary,
-                    ),
-                    title: const Text('Saved Collections'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _onTabSelected(2);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.settings_outlined,
-                      color: AppColors.textSecondary,
-                    ),
-                    title: const Text('Settings'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToSettings();
-                    },
-                  ),
-                  const Divider(height: 24),
-                ],
-                ListTile(
-                  leading: Icon(
-                    widget.isGuest ? Icons.login_rounded : Icons.logout_rounded,
-                    color: AppColors.error,
-                  ),
-                  title: Text(
-                    widget.isGuest ? 'Sign In / Register' : 'Sign Out',
-                    style: const TextStyle(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _onSignOut();
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      isGuest: widget.isGuest,
     );
   }
 
@@ -321,18 +244,6 @@ class ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (_) => const EditProfileScreen()),
     ).then((_) {
       // Reload profile data when returning from edit screen.
-      _loadProfileData();
-    });
-  }
-
-  void _navigateToSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SettingsScreen(isGuest: widget.isGuest),
-      ),
-    ).then((_) {
-      // Reload profile data when returning from settings.
       _loadProfileData();
     });
   }
@@ -365,8 +276,272 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Widget _buildGuestView(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppSpacing.contentMaxWidth,
+            ),
+            child: Column(
+              children: [
+                // 1. Top App Bar (Back Arrow, Title "Profile", Hamburger Options)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenH - 8,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else {
+                            widget.onNavigateHome?.call();
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppColors.textPrimary,
+                          size: 24,
+                        ),
+                        tooltip: 'Back',
+                      ),
+                      Text(
+                        'Profile',
+                        style: AppTypography.headline(
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
+                      ),
+                      HamburgerButton(
+                        onTap: () => _showOptionsMenu(context),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 2. Scrollable Create Account / Guest View
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenH,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 16),
+                        // Prominent Visual Icon / Badge
+                        Center(
+                          child: Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withValues(alpha: 0.15),
+                                  AppColors.accent.withValues(alpha: 0.22),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.35),
+                                width: 2.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.cardShadow,
+                                  blurRadius: 16,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.person_add_rounded,
+                              size: 40,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Title & Subtitle
+                        Text(
+                          'Create an Account',
+                          style: AppTypography.headline(
+                            color: AppColors.textPrimary,
+                          ).copyWith(fontWeight: FontWeight.w800, fontSize: 24),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'Join La Mia to share your family recipes, bookmark favorites, follow top chefs, and compete on the leaderboard.',
+                            style: AppTypography.body(
+                              color: AppColors.textSecondary,
+                            ).copyWith(fontSize: 14, height: 1.45),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Perks / Features list
+                        _buildFeatureTile(
+                          icon: Icons.soup_kitchen_rounded,
+                          iconColor: AppColors.primary,
+                          title: 'Publish Secret Recipes',
+                          subtitle:
+                              'Upload step-by-step cooking guides, ingredients, and mouthwatering photos.',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFeatureTile(
+                          icon: Icons.bookmark_added_rounded,
+                          iconColor: AppColors.secondary,
+                          title: 'Save & Collect Favorites',
+                          subtitle:
+                              'Bookmark irresistible recipes to cook anytime from your personalized collection.',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFeatureTile(
+                          icon: Icons.workspace_premium_rounded,
+                          iconColor: AppColors.accent,
+                          title: 'Earn Chef Rankings',
+                          subtitle:
+                              'Receive likes from fellow foodies and get featured on the community leaderboard.',
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        // Main Call to Action: Create an Account button
+                        PrimaryButton(
+                          label: 'Create an Account',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SignUpScreen(),
+                              ),
+                            ).then((_) => _loadProfileData());
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Secondary Action: Log In button
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            ).then((_) => _loadProfileData());
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            side: const BorderSide(
+                              color: AppColors.border,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadii.button),
+                            ),
+                            backgroundColor: AppColors.surface,
+                          ),
+                          child: Text(
+                            'Already have an account? Log In',
+                            style: AppTypography.button(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyStrong(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 12, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isOwnProfile && widget.isGuest) {
+      return _buildGuestView(context);
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     final displayName =
         _isOwnProfile
@@ -435,17 +610,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                         ).copyWith(fontWeight: FontWeight.w700, fontSize: 20),
                       ),
                       if (_isOwnProfile)
-                        IconButton(
-                          onPressed: () => _showOptionsMenu(context),
-                          icon: const Icon(
-                            Icons.menu_rounded,
-                            color: AppColors.textPrimary,
-                            size: 26,
-                          ),
-                          tooltip: 'Menu Options',
+                        HamburgerButton(
+                          onTap: () => _showOptionsMenu(context),
                         )
                       else
-                        const SizedBox(width: 48),
+                        const SizedBox(width: 40),
                     ],
                   ),
                 ),
@@ -578,7 +747,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                         // 4. 2-Column Dish Cards Grid
                         DishCardGrid(
                           recipes: tabRecipes,
-                          isLoading: _isLoading,
+                          isLoading: _isLoading ||
+                              (_selectedTabIndex == 1 && _isLoadingLikes) ||
+                              (_selectedTabIndex == 2 && _isLoadingSaved),
                           emptyMessage: _selectedTabIndex == 0
                               ? 'No recipe posts created yet'
                               : _selectedTabIndex == 1

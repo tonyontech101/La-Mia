@@ -28,9 +28,9 @@ class FavoritesRepository {
     required String userId,
   }) async {
     final favRef = _firestore
-        .collection('favorites')
+        .collection('users')
         .doc(userId)
-        .collection('items')
+        .collection('saved')
         .doc(recipeId);
 
     final favDoc = await favRef.get();
@@ -73,9 +73,9 @@ class FavoritesRepository {
     required String userId,
   }) async {
     final doc = await _firestore
-        .collection('favorites')
+        .collection('users')
         .doc(userId)
-        .collection('items')
+        .collection('saved')
         .doc(recipeId)
         .get();
     return doc.exists;
@@ -84,9 +84,9 @@ class FavoritesRepository {
   /// Returns the IDs of all recipes saved by [userId].
   Future<List<String>> getSavedRecipeIds(String userId) async {
     final snap = await _firestore
-        .collection('favorites')
+        .collection('users')
         .doc(userId)
-        .collection('items')
+        .collection('saved')
         .orderBy('savedAt', descending: true)
         .get();
     return snap.docs.map((d) => d.id).toList();

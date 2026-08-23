@@ -15,6 +15,7 @@ import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import '../../search/presentation/universal_search_screen.dart';
 import '../../social/data/follow_repository.dart';
+import '../../profile/presentation/widgets/app_right_sidebar.dart';
 import 'widgets/feed_app_bar.dart';
 import 'widgets/feed_recipe_card.dart';
 import 'widgets/search_bar_widget.dart';
@@ -194,7 +195,12 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                         displayName: displayName,
                         photoUrl: photoUrl,
                         isGuest: widget.isGuest,
-                        onAvatarTap: () => widget.onNavigateToTab?.call(3),
+                        onProfileTap: () => widget.onNavigateToTab?.call(3),
+                        onHamburgerTap: () => showAppRightSidebar(
+                          context: context,
+                          isGuest: widget.isGuest,
+                          onNavigateToTab: widget.onNavigateToTab,
+                        ),
                       ),
 
                       const SizedBox(height: 12),
