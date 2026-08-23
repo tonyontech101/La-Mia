@@ -49,17 +49,23 @@ class FollowRepository {
       // Unfollow
       batch.delete(followingRef);
       batch.delete(followerRef);
-      batch.update(currentUserRef, {
+      batch.set(currentUserRef, {
         'followingCount': FieldValue.increment(-1),
-      });
-      batch.update(targetUserRef, {'followerCount': FieldValue.increment(-1)});
+      }, SetOptions(merge: true));
+      batch.set(targetUserRef, {
+        'followerCount': FieldValue.increment(-1),
+      }, SetOptions(merge: true));
     } else {
       // Follow
       final now = FieldValue.serverTimestamp();
       batch.set(followingRef, {'followedAt': now});
       batch.set(followerRef, {'followedAt': now});
-      batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
-      batch.update(targetUserRef, {'followerCount': FieldValue.increment(1)});
+      batch.set(currentUserRef, {
+        'followingCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+      batch.set(targetUserRef, {
+        'followerCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
     }
 
     await batch.commit();

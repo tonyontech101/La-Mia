@@ -45,7 +45,6 @@ class LikeRepository {
     final isCurrentlyLiked = likeDoc.exists;
 
     final batch = _firestore.batch();
-    final recipeRef = _firestore.collection('recipes').doc(recipeId);
 
     if (isCurrentlyLiked) {
       // Unlike
@@ -54,9 +53,12 @@ class LikeRepository {
       batch.update(recipeRef, {'likeCount': FieldValue.increment(-1)});
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
-        batch.update(authorRef, {
-          'totalLikesReceived': FieldValue.increment(-1),
-        });
+        // Use set+merge so missing counter fields don't cause NOT_FOUND.
+        batch.set(
+          authorRef,
+          {'totalLikesReceived': FieldValue.increment(-1)},
+          SetOptions(merge: true),
+        );
       }
     } else {
       // Like
@@ -69,9 +71,11 @@ class LikeRepository {
       batch.update(recipeRef, {'likeCount': FieldValue.increment(1)});
       if (recipeAuthorId != null) {
         final authorRef = _firestore.collection('users').doc(recipeAuthorId);
-        batch.update(authorRef, {
-          'totalLikesReceived': FieldValue.increment(1),
-        });
+        batch.set(
+          authorRef,
+          {'totalLikesReceived': FieldValue.increment(1)},
+          SetOptions(merge: true),
+        );
       }
     }
 

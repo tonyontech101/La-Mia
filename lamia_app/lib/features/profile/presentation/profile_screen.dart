@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -65,6 +67,11 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingLikes = false;
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
+  StreamSubscription<UserModel?>? _profileSubscription;
+
+  /// Generation counter to discard stale profile loads when navigating
+  /// between different users rapidly.
+  int _profileLoadGeneration = 0;
 
   /// Public method to reload profile data after recipe upload or profile edits.
   Future<void> refresh() async {
@@ -99,6 +106,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfileData() async {
+    final generation = ++_profileLoadGeneration;
     final uid = _displayedUid;
     if (uid == null) {
       if (mounted) setState(() => _isLoading = false);
@@ -111,7 +119,7 @@ class ProfileScreenState extends State<ProfileScreen> {
       // freshly saved user document and leave the placeholder bio on screen.
       final user = await _userRepo.getUser(uid);
 
-      if (mounted) {
+      if (mounted && generation == _profileLoadGeneration) {
         setState(() {
           _userModel = user;
           _isLoading = false;
@@ -120,7 +128,10 @@ class ProfileScreenState extends State<ProfileScreen> {
 
       List<RecipeModel> recipes = [];
       try {
-        recipes = await _recipeRepo.recipesByAuthor(uid);
+        recipes = await _recipeRepo.recipesByAuthor(
+          uid,
+          includePending: _isOwnProfile,
+        );
       } catch (_) {
         // Keep the loaded profile usable even when posts cannot load.
       }
@@ -135,14 +146,17 @@ class ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      if (mounted) {
+      // Discard if a newer profile load has started.
+      if (mounted && generation == _profileLoadGeneration) {
         setState(() {
           _userRecipes = recipes;
           _isFollowing = following;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && generation == _profileLoadGeneration) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -188,11 +202,33 @@ class ProfileScreenState extends State<ProfileScreen> {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     final targetUid = _displayedUid;
     if (currentUid == null || targetUid == null) return;
-    final newState = await _followRepo.toggleFollow(
-      currentUid: currentUid,
-      targetUid: targetUid,
-    );
-    if (mounted) setState(() => _isFollowing = newState);
+    try {
+      final newState = await _followRepo.toggleFollow(
+        currentUid: currentUid,
+        targetUid: targetUid,
+      );
+      if (mounted) {
+        setState(() {
+          _isFollowing = newState;
+          if (_userModel != null) {
+            final currentCount = _userModel!.followerCount;
+            _userModel = _userModel!.copyWith(
+              followerCount: newState
+                  ? currentCount + 1
+                  : (currentCount > 0 ? currentCount - 1 : 0),
+            );
+          }
+        });
+        AppSnackbar.show(
+          context,
+          message: newState ? 'Following chef' : 'Unfollowed chef',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(context, message: 'Could not update follow status: $e');
+      }
+    }
   }
 
   void _showOptionsMenu(BuildContext context) {
@@ -508,19 +544,27 @@ class ProfileScreenState extends State<ProfileScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     final displayName =
-        _userModel?.displayName ??
-        (widget.isGuest
-            ? 'Guest Foodie'
-            : (user?.displayName ??
-                  user?.email?.split('@').first ??
-                  'Chef Foodie'));
+        _isOwnProfile
+            ? (_userModel?.displayName ??
+                  (widget.isGuest
+                      ? 'Guest Foodie'
+                      : (user?.displayName ??
+                            user?.email?.split('@').first ??
+                            'Chef Foodie')))
+            : (_userModel?.displayName ?? 'Chef');
+    // When viewing another user, never fall back to the logged-in user's photo.
     final photoUrl =
-        _userModel?.photoUrl ?? (widget.isGuest ? null : user?.photoURL);
+        _isOwnProfile
+            ? (_userModel?.photoUrl ??
+                  (widget.isGuest ? null : user?.photoURL))
+            : _userModel?.photoUrl;
     final bio =
-        _userModel?.bio ??
-        (widget.isGuest
-            ? 'Browsing as guest foodie. Sign in to post family recipes!'
-            : null);
+        _isOwnProfile
+            ? (_userModel?.bio ??
+                  (widget.isGuest
+                      ? 'Browsing as guest foodie. Sign in to post family recipes!'
+                      : null))
+            : _userModel?.bio;
 
     final tabRecipes = _getTabRecipes();
 

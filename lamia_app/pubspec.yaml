@@ -54,6 +54,9 @@ dependencies:
   image_picker: ^1.1.2
   logger: ^2.7.0
   firebase_crashlytics: ^4.3.10
+  share_plus: ^13.3.0
+  printing: ^5.15.0
+  pdf: ^3.13.0
 
   # Share recipes via system share sheet.
   share_plus: ^10.1.4

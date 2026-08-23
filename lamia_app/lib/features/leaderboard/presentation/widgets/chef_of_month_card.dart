@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/widgets/pressable_scale.dart';
+import '../../../recipes/data/recipe_repository.dart';
 
 /// "Chef of the Month" featured card at the top of the Leaderboard.
 ///
@@ -16,15 +17,19 @@ class ChefOfMonthCard extends StatelessWidget {
     required this.chefName,
     required this.dishName,
     required this.likes,
+    this.recipeId,
     this.imageUrl,
     this.onViewProfile,
+    this.onViewDish,
   });
 
   final String chefName;
   final String dishName;
   final int likes;
+  final String? recipeId;
   final String? imageUrl;
   final VoidCallback? onViewProfile;
+  final VoidCallback? onViewDish;
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +51,10 @@ class ChefOfMonthCard extends StatelessWidget {
           // Dish image area with crown overlay
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: Stack(
-              children: [
+            child: GestureDetector(
+              onTap: onViewDish,
+              child: Stack(
+                children: [
                 AspectRatio(
                   aspectRatio: 16 / 9,
                   child: imageUrl != null && imageUrl!.isNotEmpty
@@ -105,7 +112,8 @@ class ChefOfMonthCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -187,11 +195,9 @@ class ChefOfMonthCard extends StatelessWidget {
                                 color: AppColors.primary,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                '$likes Likes',
-                                style: AppTypography.caption(
-                                  color: AppColors.textSecondary,
-                                ).copyWith(fontSize: 11),
+                              _LiveLikeCount(
+                                recipeId: recipeId,
+                                initialLikes: likes,
                               ),
                             ],
                           ),
@@ -261,4 +267,29 @@ class ChefOfMonthCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LiveLikeCount extends StatelessWidget {
+  const _LiveLikeCount({required this.recipeId, required this.initialLikes});
+
+  final String? recipeId;
+  final int initialLikes;
+
+  @override
+  Widget build(BuildContext context) {
+    if (recipeId == null) return _label(initialLikes);
+    return StreamBuilder(
+      stream: RecipeRepository().watchRecipe(recipeId!),
+      builder: (context, snapshot) => _label(
+        snapshot.data?.likeCount ?? initialLikes,
+      ),
+    );
+  }
+
+  Widget _label(int count) => Text(
+    '$count Likes',
+    style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
+      fontSize: 11,
+    ),
+  );
 }

@@ -72,4 +72,32 @@ class UserModel {
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
+
+  UserModel copyWith({
+    String? uid,
+    String? displayName,
+    String? bio,
+    String? photoUrl,
+    int? recipeCount,
+    int? totalLikesReceived,
+    int? followerCount,
+    int? followingCount,
+    int? savedCount,
+    String? role,
+    DateTime? createdAt,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      displayName: displayName ?? this.displayName,
+      bio: bio ?? this.bio,
+      photoUrl: photoUrl ?? this.photoUrl,
+      recipeCount: recipeCount ?? this.recipeCount,
+      totalLikesReceived: totalLikesReceived ?? this.totalLikesReceived,
+      followerCount: followerCount ?? this.followerCount,
+      followingCount: followingCount ?? this.followingCount,
+      savedCount: savedCount ?? this.savedCount,
+      role: role ?? this.role,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

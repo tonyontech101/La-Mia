@@ -108,6 +108,115 @@ class UserRepository {
     }
   }
 
+  /// Fetches users sorted by [followerCount] descending — "Top Contributors".
+  ///
+  /// Ranks cooks by how many followers they have, reflecting their
+  /// community influence and reach on the platform.
+  Future<List<UserModel>> topContributorsByFollowers({int limit = 20}) async {
+    try {
+      final snap = await _usersRef
+          .orderBy('followerCount', descending: true)
+          .limit(limit)
+          .get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        try {
+          users.add(UserModel.fromFirestore(d));
+        } catch (e) {
+          AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
+        }
+      }
+      // If Firestore returned users (even those without the field), that's fine
+      // — fromFirestore defaults followerCount to 0. Return as-is.
+      if (users.isNotEmpty) return users;
+      throw Exception('No users returned from ordered query');
+    } catch (e) {
+      AppLogger.warning('Error fetching top contributors (falling back): $e', 'UserRepository');
+      // Fallback: fetch a larger batch without order, sort in Dart.
+      // Use 200 as the cap so we get the true top-N even if some are unordered.
+      try {
+        final fallbackSnap = await _usersRef.limit(200).get();
+        final users = <UserModel>[];
+        for (final d in fallbackSnap.docs) {
+          try {
+            users.add(UserModel.fromFirestore(d));
+          } catch (_) {}
+        }
+        users.sort((a, b) => b.followerCount.compareTo(a.followerCount));
+        return users.take(limit).toList();
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  /// Fetches users sorted by [recipeCount] descending — "Most Cooked".
+  ///
+  /// Ranks cooks by how many recipes they have shared on the platform.
+  Future<List<UserModel>> mostCookedByRecipeCount({int limit = 20}) async {
+    try {
+      final snap = await _usersRef
+          .orderBy('recipeCount', descending: true)
+          .limit(limit)
+          .get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        try {
+          users.add(UserModel.fromFirestore(d));
+        } catch (e) {
+          AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
+        }
+      }
+      if (users.isNotEmpty) return users;
+      throw Exception('No users returned from ordered query');
+    } catch (e) {
+      AppLogger.warning('Error fetching most cooked (falling back): $e', 'UserRepository');
+      // Fallback: fetch a larger batch without order, sort in Dart.
+      try {
+        final fallbackSnap = await _usersRef.limit(200).get();
+        final users = <UserModel>[];
+        for (final d in fallbackSnap.docs) {
+          try {
+            users.add(UserModel.fromFirestore(d));
+          } catch (_) {}
+        }
+        users.sort((a, b) => b.recipeCount.compareTo(a.recipeCount));
+        return users.take(limit).toList();
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  /// Ranks cooks by their actual uploaded recipes instead of the denormalized
+  /// `users.recipeCount` value. This keeps the leaderboard correct for legacy
+  /// profiles whose counter was never populated.
+  Future<List<UserModel>> mostCookedByUploadedRecipes({int limit = 20}) async {
+    try {
+      final recipes = await _db.collection('recipes').limit(500).get();
+      final counts = <String, int>{};
+      for (final recipe in recipes.docs) {
+        final data = recipe.data();
+        final authorId = data['authorId'] as String?;
+        final isSystemRecipe = data['isSystemRecipe'] as bool? ?? true;
+        if (authorId == null || authorId.isEmpty || isSystemRecipe) continue;
+        counts.update(authorId, (count) => count + 1, ifAbsent: () => 1);
+      }
+
+      final entries = counts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final cooks = <UserModel>[];
+      for (final entry in entries.take(limit)) {
+        final user = await getUser(entry.key);
+        if (user != null) cooks.add(user.copyWith(recipeCount: entry.value));
+      }
+      return cooks;
+    } catch (e) {
+      AppLogger.warning('Error calculating uploaded recipe counts: $e', 'UserRepository');
+      return [];
+    }
+  }
+
   /// Search users by display name or bio. Case-insensitive and safe.
   Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
     final q = query.trim().toLowerCase();

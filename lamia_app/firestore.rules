@@ -196,6 +196,30 @@ service cloud.firestore {
       allow delete: if isUser(uid);
     }
 
+    // ── Social: Follows & Following ─────────────────────────────────────────
+
+    match /following/{userId}/users/{targetUid} {
+      allow read: if true;
+      allow write: if isUser(userId);
+    }
+
+    match /followers/{userId}/users/{followerUid} {
+      allow read: if true;
+      allow write: if isUser(followerUid);
+    }
+
+    // ── Social: Likes & Favorites ───────────────────────────────────────────
+
+    match /likes/{recipeId}/users/{userId} {
+      allow read: if true;
+      allow write: if isUser(userId);
+    }
+
+    match /favorites/{userId}/items/{recipeId} {
+      allow read: if isUser(userId);
+      allow write: if isUser(userId);
+    }
+
     // ── Moderation Logs (written by Cloud Functions, readable by admins) ────
 
     match /moderationLogs/{logId} {

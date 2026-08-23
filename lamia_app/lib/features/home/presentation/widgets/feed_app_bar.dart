@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -11,12 +12,14 @@ class FeedAppBar extends StatelessWidget {
   const FeedAppBar({
     super.key,
     required this.displayName,
+    this.photoUrl,
     this.isGuest = false,
     this.onProfileTap,
     this.onHamburgerTap,
   });
 
   final String displayName;
+  final String? photoUrl;
   final bool isGuest;
   final VoidCallback? onProfileTap;
   final VoidCallback? onHamburgerTap;
@@ -60,6 +63,33 @@ class FeedAppBar extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                 ),
+              ),
+              child: ClipOval(
+                child: photoUrl != null && photoUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: photoUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Center(
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
               ),
             ),
           ),

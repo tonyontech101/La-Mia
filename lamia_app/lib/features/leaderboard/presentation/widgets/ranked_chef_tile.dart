@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -16,6 +17,8 @@ class RankedChefTile extends StatelessWidget {
     required this.recipesShared,
     this.isTopThree = false,
     this.onTap,
+    this.metricLabel = 'recipes shared',
+    this.photoUrl,
   });
 
   final int rank;
@@ -23,6 +26,8 @@ class RankedChefTile extends StatelessWidget {
   final int recipesShared;
   final bool isTopThree;
   final VoidCallback? onTap;
+  final String metricLabel;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -60,31 +65,11 @@ class RankedChefTile extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Avatar
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _getAvatarColor().withValues(alpha: 0.12),
-                  border: Border.all(
-                    color: _getAvatarColor().withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: _getAvatarColor(),
-                    ),
-                  ),
-                ),
-              ),
+              _buildAvatar(44, 18),
+
               const SizedBox(width: 12),
 
-              // Name + recipes count
+              // Name + count
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,7 +84,7 @@ class RankedChefTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'no. of Recipes Shared',
+                      '$recipesShared $metricLabel',
                       style: AppTypography.caption(
                         color: AppColors.textSecondary,
                       ).copyWith(fontSize: 11),
@@ -109,7 +94,7 @@ class RankedChefTile extends StatelessWidget {
               ),
 
               // Chevron
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.textSecondary,
                 size: 24,
@@ -145,24 +130,8 @@ class RankedChefTile extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Avatar (smaller)
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                ),
-                child: Center(
-                  child: Text(
-                    chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
+              _buildAvatar(36, 14),
+
               const SizedBox(width: 12),
 
               // Name
@@ -177,9 +146,9 @@ class RankedChefTile extends StatelessWidget {
                 ),
               ),
 
-              // Recipes count
+              // Count
               Text(
-                'no. of Recipes Shared',
+                '$recipesShared $metricLabel',
                 style: AppTypography.caption(
                   color: AppColors.textSecondary,
                 ).copyWith(fontSize: 11),
@@ -191,12 +160,81 @@ class RankedChefTile extends StatelessWidget {
     );
   }
 
+  Widget _buildAvatar(double size, double fontSize) {
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: CachedNetworkImage(
+          imageUrl: photoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => Container(
+            width: size,
+            height: size,
+            color: _getAvatarColor().withValues(alpha: 0.12),
+            child: Center(
+              child: Text(
+                chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  color: _getAvatarColor(),
+                ),
+              ),
+            ),
+          ),
+          errorWidget: (_, _, _) => Container(
+            width: size,
+            height: size,
+            color: _getAvatarColor().withValues(alpha: 0.12),
+            child: Center(
+              child: Text(
+                chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  color: _getAvatarColor(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _getAvatarColor().withValues(alpha: 0.12),
+        border: isTopThree
+            ? Border.all(
+                color: _getAvatarColor().withValues(alpha: 0.3),
+                width: 1.5,
+              )
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          chefName.isNotEmpty ? chefName[0].toUpperCase() : 'C',
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+            color: _getAvatarColor(),
+          ),
+        ),
+      ),
+    );
+  }
+
   Color _getAvatarColor() {
     switch (rank) {
       case 1:
         return AppColors.accent; // Gold
       case 2:
-        return AppColors.textSecondary; // Silver-ish
+        return const Color(0xFFB0B0B0); // Silver-ish
       case 3:
         return AppColors.primary; // Bronze/terracotta
       default:
