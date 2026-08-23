@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
@@ -67,7 +68,6 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingLikes = false;
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
-  StreamSubscription<UserModel?>? _profileSubscription;
 
   /// Generation counter to discard stale profile loads when navigating
   /// between different users rapidly.

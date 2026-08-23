@@ -54,16 +54,6 @@ class FeedAppBar extends StatelessWidget {
                   width: 1.5,
                 ),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
               child: ClipOval(
                 child: photoUrl != null && photoUrl!.isNotEmpty
                     ? CachedNetworkImage(

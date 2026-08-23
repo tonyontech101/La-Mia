@@ -200,7 +200,7 @@ class UserRepository {
         final authorId = data['authorId'] as String?;
         final isSystemRecipe = data['isSystemRecipe'] as bool? ?? true;
         if (authorId == null || authorId.isEmpty || isSystemRecipe) continue;
-        counts.update(authorId, (count) => count + 1, ifAbsent: () => 1);
+        counts.update(authorId, (current) => current + 1, ifAbsent: () => 1);
       }
 
       final entries = counts.entries.toList()

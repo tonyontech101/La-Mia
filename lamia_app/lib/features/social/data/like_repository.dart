@@ -44,6 +44,7 @@ class LikeRepository {
     final likeDoc = await likeRef.get();
     final isCurrentlyLiked = likeDoc.exists;
 
+    final recipeRef = _firestore.collection('recipes').doc(recipeId);
     final batch = _firestore.batch();
 
     if (isCurrentlyLiked) {

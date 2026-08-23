@@ -5,7 +5,6 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../profile/presentation/profile_screen.dart';
-import '../../leaderboard/presentation/leaderboard_screen.dart';
 import '../../planner/presentation/weekly_meal_planner_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_feed_screen.dart';

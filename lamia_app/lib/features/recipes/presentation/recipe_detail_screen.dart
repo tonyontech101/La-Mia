@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -23,7 +26,6 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import '../data/recipe_model.dart';
-import '../data/recipe_repository.dart';
 
 /// Parses a raw instruction string into a `(title, body)` pair.
 ///
@@ -77,7 +79,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   final FavoritesRepository _favoritesRepo = FavoritesRepository();
   final FollowRepository _followRepo = FollowRepository();
   final CommentRepository _commentRepo = CommentRepository();
-  final RecipeRepository _recipeRepo = RecipeRepository();
 
   bool _isLiked = false;
   bool _isBookmarked = false;
@@ -108,7 +109,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   @override
   void dispose() {
-    _recipeSubscription?.cancel();
     _commentController.dispose();
     super.dispose();
   }
@@ -228,10 +228,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               const SizedBox(height: 12),
               _buildMenuRow(
                 icon: Icons.ios_share_rounded,
-                label: 'Share',
+                label: 'Share recipe',
                 onTap: () {
                   Navigator.pop(ctx);
-                  Share.shareUri(Uri.parse('https://lamia.app/recipe/${widget.recipe.id}'));
+                  _shareRecipe();
+                },
+              ),
+              _buildMenuRow(
+                icon: Icons.print_rounded,
+                label: 'Print / Save as PDF',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _printRecipe();
                 },
               ),
               _buildMenuRow(
@@ -312,7 +320,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 style: AppTypography.bodyStrong(color: labelColor ?? AppColors.textPrimary),
               ),
             ),
-            if (trailing != null) trailing,
+            ?trailing,
           ],
         ),
       ),
@@ -411,8 +419,9 @@ $instructions
 Discovered on La Mia — Filipino Recipes App 🇵🇭
 ''';
 
-    await SharePlus.instance.share(
-      ShareParams(text: text, subject: recipe.name),
+    await Share.share(
+      text,
+      subject: recipe.name,
     );
   }
 
