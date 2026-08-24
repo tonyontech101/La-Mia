@@ -156,7 +156,11 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000;
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.isReply is bool
+          && (request.resource.data.parentCommentId is string
+              || request.resource.data.parentCommentId == null)
+          && request.resource.data.isReply == (request.resource.data.parentCommentId != null);
       allow update: if isSignedIn();
       allow delete: if isSignedIn()
           && (resource.data.userId == request.auth.uid || isAdmin());

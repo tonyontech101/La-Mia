@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Data model for a comment on a recipe.
+///
+/// Supports threading via [parentCommentId] — null means top-level, a real
+/// id means it's a reply. [replyCount] is a best-effort denormalized hint
+/// managed via `FieldValue.increment` in [CommentRepository].
 class CommentModel {
   const CommentModel({
     required this.id,
@@ -11,6 +15,8 @@ class CommentModel {
     required this.text,
     required this.createdAt,
     this.likedBy = const [],
+    this.parentCommentId,
+    this.replyCount = 0,
   });
 
   final String id;
@@ -21,8 +27,12 @@ class CommentModel {
   final String text;
   final DateTime createdAt;
   final List<String> likedBy;
+  final String? parentCommentId;
+  final int replyCount;
 
   int get likeCount => likedBy.length;
+
+  bool get isTopLevel => parentCommentId == null;
 
   bool isLikedBy(String uid) => likedBy.contains(uid);
 
@@ -31,6 +41,7 @@ class CommentModel {
     required String recipeId,
   }) {
     final data = doc.data() ?? {};
+    final parent = data['parentCommentId'] as String?;
     return CommentModel(
       id: doc.id,
       recipeId: recipeId,
@@ -51,6 +62,8 @@ class CommentModel {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      parentCommentId: parent,
+      replyCount: (data['replyCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -62,6 +75,9 @@ class CommentModel {
       'text': text,
       'createdAt': Timestamp.fromDate(createdAt),
       'likedBy': likedBy,
+      'parentCommentId': parentCommentId,
+      'isReply': parentCommentId != null,
+      'replyCount': replyCount,
     };
   }
 
