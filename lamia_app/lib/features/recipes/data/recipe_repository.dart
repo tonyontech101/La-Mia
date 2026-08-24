@@ -364,6 +364,17 @@ class RecipeRepository {
     return monthRecipes.take(limit).toList();
   }
 
+  /// Fetches a single recipe by its document ID.
+  Future<RecipeModel?> getRecipe(String recipeId) async {
+    try {
+      final doc = await _firestore.collection('recipes').doc(recipeId).get();
+      if (!doc.exists || doc.data() == null) return null;
+      return RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Adds a new user-submitted recipe to Firestore.
   /// Returns the newly created document ID.
   Future<String> addRecipe(RecipeModel recipe) async {

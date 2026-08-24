@@ -161,6 +161,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       recipeId: recipeId,
       userId: user.uid,
       recipeAuthorId: widget.recipe.authorId,
+      senderName: user.displayName,
+      senderPhotoUrl: user.photoURL,
+      recipeTitle: widget.recipe.name,
     );
     if (mounted) {
       setState(() {
@@ -366,6 +369,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final newState = await _followRepo.toggleFollow(
       currentUid: user.uid,
       targetUid: authorId,
+      currentUserName: user.displayName,
+      currentUserPhotoUrl: user.photoURL,
     );
     if (mounted) {
       setState(() => _isFollowing = newState);
@@ -581,6 +586,8 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
             : (user.email?.split('@').first ?? 'Home Cook'),
         userPhotoUrl: user.photoURL,
         text: text,
+        recipeAuthorId: widget.recipe.authorId,
+        recipeTitle: widget.recipe.name,
       );
       _commentController.clear();
       if (mounted) {

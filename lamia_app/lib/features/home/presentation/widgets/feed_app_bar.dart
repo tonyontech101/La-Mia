@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../notifications/presentation/widgets/notification_badge_icon.dart';
 
 /// Wireframe-matching app bar for the Home Feed screen.
 ///
@@ -20,14 +21,6 @@ class FeedAppBar extends StatelessWidget {
   final String? photoUrl;
   final bool isGuest;
   final VoidCallback? onProfileTap;
-
-  void _showNotificationsMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notifications coming soon!'),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,22 +100,7 @@ class FeedAppBar extends StatelessWidget {
           ),
 
           // Right: Notifications icon
-          GestureDetector(
-            onTap: () => _showNotificationsMessage(context),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceAlt,
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.textPrimary,
-                size: 20,
-              ),
-            ),
-          ),
+          NotificationBadgeIcon(isGuest: isGuest),
         ],
       ),
     );

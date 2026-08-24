@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
+import '../../notifications/data/notification_model.dart';
+import '../../notifications/data/notification_repository.dart';
 
 /// Manages recipe likes using the `likes/{recipeId}/users/{userId}`
 /// subcollection pattern from the architecture doc.
@@ -13,11 +15,14 @@ class LikeRepository {
   LikeRepository({
     FirebaseFirestore? firestore,
     RecipeRepository? recipeRepository,
+    NotificationRepository? notificationRepository,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _recipeRepository = recipeRepository ?? RecipeRepository();
+       _recipeRepository = recipeRepository ?? RecipeRepository(),
+       _notifRepo = notificationRepository ?? NotificationRepository();
 
   final FirebaseFirestore _firestore;
   final RecipeRepository _recipeRepository;
+  final NotificationRepository _notifRepo;
 
   /// Toggles the like state for [recipeId] by the current [userId].
   ///
@@ -28,6 +33,9 @@ class LikeRepository {
     required String recipeId,
     required String userId,
     String? recipeAuthorId,
+    String? senderName,
+    String? senderPhotoUrl,
+    String? recipeTitle,
   }) async {
     final likeRef = _firestore
         .collection('likes')
@@ -81,6 +89,26 @@ class LikeRepository {
     }
 
     await batch.commit();
+
+    // Send social notification on like (after successful commit)
+    if (!isCurrentlyLiked && recipeAuthorId != null && recipeAuthorId != userId) {
+      final name = (senderName != null && senderName.isNotEmpty) ? senderName : 'A foodie';
+      final title = recipeTitle ?? 'your recipe';
+      try {
+        await _notifRepo.sendNotification(
+          recipientId: recipeAuthorId,
+          type: NotificationType.recipeLike,
+          title: 'New Recipe Like',
+          body: '$name liked "$title".',
+          senderId: userId,
+          senderName: name,
+          senderPhotoUrl: senderPhotoUrl,
+          targetId: recipeId,
+          targetType: TargetType.recipe,
+        );
+      } catch (_) {}
+    }
+
     return !isCurrentlyLiked;
   }
 

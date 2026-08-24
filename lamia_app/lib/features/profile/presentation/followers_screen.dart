@@ -124,9 +124,12 @@ class _FollowersScreenState extends State<FollowersScreen> {
     });
 
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
       await _followRepo.toggleFollow(
         currentUid: currentUid,
         targetUid: user.uid,
+        currentUserName: currentUser?.displayName,
+        currentUserPhotoUrl: currentUser?.photoURL,
       );
     } catch (_) {
       if (mounted) {

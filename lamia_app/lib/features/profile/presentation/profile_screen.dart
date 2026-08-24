@@ -238,9 +238,12 @@ class ProfileScreenState extends State<ProfileScreen> {
     final targetUid = _displayedUid;
     if (currentUid == null || targetUid == null) return;
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
       final newState = await _followRepo.toggleFollow(
         currentUid: currentUid,
         targetUid: targetUid,
+        currentUserName: currentUser?.displayName,
+        currentUserPhotoUrl: currentUser?.photoURL,
       );
       if (mounted) {
         setState(() {

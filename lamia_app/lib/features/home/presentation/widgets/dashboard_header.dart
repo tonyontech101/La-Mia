@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../notifications/presentation/widgets/notification_badge_icon.dart';
 
 /// Top header bar matching the wireframe in image.png.
 /// Shows brand logo "LaMia" with amber accent on the left, notification icon on the right.
@@ -10,12 +11,12 @@ class DashboardHeader extends StatelessWidget {
     super.key,
     required this.displayName,
     this.userPhotoUrl,
-    this.onNotificationTap,
+    this.isGuest = false,
   });
 
   final String displayName;
   final String? userPhotoUrl;
-  final VoidCallback? onNotificationTap;
+  final bool isGuest;
 
   @override
   Widget build(BuildContext context) {
@@ -49,28 +50,13 @@ class DashboardHeader extends StatelessWidget {
                       fontSize: 9,
                       letterSpacing: 0.6,
                       fontWeight: FontWeight.w600,
-                    ),
+                     ),
               ),
             ],
           ),
 
-          // Right: Notification icon
-          GestureDetector(
-            onTap: onNotificationTap,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceAlt,
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.textPrimary,
-                size: 20,
-              ),
-            ),
-          ),
+          // Right: Notification icon badge
+          NotificationBadgeIcon(isGuest: isGuest),
         ],
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../auth/data/user_model.dart';
+import '../../notifications/data/notification_model.dart';
+import '../../notifications/data/notification_repository.dart';
 
 /// Manages the follow/unfollow relationship between users.
 ///
@@ -11,10 +13,14 @@ import '../../auth/data/user_model.dart';
 /// Both are existence-based (like the likes pattern). Counter updates
 /// are batched for consistency.
 class FollowRepository {
-  FollowRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  FollowRepository({
+    FirebaseFirestore? firestore,
+    NotificationRepository? notificationRepository,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _notifRepo = notificationRepository ?? NotificationRepository();
 
   final FirebaseFirestore _firestore;
+  final NotificationRepository _notifRepo;
 
   /// Toggles the follow state: [currentUid] follows/unfollows [targetUid].
   ///
@@ -23,6 +29,8 @@ class FollowRepository {
   Future<bool> toggleFollow({
     required String currentUid,
     required String targetUid,
+    String? currentUserName,
+    String? currentUserPhotoUrl,
   }) async {
     if (currentUid == targetUid) return false; // Can't follow yourself.
 
@@ -69,6 +77,27 @@ class FollowRepository {
     }
 
     await batch.commit();
+
+    // Dispatch social notification on follow
+    if (!isCurrentlyFollowing) {
+      final name = (currentUserName != null && currentUserName.isNotEmpty)
+          ? currentUserName
+          : 'A foodie';
+      try {
+        await _notifRepo.sendNotification(
+          recipientId: targetUid,
+          type: NotificationType.newFollower,
+          title: 'New Follower',
+          body: '$name started following your culinary journey.',
+          senderId: currentUid,
+          senderName: name,
+          senderPhotoUrl: currentUserPhotoUrl,
+          targetId: currentUid,
+          targetType: TargetType.user,
+        );
+      } catch (_) {}
+    }
+
     return !isCurrentlyFollowing;
   }
 

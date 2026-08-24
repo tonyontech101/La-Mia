@@ -10,6 +10,8 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
+import '../../notifications/data/notification_preference_model.dart';
+import '../../notifications/data/notification_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.isGuest = false});
@@ -25,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int? _expandedIndex;
 
   final UserRepository _userRepo = UserRepository();
+  final NotificationRepository _notifRepo = NotificationRepository();
   final ImagePicker _imagePicker = ImagePicker();
 
   // Loading state for initial data fetch
@@ -32,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Notification Preference
   bool _enableNotifications = true;
+  NotificationPreferenceModel _notifPrefs = NotificationPreferenceModel.defaults();
 
   // --- Profile Info Fields ---
   final _profileFormKey = GlobalKey<FormState>();
@@ -101,6 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       final model = await _userRepo.getUser(user.uid);
+      final pref = await _notifRepo.getNotificationPreferences(user.uid);
       
       // Also load notifications pref from Firestore user doc if present, default to true
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -113,6 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _bioController.text = model?.bio ?? '';
           _currentPhotoUrl = model?.photoUrl ?? user.photoURL;
           _enableNotifications = notifPref;
+          _notifPrefs = pref;
           _isLoadingProfile = false;
         });
       }
@@ -453,6 +459,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _onUpdateGranularPreference(String key, bool value) async {
+    if (widget.isGuest) return;
+
+    NotificationPreferenceModel updated;
+    switch (key) {
+      case 'likes':
+        updated = _notifPrefs.copyWith(likes: value);
+        break;
+      case 'comments':
+        updated = _notifPrefs.copyWith(comments: value);
+        break;
+      case 'followers':
+        updated = _notifPrefs.copyWith(followers: value);
+        break;
+      case 'followingNewRecipes':
+        updated = _notifPrefs.copyWith(followingNewRecipes: value);
+        break;
+      case 'mealReminders':
+        updated = _notifPrefs.copyWith(mealReminders: value);
+        break;
+      case 'dailySuggestions':
+        updated = _notifPrefs.copyWith(dailySuggestions: value);
+        break;
+      default:
+        return;
+    }
+
+    setState(() {
+      _notifPrefs = updated;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await _notifRepo.updateNotificationPreferences(user.uid, updated);
+      } catch (_) {}
+    }
+  }
+
+  Widget _buildGranularPreferenceTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.body(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.primary,
+            activeTrackColor: AppColors.primary.withValues(alpha: 0.2),
+            inactiveThumbColor: AppColors.textSecondary,
+            inactiveTrackColor: AppColors.border,
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Credits & Acknowledgements Dialog ---
   void _showCreditsModal() {
     showModalBottomSheet(
@@ -734,23 +823,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   horizontal: 16,
                                   vertical: 12,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Enable Notifications',
-                                      style: AppTypography.body(
-                                        color: AppColors.textPrimary,
-                                      ).copyWith(fontWeight: FontWeight.w600),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Enable Notifications',
+                                          style: AppTypography.body(
+                                            color: AppColors.textPrimary,
+                                          ).copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                        Switch(
+                                          value: _enableNotifications,
+                                          onChanged: _onToggleNotifications,
+                                          activeThumbColor: AppColors.primary,
+                                          activeTrackColor: AppColors.primary.withValues(alpha: 0.2),
+                                          inactiveThumbColor: AppColors.textSecondary,
+                                          inactiveTrackColor: AppColors.border,
+                                        ),
+                                      ],
                                     ),
-                                    Switch(
-                                      value: _enableNotifications,
-                                      onChanged: _onToggleNotifications,
-                                      activeThumbColor: AppColors.primary,
-                                      activeTrackColor: AppColors.primary.withValues(alpha: 0.2),
-                                      inactiveThumbColor: AppColors.textSecondary,
-                                      inactiveTrackColor: AppColors.border,
-                                    ),
+                                    if (_enableNotifications) ...[
+                                      const Divider(color: AppColors.border, height: 24),
+                                      _buildGranularPreferenceTile(
+                                        title: 'Likes & Ratings',
+                                        subtitle: 'When someone likes or rates your recipes',
+                                        value: _notifPrefs.likes,
+                                        onChanged: (val) => _onUpdateGranularPreference('likes', val),
+                                      ),
+                                      _buildGranularPreferenceTile(
+                                        title: 'Comments',
+                                        subtitle: 'When someone comments on your recipes',
+                                        value: _notifPrefs.comments,
+                                        onChanged: (val) => _onUpdateGranularPreference('comments', val),
+                                      ),
+                                      _buildGranularPreferenceTile(
+                                        title: 'New Followers',
+                                        subtitle: 'When someone follows your profile',
+                                        value: _notifPrefs.followers,
+                                        onChanged: (val) => _onUpdateGranularPreference('followers', val),
+                                      ),
+                                      _buildGranularPreferenceTile(
+                                        title: 'Creator Updates',
+                                        subtitle: 'When chefs you follow post new recipes',
+                                        value: _notifPrefs.followingNewRecipes,
+                                        onChanged: (val) => _onUpdateGranularPreference('followingNewRecipes', val),
+                                      ),
+                                      _buildGranularPreferenceTile(
+                                        title: 'Meal Reminders',
+                                        subtitle: 'Reminders for your scheduled meal plans',
+                                        value: _notifPrefs.mealReminders,
+                                        onChanged: (val) => _onUpdateGranularPreference('mealReminders', val),
+                                      ),
+                                      _buildGranularPreferenceTile(
+                                        title: 'Daily Meal Recommendations',
+                                        subtitle: 'Ano Pong Ulam? daily cooking alerts',
+                                        value: _notifPrefs.dailySuggestions,
+                                        onChanged: (val) => _onUpdateGranularPreference('dailySuggestions', val),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

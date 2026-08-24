@@ -219,13 +219,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     // 1. Dashboard Top Header Bar
                     DashboardHeader(
                       displayName: displayName,
-                      onNotificationTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notifications coming soon!'),
-                          ),
-                        );
-                      },
+                      isGuest: widget.isGuest,
                     ),
 
                     const SizedBox(height: 20),

@@ -2,13 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/utils/app_logger.dart';
 import 'comment_model.dart';
+import '../../notifications/data/notification_model.dart';
+import '../../notifications/data/notification_repository.dart';
 
 /// Repository for handling recipe comments against Firestore.
 class CommentRepository {
-  CommentRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CommentRepository({
+    FirebaseFirestore? firestore,
+    NotificationRepository? notificationRepository,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _notifRepo = notificationRepository ?? NotificationRepository();
 
   final FirebaseFirestore _firestore;
+  final NotificationRepository _notifRepo;
 
   CollectionReference<Map<String, dynamic>> _commentsRef(String recipeId) =>
       _firestore.collection('recipes').doc(recipeId).collection('comments');
@@ -43,6 +49,8 @@ class CommentRepository {
     required String userName,
     String? userPhotoUrl,
     required String text,
+    String? recipeAuthorId,
+    String? recipeTitle,
   }) async {
     final cleanText = text.trim();
     if (cleanText.isEmpty) return;
@@ -58,6 +66,25 @@ class CommentRepository {
     );
 
     await _commentsRef(recipeId).add(comment.toFirestore());
+
+    // Dispatch social notification (if author is not commenter)
+    if (recipeAuthorId != null && recipeAuthorId != userId) {
+      final title = recipeTitle ?? 'your recipe';
+      final snippet = cleanText.length > 50 ? '${cleanText.substring(0, 47)}...' : cleanText;
+      try {
+        await _notifRepo.sendNotification(
+          recipientId: recipeAuthorId,
+          type: NotificationType.recipeComment,
+          title: 'New Comment',
+          body: '$userName commented on "$title": "$snippet"',
+          senderId: userId,
+          senderName: userName,
+          senderPhotoUrl: userPhotoUrl,
+          targetId: recipeId,
+          targetType: TargetType.recipe,
+        );
+      } catch (_) {}
+    }
   }
 
   /// Deletes a comment by ID.
