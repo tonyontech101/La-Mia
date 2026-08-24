@@ -59,6 +59,9 @@ dependencies:
 
   # Share recipes via system share sheet.
   share_plus: ^10.1.4
+  flutter_local_notifications: ^22.3.0
+  firebase_messaging: ^15.2.10
+  timezone: ^0.11.1
 
 dev_dependencies:
   flutter_test:

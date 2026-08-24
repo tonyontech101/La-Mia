@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'app/app.dart';
 import 'firebase_options.dart';
+import 'features/notifications/services/local_notification_service.dart';
+import 'features/notifications/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -102,5 +104,14 @@ void main() async {
     ));
     return;
   }
+
+  // Safely initialize notification services without crashing the entire app
+  try {
+    await LocalNotificationService.instance.initialize();
+    await FCMService.instance.initialize();
+  } catch (e) {
+    debugPrint('Notification services init warning (requires full app restart after adding new plugins): $e');
+  }
+
   runApp(const LaMiaApp());
 }

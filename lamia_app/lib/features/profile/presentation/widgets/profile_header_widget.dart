@@ -9,38 +9,44 @@ import '../../../../app/theme/app_typography.dart';
 ///
 /// Features:
 /// - Circular profile avatar with status/online badge
-/// - `#34 ranking` pill badge
+/// - Optional `#34 ranking` pill badge (only shown if ranked)
 /// - Bio text section
-/// - 3-column stats row: Recipes, Likes, Followers
+/// - 3-column stats row: Following, Followers, Likes
 class ProfileHeaderWidget extends StatelessWidget {
   const ProfileHeaderWidget({
     super.key,
     required this.displayName,
     this.bio,
     this.photoUrl,
-    this.ranking = '#34 ranking',
-    this.recipesCount = '24',
-    this.likesCount = '1.2k',
-    this.followersCount = '950',
+    this.ranking,
+    this.followingCount = '0',
+    this.followersCount = '0',
+    this.likesCount = '0',
     this.isGuest = false,
     this.isOwnProfile = true,
     this.isFollowing = false,
     this.onEditProfileTap,
     this.onFollowTap,
+    this.onFollowingTap,
+    this.onFollowersTap,
+    this.onLikesTap,
   });
 
   final String displayName;
   final String? bio;
   final String? photoUrl;
-  final String ranking;
-  final String recipesCount;
-  final String likesCount;
+  final String? ranking;
+  final String followingCount;
   final String followersCount;
+  final String likesCount;
   final bool isGuest;
   final bool isOwnProfile;
   final bool isFollowing;
   final VoidCallback? onEditProfileTap;
   final VoidCallback? onFollowTap;
+  final VoidCallback? onFollowingTap;
+  final VoidCallback? onFollowersTap;
+  final VoidCallback? onLikesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -110,34 +116,35 @@ class ProfileHeaderWidget extends StatelessWidget {
           ],
         ),
 
-        const SizedBox(height: 12),
-
-        // 2. Ranking Pill Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.accentSoft,
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+        // 2. Ranking Pill Badge (Only shown if user has a ranking)
+        if (ranking != null && ranking!.trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  ranking!,
+                  style: AppTypography.caption(
+                    color: AppColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.workspace_premium_rounded,
-                color: AppColors.primary,
-                size: 16,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                ranking,
-                style: AppTypography.caption(
-                  color: AppColors.textPrimary,
-                ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
+        ],
 
         const SizedBox(height: 10),
 
@@ -190,9 +197,9 @@ class ProfileHeaderWidget extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        // 4. Stats Row (Recipes, Likes, Followers)
+        // 4. Stats Row (Following, Followers, Likes)
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadii.card),
@@ -208,11 +215,23 @@ class ProfileHeaderWidget extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatItem(count: recipesCount, label: 'Recipes'),
+              _StatItem(
+                count: followingCount,
+                label: 'Following',
+                onTap: onFollowingTap,
+              ),
               _buildDivider(),
-              _StatItem(count: likesCount, label: 'Likes'),
+              _StatItem(
+                count: followersCount,
+                label: 'Followers',
+                onTap: onFollowersTap,
+              ),
               _buildDivider(),
-              _StatItem(count: followersCount, label: 'Followers'),
+              _StatItem(
+                count: likesCount,
+                label: 'Likes',
+                onTap: onLikesTap,
+              ),
             ],
           ),
         ),
@@ -242,30 +261,48 @@ class ProfileHeaderWidget extends StatelessWidget {
 }
 
 class _StatItem extends StatelessWidget {
-  const _StatItem({required this.count, required this.label});
+  const _StatItem({
+    required this.count,
+    required this.label,
+    this.onTap,
+  });
 
   final String count;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          count,
-          style: AppTypography.title(
-            color: AppColors.textPrimary,
-          ).copyWith(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: AppTypography.caption(
-            color: AppColors.textSecondary,
-          ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
-      ],
+    Widget content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            count,
+            style: AppTypography.title(
+              color: AppColors.textPrimary,
+            ).copyWith(fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTypography.caption(
+              color: AppColors.textSecondary,
+            ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.button),
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

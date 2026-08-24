@@ -14,7 +14,6 @@ import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
 import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
-import '../../profile/presentation/widgets/app_right_sidebar.dart';
 import 'widgets/categories_section.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/featured_recipes_section.dart';
@@ -220,18 +219,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     // 1. Dashboard Top Header Bar
                     DashboardHeader(
                       displayName: displayName,
-                      onNotificationTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notifications coming soon!'),
-                          ),
-                        );
-                      },
-                      onHamburgerTap: () => showAppRightSidebar(
-                        context: context,
-                        isGuest: widget.isGuest,
-                        onNavigateToTab: widget.onNavigateToTab,
-                      ),
+                      isGuest: widget.isGuest,
                     ),
 
                     const SizedBox(height: 20),
