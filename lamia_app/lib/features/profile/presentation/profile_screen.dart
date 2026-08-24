@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -70,6 +71,8 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
   int? _userRank;
+  int? _followingCount;
+  int? _followerCount;
 
   /// Generation counter to discard stale profile loads when navigating
   /// between different users rapidly.
@@ -154,13 +157,36 @@ class ProfileScreenState extends State<ProfileScreen> {
         rank = await _userRepo.getUserLeaderboardRank(uid);
       } catch (_) {}
 
+      // Fetch real-time count of following and followers directly from subcollections
+      int? followingCount;
+      int? followerCount;
+      try {
+        final followingFuture = _followRepo.getFollowingIds(uid);
+        final followerFuture = _followRepo.getFollowerIds(uid);
+        final counts = await Future.wait([followingFuture, followerFuture]);
+        followingCount = counts[0].length;
+        followerCount = counts[1].length;
+      } catch (_) {}
+
       // Discard if a newer profile load has started.
       if (mounted && generation == _profileLoadGeneration) {
         setState(() {
           _userRecipes = recipes;
           _isFollowing = following;
           _userRank = rank;
+          _followingCount = followingCount;
+          _followerCount = followerCount;
         });
+
+        // Self-heal user document in Firestore if followingCount is out of sync and it is own profile
+        if (_isOwnProfile &&
+            followingCount != null &&
+            user != null &&
+            user.followingCount != followingCount) {
+          FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'followingCount': followingCount,
+          }, SetOptions(merge: true));
+        }
       }
     } catch (_) {
       if (mounted && generation == _profileLoadGeneration) {
@@ -247,7 +273,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _navigateToFollowersScreen() {
+  void _navigateToFollowersScreen({int initialTab = 0}) {
     final uid = _displayedUid;
     if (uid == null) return;
     final name = _userModel?.displayName ?? 'User';
@@ -258,6 +284,7 @@ class ProfileScreenState extends State<ProfileScreen> {
         builder: (_) => FollowersScreen(
           userId: uid,
           displayName: name,
+          initialTab: initialTab,
         ),
       ),
     ).then((_) => _loadProfileData());
@@ -661,14 +688,16 @@ class ProfileScreenState extends State<ProfileScreen> {
                           photoUrl: photoUrl,
                           bio: bio,
                           ranking: _userRank != null ? '#$_userRank ranking' : null,
-                          recipesCount: widget.isGuest
+                          followingCount: widget.isGuest
                               ? '0'
-                              : (_userRecipes.isNotEmpty
-                                  ? _userRecipes.length.toString()
-                                  : (_userModel?.recipeCount.toString() ?? '0')),
-                          followersCount:
-                              _userModel?.followerCount.toString() ??
-                              (widget.isGuest ? '0' : '0'),
+                              : (_followingCount?.toString() ??
+                                  _userModel?.followingCount.toString() ??
+                                  '0'),
+                          followersCount: widget.isGuest
+                              ? '0'
+                              : (_followerCount?.toString() ??
+                                  _userModel?.followerCount.toString() ??
+                                  '0'),
                           likesCount:
                               _userModel?.totalLikesReceived.toString() ??
                               (widget.isGuest ? '0' : '0'),
@@ -679,8 +708,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                               ? _navigateToEditProfile
                               : null,
                           onFollowTap: !_isOwnProfile ? _toggleFollow : null,
-                          onFollowersTap: _navigateToFollowersScreen,
-                          onRecipesTap: () => _onTabSelected(0),
+                          onFollowingTap: () =>
+                              _navigateToFollowersScreen(initialTab: 1),
+                          onFollowersTap: () =>
+                              _navigateToFollowersScreen(initialTab: 0),
                           onLikesTap: () => _onTabSelected(1),
                         ),
 

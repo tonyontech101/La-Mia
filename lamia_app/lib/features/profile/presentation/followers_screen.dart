@@ -10,16 +10,18 @@ import '../../auth/data/user_model.dart';
 import '../../social/data/follow_repository.dart';
 import 'profile_screen.dart';
 
-/// Full standalone screen displaying all followers of a user.
+/// Full standalone screen displaying Followers and Following lists for a user.
 class FollowersScreen extends StatefulWidget {
   const FollowersScreen({
     super.key,
     required this.userId,
     required this.displayName,
+    this.initialTab = 0, // 0: Followers, 1: Following
   });
 
   final String userId;
   final String displayName;
+  final int initialTab;
 
   @override
   State<FollowersScreen> createState() => _FollowersScreenState();
@@ -29,8 +31,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
   final FollowRepository _followRepo = FollowRepository();
   final TextEditingController _searchController = TextEditingController();
 
+  late int _activeTab; // 0: Followers, 1: Following
   List<UserModel> _allFollowers = [];
-  List<UserModel> _filteredFollowers = [];
+  List<UserModel> _allFollowing = [];
+  List<UserModel> _filteredUsers = [];
   final Set<String> _followingIds = {};
   bool _isLoading = true;
   String _searchQuery = '';
@@ -38,7 +42,8 @@ class _FollowersScreenState extends State<FollowersScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFollowers();
+    _activeTab = widget.initialTab;
+    _loadData();
   }
 
   @override
@@ -47,22 +52,21 @@ class _FollowersScreenState extends State<FollowersScreen> {
     super.dispose();
   }
 
-  Future<void> _loadFollowers() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final currentUid = FirebaseAuth.instance.currentUser?.uid;
-      final results = await _followRepo.getFollowers(widget.userId);
-
-      Set<String> following = {};
-      if (currentUid != null) {
-        final followingList = await _followRepo.getFollowingIds(currentUid);
-        following = followingList.toSet();
-      }
+      final followers = await _followRepo.getFollowers(widget.userId);
+      final following = await _followRepo.getFollowing(widget.userId);
+      final myFollowingList = currentUid != null
+          ? await _followRepo.getFollowingIds(currentUid)
+          : <String>[];
 
       if (mounted) {
         setState(() {
-          _allFollowers = results;
-          _followingIds.addAll(following);
+          _allFollowers = followers;
+          _allFollowing = following;
+          _followingIds.addAll(myFollowingList);
           _applyFilter();
           _isLoading = false;
         });
@@ -74,12 +78,16 @@ class _FollowersScreenState extends State<FollowersScreen> {
     }
   }
 
+  List<UserModel> get _currentList =>
+      _activeTab == 0 ? _allFollowers : _allFollowing;
+
   void _applyFilter() {
     final query = _searchQuery.trim().toLowerCase();
+    final current = _currentList;
     if (query.isEmpty) {
-      _filteredFollowers = List.from(_allFollowers);
+      _filteredUsers = List.from(current);
     } else {
-      _filteredFollowers = _allFollowers.where((u) {
+      _filteredUsers = current.where((u) {
         final nameMatch = u.displayName.toLowerCase().contains(query);
         final bioMatch = u.bio?.toLowerCase().contains(query) ?? false;
         return nameMatch || bioMatch;
@@ -90,6 +98,14 @@ class _FollowersScreenState extends State<FollowersScreen> {
   void _onSearchChanged(String value) {
     setState(() {
       _searchQuery = value;
+      _applyFilter();
+    });
+  }
+
+  void _onTabChanged(int index) {
+    if (_activeTab == index) return;
+    setState(() {
+      _activeTab = index;
       _applyFilter();
     });
   }
@@ -163,7 +179,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Followers',
+                              _activeTab == 0 ? 'Followers' : 'Following',
                               style: AppTypography.headline(
                                 color: AppColors.textPrimary,
                               ).copyWith(
@@ -182,30 +198,48 @@ class _FollowersScreenState extends State<FollowersScreen> {
                           ],
                         ),
                       ),
-                      if (!_isLoading && _allFollowers.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt,
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Text(
-                            '${_allFollowers.length}',
-                            style: AppTypography.caption(
-                              color: AppColors.primary,
-                            ).copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
                     ],
                   ),
                 ),
 
-                // 2. Search Bar (if more than 3 followers or active search)
-                if (_allFollowers.length > 3 || _searchQuery.isNotEmpty)
+                // 2. Tab Bar Switcher (Followers | Following)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenH,
+                    vertical: 4,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _TabButton(
+                            label: 'Followers (${_allFollowers.length})',
+                            isSelected: _activeTab == 0,
+                            onTap: () => _onTabChanged(0),
+                          ),
+                        ),
+                        Expanded(
+                          child: _TabButton(
+                            label: 'Following (${_allFollowing.length})',
+                            isSelected: _activeTab == 1,
+                            onTap: () => _onTabChanged(1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // 3. Search Bar
+                if (_currentList.length > 3 || _searchQuery.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.screenH,
@@ -229,7 +263,9 @@ class _FollowersScreenState extends State<FollowersScreen> {
                         onChanged: _onSearchChanged,
                         style: AppTypography.body(color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Search followers...',
+                          hintText: _activeTab == 0
+                              ? 'Search followers...'
+                              : 'Search following...',
                           hintStyle: AppTypography.body(
                             color: AppColors.textSecondary.withValues(alpha: 0.6),
                           ),
@@ -263,7 +299,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
 
                 const SizedBox(height: 6),
 
-                // 3. Followers List Content
+                // 4. List Content
                 Expanded(
                   child: _isLoading
                       ? const Center(
@@ -274,13 +310,13 @@ class _FollowersScreenState extends State<FollowersScreen> {
                         )
                       : RefreshIndicator(
                           color: AppColors.primary,
-                          onRefresh: _loadFollowers,
-                          child: _filteredFollowers.isEmpty
+                          onRefresh: _loadData,
+                          child: _filteredUsers.isEmpty
                               ? ListView(
                                   physics: const AlwaysScrollableScrollPhysics(),
                                   children: [
                                     SizedBox(
-                                      height: MediaQuery.sizeOf(context).height * 0.45,
+                                      height: MediaQuery.sizeOf(context).height * 0.40,
                                       child: Center(
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(
@@ -308,8 +344,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                               const SizedBox(height: 16),
                                               Text(
                                                 _searchQuery.isNotEmpty
-                                                    ? 'No followers found'
-                                                    : 'No followers yet',
+                                                    ? 'No users found'
+                                                    : (_activeTab == 0
+                                                        ? 'No followers yet'
+                                                        : 'Not following anyone yet'),
                                                 style: AppTypography.headline(
                                                   color: AppColors.textPrimary,
                                                 ).copyWith(
@@ -322,7 +360,9 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                               Text(
                                                 _searchQuery.isNotEmpty
                                                     ? 'No one matches "$_searchQuery". Try another search.'
-                                                    : 'When foodies follow ${widget.displayName}, they will appear here.',
+                                                    : (_activeTab == 0
+                                                        ? 'When foodies follow ${widget.displayName}, they will appear here.'
+                                                        : 'When ${widget.displayName} follows chefs, they will appear here.'),
                                                 style: AppTypography.body(
                                                   color: AppColors.textSecondary,
                                                 ).copyWith(fontSize: 13),
@@ -343,16 +383,16 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                     horizontal: AppSpacing.screenH,
                                     vertical: 8,
                                   ),
-                                  itemCount: _filteredFollowers.length,
+                                  itemCount: _filteredUsers.length,
                                   separatorBuilder: (context, index) => const SizedBox(height: 8),
                                   itemBuilder: (context, index) {
-                                    final follower = _filteredFollowers[index];
+                                    final user = _filteredUsers[index];
                                     final isSelf = currentUid != null &&
-                                        follower.uid == currentUid;
+                                        user.uid == currentUid;
                                     final isFollowing =
-                                        _followingIds.contains(follower.uid);
-                                    final initial = follower.displayName.isNotEmpty
-                                        ? follower.displayName[0].toUpperCase()
+                                        _followingIds.contains(user.uid);
+                                    final initial = user.displayName.isNotEmpty
+                                        ? user.displayName[0].toUpperCase()
                                         : 'U';
 
                                     return PressableScale(
@@ -361,10 +401,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) => ProfileScreen(
-                                              targetUserId: follower.uid,
+                                              targetUserId: user.uid,
                                             ),
                                           ),
-                                        ).then((_) => _loadFollowers());
+                                        ).then((_) => _loadData());
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(12),
@@ -402,10 +442,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                                 ),
                                               ),
                                               child: ClipOval(
-                                                child: follower.photoUrl != null &&
-                                                        follower.photoUrl!.isNotEmpty
+                                                child: user.photoUrl != null &&
+                                                        user.photoUrl!.isNotEmpty
                                                     ? CachedNetworkImage(
-                                                        imageUrl: follower.photoUrl!,
+                                                        imageUrl: user.photoUrl!,
                                                         fit: BoxFit.cover,
                                                         placeholder: (context, url) =>
                                                             const Center(
@@ -449,7 +489,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    follower.displayName,
+                                                    user.displayName,
                                                     style: AppTypography.bodyStrong(
                                                       color: AppColors.textPrimary,
                                                     ).copyWith(fontSize: 15),
@@ -458,10 +498,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                                         TextOverflow.ellipsis,
                                                   ),
                                                   const SizedBox(height: 2),
-                                                  if (follower.bio != null &&
-                                                      follower.bio!.trim().isNotEmpty)
+                                                  if (user.bio != null &&
+                                                      user.bio!.trim().isNotEmpty)
                                                     Text(
-                                                      follower.bio!.trim(),
+                                                      user.bio!.trim(),
                                                       style: AppTypography.caption(
                                                         color: AppColors.textSecondary,
                                                       ).copyWith(fontSize: 12),
@@ -471,7 +511,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                                     )
                                                   else
                                                     Text(
-                                                      '${follower.recipeCount} ${follower.recipeCount == 1 ? 'recipe' : 'recipes'} • ${follower.followerCount} ${follower.followerCount == 1 ? 'follower' : 'followers'}',
+                                                      '${user.recipeCount} ${user.recipeCount == 1 ? 'recipe' : 'recipes'} • ${user.followerCount} ${user.followerCount == 1 ? 'follower' : 'followers'}',
                                                       style: AppTypography.caption(
                                                         color: AppColors.textSecondary
                                                             .withValues(alpha: 0.75),
@@ -486,7 +526,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
                                               const SizedBox(width: 8),
                                               ElevatedButton(
                                                 onPressed: () =>
-                                                    _toggleFollowUser(follower),
+                                                    _toggleFollowUser(user),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: isFollowing
                                                       ? AppColors.surfaceAlt
@@ -526,6 +566,55 @@ class _FollowersScreenState extends State<FollowersScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppTypography.caption(
+            color: isSelected
+                ? AppColors.textPrimary
+                : AppColors.textSecondary,
+          ).copyWith(
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
           ),
         ),
       ),

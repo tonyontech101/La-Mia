@@ -11,7 +11,7 @@ import '../../../../app/theme/app_typography.dart';
 /// - Circular profile avatar with status/online badge
 /// - Optional `#34 ranking` pill badge (only shown if ranked)
 /// - Bio text section
-/// - 3-column stats row: Recipes, Followers, Likes (Followers clickable)
+/// - 3-column stats row: Following, Followers, Likes
 class ProfileHeaderWidget extends StatelessWidget {
   const ProfileHeaderWidget({
     super.key,
@@ -19,7 +19,7 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.bio,
     this.photoUrl,
     this.ranking,
-    this.recipesCount = '0',
+    this.followingCount = '0',
     this.followersCount = '0',
     this.likesCount = '0',
     this.isGuest = false,
@@ -27,16 +27,16 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.isFollowing = false,
     this.onEditProfileTap,
     this.onFollowTap,
+    this.onFollowingTap,
     this.onFollowersTap,
     this.onLikesTap,
-    this.onRecipesTap,
   });
 
   final String displayName;
   final String? bio;
   final String? photoUrl;
   final String? ranking;
-  final String recipesCount;
+  final String followingCount;
   final String followersCount;
   final String likesCount;
   final bool isGuest;
@@ -44,9 +44,9 @@ class ProfileHeaderWidget extends StatelessWidget {
   final bool isFollowing;
   final VoidCallback? onEditProfileTap;
   final VoidCallback? onFollowTap;
+  final VoidCallback? onFollowingTap;
   final VoidCallback? onFollowersTap;
   final VoidCallback? onLikesTap;
-  final VoidCallback? onRecipesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +197,7 @@ class ProfileHeaderWidget extends StatelessWidget {
 
         const SizedBox(height: 18),
 
-        // 4. Stats Row (Recipes, Followers, Likes)
+        // 4. Stats Row (Following, Followers, Likes)
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: BoxDecoration(
@@ -216,9 +216,9 @@ class ProfileHeaderWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _StatItem(
-                count: recipesCount,
-                label: 'Recipes',
-                onTap: onRecipesTap,
+                count: followingCount,
+                label: 'Following',
+                onTap: onFollowingTap,
               ),
               _buildDivider(),
               _StatItem(
