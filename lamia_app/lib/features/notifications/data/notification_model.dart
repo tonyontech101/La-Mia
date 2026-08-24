@@ -4,6 +4,7 @@ enum NotificationType {
   recipeLike,
   recipeComment,
   commentLike,
+  commentReply,
   newFollower,
   followingNewRecipe,
   recipeApproved,
@@ -17,6 +18,7 @@ enum NotificationType {
       case NotificationType.recipeLike: return 'recipe_like';
       case NotificationType.recipeComment: return 'recipe_comment';
       case NotificationType.commentLike: return 'comment_like';
+      case NotificationType.commentReply: return 'comment_reply';
       case NotificationType.newFollower: return 'new_follower';
       case NotificationType.followingNewRecipe: return 'following_new_recipe';
       case NotificationType.recipeApproved: return 'recipe_approved';
@@ -32,6 +34,7 @@ enum NotificationType {
       case 'recipe_like': return NotificationType.recipeLike;
       case 'recipe_comment': return NotificationType.recipeComment;
       case 'comment_like': return NotificationType.commentLike;
+      case 'comment_reply': return NotificationType.commentReply;
       case 'new_follower': return NotificationType.newFollower;
       case 'following_new_recipe': return NotificationType.followingNewRecipe;
       case 'recipe_approved': return NotificationType.recipeApproved;

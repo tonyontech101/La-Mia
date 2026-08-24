@@ -41,6 +41,8 @@ class NotificationTile extends StatelessWidget {
         return Icons.favorite_rounded;
       case NotificationType.recipeComment:
         return Icons.comment_rounded;
+      case NotificationType.commentReply:
+        return Icons.reply_rounded;
       case NotificationType.newFollower:
         return Icons.person_add_rounded;
       case NotificationType.followingNewRecipe:
@@ -65,6 +67,8 @@ class NotificationTile extends StatelessWidget {
         return Colors.red;
       case NotificationType.recipeComment:
         return Colors.amber[800]!;
+      case NotificationType.commentReply:
+        return AppColors.accent;
       case NotificationType.newFollower:
         return Colors.teal;
       case NotificationType.followingNewRecipe:

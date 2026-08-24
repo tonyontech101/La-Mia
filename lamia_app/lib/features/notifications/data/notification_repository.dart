@@ -18,7 +18,7 @@ class NotificationRepository {
     if (filter != null && filter != 'all') {
       List<String> types = [];
       if (filter == 'social') {
-        types = ['recipe_like', 'recipe_comment', 'comment_like', 'new_follower', 'following_new_recipe'];
+        types = ['recipe_like', 'recipe_comment', 'comment_like', 'comment_reply', 'new_follower', 'following_new_recipe'];
       } else if (filter == 'planner') {
         types = ['meal_reminder', 'daily_suggestion'];
       } else if (filter == 'system') {
@@ -61,7 +61,11 @@ class NotificationRepository {
     if (senderId == recipientId) return;
 
     // Check for debouncing duplicate social notifications within the last 5 minutes
-    if (type == NotificationType.recipeLike && targetId != null && senderId != null) {
+    if ((type == NotificationType.recipeLike ||
+            type == NotificationType.commentLike ||
+            type == NotificationType.commentReply) &&
+        targetId != null &&
+        senderId != null) {
       final fiveMinAgo = DateTime.now().subtract(const Duration(minutes: 5));
       final recent = await _userNotifications(recipientId)
           .where('type', isEqualTo: type.value)
