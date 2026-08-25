@@ -146,6 +146,16 @@ class ChefOfMonthCard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
+                Text(
+                  'Awarded to the creator of this month\'s most-engaged new recipe. '
+                  'Likes and favorites help a dish rise to the top.',
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 11, height: 1.35),
+                ),
+
+                const SizedBox(height: 12),
+
                 // Chef name, dish, likes + View Profile button
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,

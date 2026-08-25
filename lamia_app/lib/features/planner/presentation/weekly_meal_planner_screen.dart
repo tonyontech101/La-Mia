@@ -726,6 +726,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
                   final matched = _cachedRecipes.firstWhere(
                     (r) => r.id == item.recipeId || r.name == item.recipeName,
                     orElse: () => RecipeModel(
+                      id: item.recipeId,
                       name: item.recipeName,
                       category: item.category,
                       region: 'Philippines',

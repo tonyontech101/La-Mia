@@ -9,7 +9,7 @@ import '../../../../app/theme/app_typography.dart';
 ///
 /// Features:
 /// - Circular profile avatar with status/online badge
-/// - Optional `#34 ranking` pill badge (only shown if ranked)
+/// - Earned leaderboard recognition badges
 /// - Bio text section
 /// - 3-column stats row: Following, Followers, Likes
 class ProfileHeaderWidget extends StatelessWidget {
@@ -18,7 +18,8 @@ class ProfileHeaderWidget extends StatelessWidget {
     required this.displayName,
     this.bio,
     this.photoUrl,
-    this.ranking,
+    this.recognitions = const [],
+    this.achievementLevelLabel,
     this.followingCount = '0',
     this.followersCount = '0',
     this.likesCount = '0',
@@ -30,12 +31,14 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.onFollowingTap,
     this.onFollowersTap,
     this.onLikesTap,
+    this.onAchievementsTap,
   });
 
   final String displayName;
   final String? bio;
   final String? photoUrl;
-  final String? ranking;
+  final List<ProfileRecognition> recognitions;
+  final String? achievementLevelLabel;
   final String followingCount;
   final String followersCount;
   final String likesCount;
@@ -47,6 +50,7 @@ class ProfileHeaderWidget extends StatelessWidget {
   final VoidCallback? onFollowingTap;
   final VoidCallback? onFollowersTap;
   final VoidCallback? onLikesTap;
+  final VoidCallback? onAchievementsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -116,33 +120,16 @@ class ProfileHeaderWidget extends StatelessWidget {
           ],
         ),
 
-        // 2. Ranking Pill Badge (Only shown if user has a ranking)
-        if (ranking != null && ranking!.trim().isNotEmpty) ...[
+        // 2. Recognition badges (only shown for earned recognitions).
+        if (recognitions.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.workspace_premium_rounded,
-                  color: AppColors.primary,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  ranking!,
-                  style: AppTypography.caption(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
-                ),
-              ],
-            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 6,
+            runSpacing: 6,
+            children: recognitions
+                .map((recognition) => _RecognitionBadge(recognition))
+                .toList(),
           ),
         ],
 
@@ -171,6 +158,25 @@ class ProfileHeaderWidget extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+
+        if (achievementLevelLabel != null && onAchievementsTap != null) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: onAchievementsTap,
+            icon: const Icon(Icons.emoji_events_rounded, size: 17),
+            label: Text(
+              '${isOwnProfile ? 'Your' : 'View'} achievements · '
+              '$achievementLevelLabel',
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: AppTypography.caption().copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
 
         // 3b. Follow Button for Other User Profiles
         if (!isOwnProfile && onFollowTap != null) ...[
@@ -257,6 +263,56 @@ class ProfileHeaderWidget extends StatelessWidget {
 
   Widget _buildDivider() {
     return Container(height: 28, width: 1, color: AppColors.border);
+  }
+}
+
+/// A public, presentation-only description of one earned profile badge.
+class ProfileRecognition {
+  const ProfileRecognition({
+    required this.label,
+    required this.icon,
+    required this.color,
+    this.detail,
+  });
+
+  final String label;
+  final String? detail;
+  final IconData icon;
+  final Color color;
+}
+
+class _RecognitionBadge extends StatelessWidget {
+  const _RecognitionBadge(this.recognition);
+
+  final ProfileRecognition recognition;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeText = recognition.detail == null
+        ? recognition.label
+        : '${recognition.label} ${recognition.detail}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: recognition.color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: recognition.color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(recognition.icon, color: recognition.color, size: 15),
+          const SizedBox(width: 5),
+          Text(
+            badgeText,
+            style: AppTypography.caption(color: AppColors.textPrimary).copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

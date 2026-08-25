@@ -257,25 +257,39 @@ class RecipeRepository {
 
   /// Batch-fetches recipes by their document IDs.
   ///
-  /// Firestore `whereIn` caps at 30 elements, so this method chunks
-  /// the list and merges results. Used for liked/saved recipe lists.
+  /// Uses individual document reads (rather than a whereIn collection query)
+  /// because Firestore security rules evaluate collection-level queries
+  /// against ALL docs — silently omitting any document the caller cannot read
+  /// (e.g. pending recipes authored by others). Individual doc.get() calls
+  /// resolve per-document read access correctly, so liked/saved recipes
+  /// always appear regardless of their status.
+  ///
+  /// Preserves the original ordering of [ids].
   Future<List<RecipeModel>> recipesByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
-    final results = <RecipeModel>[];
-    // Firestore whereIn supports max 30 values per query.
+    // Fetch all docs concurrently in chunks of 30 to avoid overloading
+    // the connection pool while still being fast.
+    final results = <RecipeModel?>[];
     for (var i = 0; i < ids.length; i += 30) {
       final chunk = ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30);
-      final snap = await _firestore
-          .collection('recipes')
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
-      results.addAll(
-        snap.docs
-            .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-            .where((r) => r.status == 'approved' || r.isSystemRecipe),
+      final chunkResults = await Future.wait(
+        chunk.map((docId) async {
+          try {
+            final doc = await _firestore.collection('recipes').doc(docId).get();
+            if (!doc.exists || doc.data() == null) return null;
+            final model = RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
+            if (model.status == 'rejected') return null;
+            return model;
+          } catch (_) {
+            return null;
+          }
+        }),
       );
+      results.addAll(chunkResults);
     }
-    return results;
+    // Preserve the original ordering of [ids], filtering out any nulls
+    // (recipes that don't exist or were rejected).
+    return results.whereType<RecipeModel>().toList();
   }
 
   /// Returns recipes from the given [authorIds] — used for the "Following"
