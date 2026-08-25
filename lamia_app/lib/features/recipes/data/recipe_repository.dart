@@ -397,4 +397,17 @@ class RecipeRepository {
         .add(recipe.toFirestoreForCreate());
     return ref.id;
   }
+
+  /// Updates an existing recipe in Firestore.
+  Future<void> updateRecipe(String recipeId, RecipeModel recipe) async {
+    await _firestore
+        .collection('recipes')
+        .doc(recipeId)
+        .update(recipe.toFirestore());
+  }
+
+  /// Deletes a recipe from Firestore.
+  Future<void> deleteRecipe(String recipeId) async {
+    await _firestore.collection('recipes').doc(recipeId).delete();
+  }
 }

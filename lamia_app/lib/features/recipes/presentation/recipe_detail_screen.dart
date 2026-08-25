@@ -19,12 +19,16 @@ import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../planner/data/meal_plan_model.dart';
 import '../../planner/data/meal_plan_repository.dart';
+import '../../planner/data/grocery_list_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../social/data/favorites_repository.dart';
 import '../../social/presentation/widgets/comment_section.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
+import '../../social/data/rating_repository.dart';
 import '../data/recipe_model.dart';
+import '../data/recipe_repository.dart';
+import 'recipe_creating_screen.dart';
 
 /// Parses a raw instruction string into a `(title, body)` pair.
 ///
@@ -73,10 +77,14 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   int _activeTabIndex = 0; // 0: Ingredients, 1: Instructions, 2: Chef's Tips
 
+  late RecipeModel _recipe;
+
   // ── Social state ────────────────────────────────────────────────────────
   final LikeRepository _likeRepo = LikeRepository();
   final FavoritesRepository _favoritesRepo = FavoritesRepository();
   final FollowRepository _followRepo = FollowRepository();
+  final RatingRepository _ratingRepo = RatingRepository();
+  final GroceryListRepository _groceryRepo = GroceryListRepository();
 
   bool _isLiked = false;
   bool _isBookmarked = false;
@@ -94,10 +102,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _localLikeCount = widget.recipe.likeCount;
-    _localFavoriteCount = widget.recipe.favoriteCount;
-    _localRatingAvg = widget.recipe.ratingAvg;
-    _localRatingCount = widget.recipe.ratingCount;
+    _recipe = widget.recipe;
+    _localLikeCount = _recipe.likeCount;
+    _localFavoriteCount = _recipe.favoriteCount;
+    _localRatingAvg = _recipe.ratingAvg;
+    _localRatingCount = _recipe.ratingCount;
     _loadSocialState();
   }
 
@@ -112,7 +121,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       if (mounted) setState(() => _socialLoading = false);
       return;
     }
-    final recipeId = widget.recipe.id;
+    final recipeId = _recipe.id;
     if (recipeId == null) {
       if (mounted) setState(() => _socialLoading = false);
       return;
@@ -121,19 +130,21 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       final results = await Future.wait([
         _likeRepo.isLiked(recipeId: recipeId, userId: user.uid),
         _favoritesRepo.isSaved(recipeId: recipeId, userId: user.uid),
-        if (widget.recipe.authorId != null && !widget.recipe.isSystemRecipe)
+        if (_recipe.authorId != null && !_recipe.isSystemRecipe)
           _followRepo.isFollowing(
             currentUid: user.uid,
-            targetUid: widget.recipe.authorId!,
+            targetUid: _recipe.authorId!,
           )
         else
           Future.value(false),
+        _ratingRepo.getUserRating(recipeId: recipeId, userId: user.uid),
       ]);
       if (mounted) {
         setState(() {
-          _isLiked = results[0];
-          _isBookmarked = results[1];
-          _isFollowing = results[2];
+          _isLiked = results[0] as bool;
+          _isBookmarked = results[1] as bool;
+          _isFollowing = results[2] as bool;
+          _userRating = (results[3] as int?) ?? 0;
           _socialLoading = false;
         });
       }
@@ -148,7 +159,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       AppSnackbar.show(context, message: 'Sign in to like recipes');
       return;
     }
-    final recipeId = widget.recipe.id;
+    final recipeId = _recipe.id;
     if (recipeId == null || recipeId.isEmpty) {
       AppSnackbar.show(context, message: 'Cannot like this recipe');
       return;
@@ -157,10 +168,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       final newState = await _likeRepo.toggleLike(
         recipeId: recipeId,
         userId: user.uid,
-        recipeAuthorId: widget.recipe.authorId,
+        recipeAuthorId: _recipe.authorId,
         senderName: user.displayName,
         senderPhotoUrl: user.photoURL,
-        recipeTitle: widget.recipe.name,
+        recipeTitle: _recipe.name,
       );
       if (mounted) {
         setState(() {
@@ -183,7 +194,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       AppSnackbar.show(context, message: 'Sign in to save recipes');
       return;
     }
-    final recipeId = widget.recipe.id;
+    final recipeId = _recipe.id;
     if (recipeId == null || recipeId.isEmpty) {
       AppSnackbar.show(context, message: 'Cannot save this recipe');
       return;
@@ -212,11 +223,28 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     }
   }
 
+  Future<void> _reloadRecipe() async {
+    final recipeId = _recipe.id;
+    if (recipeId == null) return;
+    try {
+      final updated = await RecipeRepository().getRecipe(recipeId);
+      if (updated != null && mounted) {
+        setState(() {
+          _recipe = updated;
+          _localLikeCount = updated.likeCount;
+          _localFavoriteCount = updated.favoriteCount;
+          _localRatingAvg = updated.ratingAvg;
+          _localRatingCount = updated.ratingCount;
+        });
+      }
+    } catch (_) {}
+  }
+
   void _openMoreMenu() {
     final user = FirebaseAuth.instance.currentUser;
     final isAuthor = user != null &&
-        widget.recipe.authorId == user.uid &&
-        !widget.recipe.isSystemRecipe;
+        _recipe.authorId == user.uid &&
+        !_recipe.isSystemRecipe;
 
     showModalBottomSheet(
       context: context,
@@ -270,11 +298,39 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 },
               ),
               _buildMenuRow(
+                icon: Icons.shopping_basket_rounded,
+                label: 'Add ingredients to grocery list',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) {
+                    AppSnackbar.show(context, message: 'Please sign in to add to grocery list');
+                    return;
+                  }
+                  try {
+                    await _groceryRepo.addIngredientsFromRecipe(
+                      userId: user.uid,
+                      recipe: _recipe,
+                    );
+                    if (mounted) {
+                      AppSnackbar.show(
+                        context,
+                        message: '${_recipe.ingredients.length} ingredients added to grocery list.',
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      AppSnackbar.show(context, message: 'Could not add to grocery list: $e', isError: true);
+                    }
+                  }
+                },
+              ),
+              _buildMenuRow(
                 icon: Icons.link_rounded,
                 label: 'Copy link',
                 onTap: () {
                   Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(text: 'https://lamia.app/recipe/${widget.recipe.id}'));
+                  Clipboard.setData(ClipboardData(text: 'https://lamia.app/recipe/${_recipe.id}'));
                   AppSnackbar.show(context, message: 'Link copied.');
                 },
               ),
@@ -286,7 +342,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
                   onTap: () {
                     Navigator.pop(ctx);
-                    // TODO: navigate to edit screen
+                    Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RecipeCreatingScreen(recipeToEdit: _recipe),
+                      ),
+                    ).then((updated) {
+                      if (updated == true) {
+                        _reloadRecipe();
+                      }
+                    });
                   },
                 ),
                 _buildMenuRow(
@@ -346,8 +411,39 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   void _confirmDeleteRecipe() {
-    // Placeholder — full delete implementation is out of scope
-    AppSnackbar.show(context, message: 'Delete not yet implemented', isError: true);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Recipe'),
+        content: const Text('Are you sure you want to delete this recipe permanently? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final recipeId = _recipe.id;
+              if (recipeId != null) {
+                try {
+                  await RecipeRepository().deleteRecipe(recipeId);
+                  if (mounted) {
+                    AppSnackbar.show(context, message: 'Recipe deleted successfully.');
+                    Navigator.pop(context, true); // Pop details screen with refresh trigger
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    AppSnackbar.show(context, message: 'Failed to delete recipe: $e', isError: true);
+                  }
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openAddToPlannerPicker() {
@@ -355,22 +451,37 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PlannerSlotPicker(recipe: widget.recipe, plannerRepo: _plannerRepo),
+      builder: (_) => _PlannerSlotPicker(recipe: _recipe, plannerRepo: _plannerRepo),
     );
   }
 
-  void _handleRateRecipe(int rating) {
-    if (_userRating > 0) {
-      AppSnackbar.show(context, message: 'You have already rated this recipe!');
+  Future<void> _handleRateRecipe(int rating) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      AppSnackbar.show(context, message: 'Please sign in to rate this recipe');
       return;
     }
-    setState(() {
-      _userRating = rating;
-      final totalScore = (_localRatingAvg * _localRatingCount) + rating;
-      _localRatingCount += 1;
-      _localRatingAvg = totalScore / _localRatingCount;
-    });
-    AppSnackbar.show(context, message: 'Thank you for rating this recipe!');
+    final recipeId = _recipe.id;
+    if (recipeId == null) return;
+
+    try {
+      await _ratingRepo.submitRating(
+        recipeId: recipeId,
+        userId: user.uid,
+        rating: rating,
+      );
+      if (mounted) {
+        setState(() {
+          _userRating = rating;
+        });
+        _reloadRecipe();
+        AppSnackbar.show(context, message: 'Thank you for rating this recipe!');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(context, message: 'Could not submit rating: $e', isError: true);
+      }
+    }
   }
 
   Future<void> _toggleFollow() async {
@@ -579,7 +690,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
 
   @override
   Widget build(BuildContext context) {
-    final recipe = widget.recipe;
+    final recipe = _recipe;
     final chefsTips = recipe.chefsTips.isNotEmpty
         ? recipe.chefsTips
         : _defaultChefsTips;

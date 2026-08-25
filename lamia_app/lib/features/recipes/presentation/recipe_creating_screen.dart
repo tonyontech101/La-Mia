@@ -66,7 +66,9 @@ class _InstructionStepData {
 /// Redesigned as a modern 5-step wizard in a clean elevated card matching
 /// the reference design.
 class RecipeCreatingScreen extends StatefulWidget {
-  const RecipeCreatingScreen({super.key});
+  const RecipeCreatingScreen({super.key, this.recipeToEdit});
+
+  final RecipeModel? recipeToEdit;
 
   @override
   State<RecipeCreatingScreen> createState() => _RecipeCreatingScreenState();
@@ -159,12 +161,94 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize default ingredient row
-    _ingredientItems.add(_IngredientRowData());
-    // Initialize default instruction step
-    _instructionItems.add(_InstructionStepData());
-    // Initialize default chef's tip field
-    _chefsTipControllers.add(TextEditingController());
+    if (widget.recipeToEdit != null) {
+      final r = widget.recipeToEdit!;
+      _titleController.text = r.name;
+      _descriptionController.text = r.description;
+      _selectedCoverPhotoUrl = r.coverPhotoUrl;
+
+      // Category matching
+      final cat = RecipeCategoryModel.defaultCategories.firstWhere(
+        (c) => c.name.toLowerCase() == r.category.toLowerCase(),
+        orElse: () => RecipeCategoryModel.defaultCategories.first,
+      );
+      _selectedCategoryId = cat.id;
+
+      // Region matching
+      if (_regionOptions.contains(r.region)) {
+        _selectedRegion = r.region;
+      } else if (r.region == 'Philippines') {
+        _selectedRegion = 'Any region';
+      } else {
+        _selectedRegion = 'Other / Fusion';
+      }
+
+      // Difficulty matching
+      if (_difficultyOptions.contains(r.difficulty)) {
+        _selectedDifficulty = r.difficulty;
+      }
+
+      // Budget matching
+      final budgetStr = r.budget;
+      if (budgetStr != null) {
+        final matchedBudget = _budgetOptions.firstWhere(
+          (b) => b.toLowerCase().contains(budgetStr.toLowerCase()) || budgetStr.toLowerCase().contains(b.toLowerCase()),
+          orElse: () => _budgetOptions.first,
+        );
+        _selectedBudget = matchedBudget;
+      }
+
+      _servings = r.servings;
+
+      // Parse cook & prep times
+      final prepDigits = int.tryParse(r.prepTime.replaceAll(RegExp(r'[^0-9]'), ''));
+      if (prepDigits != null) _prepTimeMin = prepDigits;
+
+      final cookDigits = int.tryParse(r.cookTime.replaceAll(RegExp(r'[^0-9]'), ''));
+      if (cookDigits != null) _cookTimeMin = cookDigits;
+
+      _tagsController.text = r.tags.join(', ');
+
+      // Ingredients loading
+      for (final ingredient in r.ingredients) {
+        String name = ingredient;
+        String notes = '';
+        if (ingredient.contains('(') && ingredient.endsWith(')')) {
+          final openParen = ingredient.lastIndexOf('(');
+          name = ingredient.substring(0, openParen).trim();
+          notes = ingredient.substring(openParen + 1, ingredient.length - 1).trim();
+        }
+        _ingredientItems.add(_IngredientRowData(name: name, notes: notes));
+      }
+
+      // Instructions loading
+      for (final step in r.instructions) {
+        String desc = step;
+        String tip = '';
+        if (step.contains('(Tip:') && step.endsWith(')')) {
+          final openTip = step.lastIndexOf('(Tip:');
+          desc = step.substring(0, openTip).trim();
+          tip = step.substring(openTip + 5, step.length - 1).trim();
+        }
+        _instructionItems.add(_InstructionStepData(description: desc, tip: tip));
+      }
+
+      // Chef's tips loading
+      for (final tip in r.chefsTips) {
+        _chefsTipControllers.add(TextEditingController(text: tip));
+      }
+    }
+
+    // Default fallbacks if empty
+    if (_ingredientItems.isEmpty) {
+      _ingredientItems.add(_IngredientRowData());
+    }
+    if (_instructionItems.isEmpty) {
+      _instructionItems.add(_InstructionStepData());
+    }
+    if (_chefsTipControllers.isEmpty) {
+      _chefsTipControllers.add(TextEditingController());
+    }
   }
 
   @override
@@ -438,6 +522,46 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       final tags = _parsedTags.isNotEmpty
           ? _parsedTags
           : [categoryModel.name.toLowerCase()];
+
+      if (widget.recipeToEdit != null) {
+        final updatedRecipe = RecipeModel(
+          id: widget.recipeToEdit!.id,
+          name: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: categoryModel.name,
+          region: _selectedRegion == 'Any region' ? 'Philippines' : _selectedRegion,
+          prepTime: '$_prepTimeMin mins',
+          cookTime: '$_cookTimeMin mins',
+          servings: _servings,
+          difficulty: _selectedDifficulty,
+          ingredients: ingredients,
+          instructions: instructions,
+          chefsTips: _formattedChefsTips,
+          tags: tags,
+          coverPhotoUrl: coverUrl,
+          source: widget.recipeToEdit!.source,
+          authorId: widget.recipeToEdit!.authorId,
+          authorName: widget.recipeToEdit!.authorName,
+          authorPhotoUrl: widget.recipeToEdit!.authorPhotoUrl,
+          isSystemRecipe: widget.recipeToEdit!.isSystemRecipe,
+          createdAt: widget.recipeToEdit!.createdAt,
+          budget: _selectedBudget,
+          status: widget.recipeToEdit!.status,
+          likeCount: widget.recipeToEdit!.likeCount,
+          commentCount: widget.recipeToEdit!.commentCount,
+          favoriteCount: widget.recipeToEdit!.favoriteCount,
+          ratingAvg: widget.recipeToEdit!.ratingAvg,
+          ratingCount: widget.recipeToEdit!.ratingCount,
+          trendingScore: widget.recipeToEdit!.trendingScore,
+        );
+
+        await _recipeRepo.updateRecipe(widget.recipeToEdit!.id!, updatedRecipe);
+
+        if (!mounted) return;
+        _showToast('Recipe updated successfully!');
+        Navigator.pop(context, true);
+        return;
+      }
 
       final newRecipe = RecipeModel(
         name: _titleController.text.trim(),
