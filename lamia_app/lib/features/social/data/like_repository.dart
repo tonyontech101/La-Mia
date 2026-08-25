@@ -1,16 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
-import '../../recipes/data/recipe_model.dart';
-import '../../recipes/data/recipe_repository.dart';
 import '../../notifications/data/notification_model.dart';
 import '../../notifications/data/notification_repository.dart';
+import '../../recipes/data/recipe_model.dart';
+import '../../recipes/data/recipe_repository.dart';
 
-/// Manages recipe likes using the `likes/{recipeId}/users/{userId}`
-/// subcollection pattern from the architecture doc.
-///
-/// Existence of a document means the user liked the recipe.
-/// Counter updates (`likeCount`, `totalLikesReceived`) are done
-/// in a batch write for consistency.
+/// Manages recipe likes and the per-user index used by the profile Likes tab.
 class LikeRepository {
   LikeRepository({
     FirebaseFirestore? firestore,
@@ -24,11 +20,11 @@ class LikeRepository {
   final RecipeRepository _recipeRepository;
   final NotificationRepository _notifRepo;
 
-  /// Toggles the like state for [recipeId] by the current [userId].
+  /// Toggles a recipe like and returns its resulting state.
   ///
-  /// Returns `true` if the recipe is now liked, `false` if unliked.
-  /// Updates `recipes/{recipeId}.likeCount` and the recipe author's
-  /// `users/{authorId}.totalLikesReceived` in a batch write.
+  /// The recipe lookup, profile lookup, and counters are committed together.
+  /// This prevents a filled heart from appearing when the recipe was not
+  /// actually added to the profile's Likes tab.
   Future<bool> toggleLike({
     required String recipeId,
     required String userId,
@@ -37,32 +33,35 @@ class LikeRepository {
     String? senderPhotoUrl,
     String? recipeTitle,
   }) async {
+    final userLikeRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('likes')
+        .doc(recipeId);
     final likeRef = _firestore
         .collection('likes')
         .doc(recipeId)
         .collection('users')
         .doc(userId);
 
-    final userLikeRef = _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('likes')
-        .doc(recipeId);
+    // Prefer the profile index, but recognize likes written by older clients.
+    final userLikeDoc = await userLikeRef.get();
+    final isCurrentlyLiked = userLikeDoc.exists ||
+        (!userLikeDoc.exists && (await likeRef.get()).exists);
 
-    final likeDoc = await likeRef.get();
-    final isCurrentlyLiked = likeDoc.exists;
-
-    final recipeRef = _firestore.collection('recipes').doc(recipeId);
     final batch = _firestore.batch();
+    final recipeRef = _firestore.collection('recipes').doc(recipeId);
+    final authorRef = recipeAuthorId != null &&
+            recipeAuthorId.isNotEmpty &&
+            recipeAuthorId != 'null'
+        ? _firestore.collection('users').doc(recipeAuthorId)
+        : null;
 
     if (isCurrentlyLiked) {
-      // Unlike
-      batch.delete(likeRef);
       batch.delete(userLikeRef);
+      batch.delete(likeRef);
       batch.update(recipeRef, {'likeCount': FieldValue.increment(-1)});
-      if (recipeAuthorId != null) {
-        final authorRef = _firestore.collection('users').doc(recipeAuthorId);
-        // Use set+merge so missing counter fields don't cause NOT_FOUND.
+      if (authorRef != null) {
         batch.set(
           authorRef,
           {'totalLikesReceived': FieldValue.increment(-1)},
@@ -70,16 +69,14 @@ class LikeRepository {
         );
       }
     } else {
-      // Like
       final now = FieldValue.serverTimestamp();
-      batch.set(likeRef, {'likedAt': now});
-      batch.set(userLikeRef, {
-        'recipeId': recipeId,
-        'likedAt': now,
-      });
+      batch.set(userLikeRef, {'recipeId': recipeId, 'likedAt': now});
+      batch.set(
+        likeRef,
+        {'recipeId': recipeId, 'userId': userId, 'likedAt': now},
+      );
       batch.update(recipeRef, {'likeCount': FieldValue.increment(1)});
-      if (recipeAuthorId != null) {
-        final authorRef = _firestore.collection('users').doc(recipeAuthorId);
+      if (authorRef != null) {
         batch.set(
           authorRef,
           {'totalLikesReceived': FieldValue.increment(1)},
@@ -90,33 +87,43 @@ class LikeRepository {
 
     await batch.commit();
 
-    // Send social notification on like (after successful commit)
-    if (!isCurrentlyLiked && recipeAuthorId != null && recipeAuthorId != userId) {
-      final name = (senderName != null && senderName.isNotEmpty) ? senderName : 'A foodie';
-      final title = recipeTitle ?? 'your recipe';
-      try {
-        await _notifRepo.sendNotification(
-          recipientId: recipeAuthorId,
-          type: NotificationType.recipeLike,
-          title: 'New Recipe Like',
-          body: '$name liked "$title".',
-          senderId: userId,
-          senderName: name,
-          senderPhotoUrl: senderPhotoUrl,
-          targetId: recipeId,
-          targetType: TargetType.recipe,
-        );
-      } catch (_) {}
+    if (!isCurrentlyLiked &&
+        authorRef != null &&
+        recipeAuthorId != userId) {
+      final name = senderName?.isNotEmpty == true ? senderName! : 'A foodie';
+      _notifRepo
+          .sendNotification(
+            recipientId: recipeAuthorId!,
+            type: NotificationType.recipeLike,
+            title: 'New Recipe Like',
+            body: '$name liked "${recipeTitle ?? 'your recipe'}".',
+            senderId: userId,
+            senderName: name,
+            senderPhotoUrl: senderPhotoUrl,
+            targetId: recipeId,
+            targetType: TargetType.recipe,
+          )
+          .catchError(
+            (Object error) =>
+                debugPrint('[LikeRepo] notification failed: $error'),
+          );
     }
 
     return !isCurrentlyLiked;
   }
 
-  /// Checks whether [userId] has liked [recipeId].
   Future<bool> isLiked({
     required String recipeId,
     required String userId,
   }) async {
+    final userDoc = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('likes')
+        .doc(recipeId)
+        .get();
+    if (userDoc.exists) return true;
+
     final doc = await _firestore
         .collection('likes')
         .doc(recipeId)
@@ -126,18 +133,26 @@ class LikeRepository {
     return doc.exists;
   }
 
-  /// Returns the IDs of all recipes liked by [userId].
+  /// Returns liked recipe IDs, newest first.
   Future<List<String>> getLikedRecipeIds(String userId) async {
     final snap = await _firestore
         .collection('users')
         .doc(userId)
         .collection('likes')
-        .orderBy('likedAt', descending: true)
         .get();
-    return snap.docs.map((d) => d.id).toList();
+    final likes = snap.docs
+        .map(
+          (doc) => (
+            id: doc.id,
+            likedAt: (doc.data()['likedAt'] as Timestamp?)?.toDate() ??
+                DateTime.fromMillisecondsSinceEpoch(0),
+          ),
+        )
+        .toList()
+      ..sort((a, b) => b.likedAt.compareTo(a.likedAt));
+    return likes.map((like) => like.id).toList();
   }
 
-  /// Returns the full recipe objects for all recipes liked by [userId].
   Future<List<RecipeModel>> getLikedRecipes(String userId) async {
     final ids = await getLikedRecipeIds(userId);
     if (ids.isEmpty) return [];

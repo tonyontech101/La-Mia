@@ -45,10 +45,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   /// Generation counter to discard stale leaderboard loads.
   int _loadGeneration = 0;
 
-  /// Current user's ranking info.
-  int _currentUserRank = 0;
-  String _currentUserTitle = 'Cooking Enthusiast';
-  int _currentUserSpotsChange = 0;
+  /// Current user's placements are kept independently so they do not change
+  /// when the leaderboard tab changes.
+  int _topContributorRank = 0;
+  int _mostCookedRank = 0;
 
   @override
   void initState() {
@@ -107,42 +107,34 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
   }
 
-  /// Finds the current user's rank in both tabs.
+  /// Finds the current user's placement in each ranking category.
   Future<void> _getCurrentUserRanking() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return;
 
-      final user = await _userRepo.getUser(currentUser.uid);
-      if (user == null) return;
-
-      // Find rank in Top Contributors (by followers)
-      final allContributors = await _userRepo.topContributorsByFollowers(limit: 100);
-      int rank = 0;
-      for (int i = 0; i < allContributors.length; i++) {
-        if (allContributors[i].uid == currentUser.uid) {
-          rank = i + 1;
-          break;
-        }
-      }
+      final rankings = await Future.wait([
+        _userRepo.topContributorsByFollowers(limit: 100),
+        _userRepo.mostCookedByUploadedRecipes(limit: 100),
+      ]);
+      final contributorRank = _rankForUser(
+        rankings[0],
+        currentUser.uid,
+      );
+      final cookedRank = _rankForUser(rankings[1], currentUser.uid);
 
       if (mounted) {
         setState(() {
-          _currentUserRank = rank;
-          _currentUserTitle = _getTitleForRank(rank);
-          _currentUserSpotsChange = 0; // TODO: track historical rank for delta
+          _topContributorRank = contributorRank;
+          _mostCookedRank = cookedRank;
         });
       }
     } catch (_) {}
   }
 
-  String _getTitleForRank(int rank) {
-    if (rank <= 0) return 'Newcomer';
-    if (rank == 1) return 'Head Chef';
-    if (rank <= 3) return 'Sous Chef';
-    if (rank <= 10) return 'Line Cook';
-    if (rank <= 25) return 'Kitchen Hand';
-    return 'Cooking Enthusiast';
+  int _rankForUser(List<UserModel> users, String uid) {
+    final index = users.indexWhere((user) => user.uid == uid);
+    return index == -1 ? 0 : index + 1;
   }
 
   void _showOptionsMenu(BuildContext context) {
@@ -431,11 +423,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                               const SizedBox(height: 24),
 
-                              // 7. Your Ranking card
-                              YourRankingCard(
-                                rank: _currentUserRank,
-                                title: _currentUserTitle,
-                                spotsChange: _currentUserSpotsChange,
+                              // 7. Your placements stay visible across tabs.
+                              _YourRankingsSection(
+                                topContributorRank: _topContributorRank,
+                                mostCookedRank: _mostCookedRank,
+                                isChefOfMonth:
+                                    _chefOfMonth?.uid ==
+                                    FirebaseAuth.instance.currentUser?.uid,
                                 onSeeFullRank: () {
                                   Navigator.push(
                                     context,
@@ -499,7 +493,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'No recipes shared this month yet.\nBe the first to earn this title!',
+            'The creator of the month\'s most-engaged new recipe earns this title.\n'
+            'No recipes shared this month yet—be the first!',
             textAlign: TextAlign.center,
             style: AppTypography.body(
               color: AppColors.textSecondary,
@@ -569,6 +564,68 @@ class _LeaderboardTabSwitcher extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Shows every leaderboard recognition the signed-in cook currently holds.
+/// These cards deliberately do not depend on the selected roster tab.
+class _YourRankingsSection extends StatelessWidget {
+  const _YourRankingsSection({
+    required this.topContributorRank,
+    required this.mostCookedRank,
+    required this.isChefOfMonth,
+    this.onSeeFullRank,
+  });
+
+  final int topContributorRank;
+  final int mostCookedRank;
+  final bool isChefOfMonth;
+  final VoidCallback? onSeeFullRank;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'YOUR RECOGNITIONS',
+          style: AppTypography.caption(color: AppColors.textSecondary).copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 10),
+        YourRankingCard(
+          rank: topContributorRank,
+          label: 'Top Contributor',
+          description: 'Your placement by followers',
+          icon: Icons.people_alt_rounded,
+          accentColor: AppColors.secondary,
+          onSeeFullRank: onSeeFullRank,
+        ),
+        const SizedBox(height: 10),
+        YourRankingCard(
+          rank: mostCookedRank,
+          label: 'Most Cooked',
+          description: 'Your placement by recipes shared',
+          icon: Icons.restaurant_menu_rounded,
+          accentColor: AppColors.primary,
+          onSeeFullRank: onSeeFullRank,
+        ),
+        if (isChefOfMonth) ...[
+          const SizedBox(height: 10),
+          YourRankingCard(
+            rank: 1,
+            label: 'Chef of the Month',
+            description: 'You earned this month\'s community honor',
+            icon: Icons.workspace_premium_rounded,
+            accentColor: AppColors.accent,
+            onSeeFullRank: onSeeFullRank,
+          ),
+        ],
+      ],
     );
   }
 }

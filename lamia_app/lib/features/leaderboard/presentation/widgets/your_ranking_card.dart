@@ -3,26 +3,27 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 
-/// Bottom "Your Ranking" card showing the user's personal rank,
-/// title, spots gained, and a "See Full Rank" link.
+/// A compact personal placement card for one leaderboard category.
 class YourRankingCard extends StatelessWidget {
   const YourRankingCard({
     super.key,
     required this.rank,
-    required this.title,
-    required this.spotsChange,
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.accentColor,
     this.onSeeFullRank,
   });
 
   final int rank;
-  final String title;
-  final int spotsChange; // positive = moved up, negative = dropped
+  final String label;
+  final String description;
+  final IconData icon;
+  final Color accentColor;
   final VoidCallback? onSeeFullRank;
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = spotsChange >= 0;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -39,45 +40,42 @@ class YourRankingCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Rank circle
+          // Category marker
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.12),
+              color: accentColor.withValues(alpha: 0.12),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: accentColor.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: Center(
-              child: Text(
-                '$rank',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+              child: Icon(
+                icon,
+                size: 21,
+                color: accentColor,
               ),
             ),
           ),
           const SizedBox(width: 14),
 
-          // "Your Ranking" + title
+          // Category + placement
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Ranking',
+                  label,
                   style: AppTypography.bodyStrong(
                     color: AppColors.textPrimary,
                   ).copyWith(fontSize: 14),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  title,
+                  description,
                   style: AppTypography.caption(
                     color: AppColors.textSecondary,
                   ).copyWith(fontSize: 11),
@@ -86,28 +84,15 @@ class YourRankingCard extends StatelessWidget {
             ),
           ),
 
-          // Spots change + See Full Rank
+          // Placement + full ranking link
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isPositive
-                        ? Icons.arrow_upward_rounded
-                        : Icons.arrow_downward_rounded,
-                    size: 14,
-                    color: isPositive ? AppColors.success : AppColors.error,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    '${isPositive ? '+' : ''}$spotsChange Spots ${isPositive ? 'Up' : 'Down'}',
-                    style: AppTypography.caption(
-                      color: isPositive ? AppColors.success : AppColors.error,
-                    ).copyWith(fontWeight: FontWeight.w600, fontSize: 11),
-                  ),
-                ],
+              Text(
+                rank > 0 ? '#$rank' : 'Unranked',
+                style: AppTypography.bodyStrong(color: accentColor).copyWith(
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 4),
               GestureDetector(

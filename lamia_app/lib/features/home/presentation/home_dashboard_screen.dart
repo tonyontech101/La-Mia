@@ -12,6 +12,7 @@ import '../../recipes/data/recipe_category_model.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../recipes/presentation/category_recipes_screen.dart';
 import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import 'widgets/categories_section.dart';
@@ -36,6 +37,7 @@ class HomeDashboardScreen extends StatefulWidget {
 }
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+  // Kept while the legacy loader is retained for a later cleanup migration.
   String? _selectedCategoryId;
 
   final RecipeRepository _recipeRepository = RecipeRepository();
@@ -50,7 +52,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   bool _hasPopularError = false;
   bool _hasCategoryError = false;
 
-  /// Generation counter to discard stale category load results.
   int _categoryLoadGeneration = 0;
 
   @override
@@ -118,7 +119,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     await Future.wait([
       _loadFeatured(),
       _loadPopular(),
-      if (_selectedCategoryId != null) _loadCategoryRecipes(_selectedCategoryId!),
     ]);
   }
 
@@ -169,15 +169,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     }).toList();
   }
 
-  /// Handles category tap: toggles selection and loads filtered recipes.
+  /// Opens the category as its own collection rather than changing Cook inline.
   void _onCategoryTap(RecipeCategoryModel cat) {
-    final newId = _selectedCategoryId == cat.id ? null : cat.id;
-    setState(() {
-      _selectedCategoryId = newId;
-    });
-    if (newId != null) {
-      _loadCategoryRecipes(newId);
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CategoryRecipesScreen(category: cat)),
+    );
   }
 
   void _showRecipeDetailsDialog(RecipeModel recipe) {
@@ -255,19 +252,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                     // 5. Recipe Categories Section
                     CategoriesSection(
                       categories: RecipeCategoryModel.defaultCategories,
-                      selectedCategoryId: _selectedCategoryId,
                       onCategoryTap: _onCategoryTap,
                     ),
 
                     const SizedBox(height: 28),
 
-                    // 6. Category Filtered Results (shown when a category is selected)
-                    if (_selectedCategoryId != null) ...[
-                      _buildCategoryFilteredSection(),
-                      const SizedBox(height: 28),
-                    ],
-
-                    // 7. Popular Choices Section (always shown)
+                    // 6. Popular Choices Section
                     _buildPopularSection(),
 
                     const SizedBox(height: 24),

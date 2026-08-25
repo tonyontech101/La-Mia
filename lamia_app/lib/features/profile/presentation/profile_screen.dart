@@ -21,6 +21,7 @@ import '../../social/data/favorites_repository.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/data/like_repository.dart';
 import 'edit_profile_screen.dart';
+import 'achievements_screen.dart';
 import 'followers_screen.dart';
 import 'widgets/app_right_sidebar.dart';
 import 'widgets/dish_card_grid.dart';
@@ -70,7 +71,9 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingLikes = false;
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
-  int? _userRank;
+  int? _topContributorRank;
+  int? _mostCookedRank;
+  bool _isChefOfMonth = false;
   int? _followingCount;
   int? _followerCount;
 
@@ -80,15 +83,19 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   /// Public method to reload profile data after recipe upload or profile edits.
   Future<void> refresh() async {
-    if (mounted) {
-      setState(() {
-        _likedRecipes = [];
-        _savedRecipes = [];
-      });
-    }
     await _loadProfileData();
-    if (_selectedTabIndex == 1) await _loadLikedRecipes();
-    if (_selectedTabIndex == 2) await _loadSavedRecipes();
+    if (_selectedTabIndex == 1) {
+      await _loadLikedRecipes(force: true);
+    } else if (_selectedTabIndex == 2) {
+      await _loadSavedRecipes(force: true);
+    } else {
+      if (mounted) {
+        setState(() {
+          _likedRecipes = [];
+          _savedRecipes = [];
+        });
+      }
+    }
   }
 
   /// Whether we are viewing our own profile or another user's.
@@ -106,8 +113,8 @@ class ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _selectedTabIndex = widget.initialTabIndex;
     _loadProfileData();
-    if (_selectedTabIndex == 1) _loadLikedRecipes();
-    if (_selectedTabIndex == 2) _loadSavedRecipes();
+    if (_selectedTabIndex == 1) _loadLikedRecipes(force: true);
+    if (_selectedTabIndex == 2) _loadSavedRecipes(force: true);
   }
 
   Future<void> _loadProfileData() async {
@@ -151,10 +158,25 @@ class ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      // Fetch leaderboard ranking for this user (null if unranked).
-      int? rank;
+      // Load every recognition independently; a profile should not reduce a
+      // cook's achievements to only their follower-based placement.
+      int? topContributorRank;
+      int? mostCookedRank;
+      bool isChefOfMonth = false;
       try {
-        rank = await _userRepo.getUserLeaderboardRank(uid);
+        final rankings = await Future.wait([
+          _userRepo.topContributorsByFollowers(limit: 100),
+          _userRepo.mostCookedByUploadedRecipes(limit: 100),
+          _recipeRepo.recipesCreatedThisMonth(),
+        ]);
+        topContributorRank = _rankForUser(
+          rankings[0] as List<UserModel>,
+          uid,
+        );
+        mostCookedRank = _rankForUser(rankings[1] as List<UserModel>, uid);
+        final monthRecipes = rankings[2] as List<RecipeModel>;
+        isChefOfMonth =
+            monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
       } catch (_) {}
 
       // Fetch real-time count of following and followers directly from subcollections
@@ -173,7 +195,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _userRecipes = recipes;
           _isFollowing = following;
-          _userRank = rank;
+          _topContributorRank = topContributorRank;
+          _mostCookedRank = mostCookedRank;
+          _isChefOfMonth = isChefOfMonth;
           _followingCount = followingCount;
           _followerCount = followerCount;
         });
@@ -195,9 +219,14 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Lazily loads liked recipes when the Likes tab is first selected.
-  Future<void> _loadLikedRecipes() async {
-    if (_likedRecipes.isNotEmpty) return;
+  int? _rankForUser(List<UserModel> users, String uid) {
+    final index = users.indexWhere((user) => user.uid == uid);
+    return index == -1 ? null : index + 1;
+  }
+
+  /// Loads liked recipes.
+  Future<void> _loadLikedRecipes({bool force = false}) async {
+    if (!force && _likedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
     if (mounted) setState(() => _isLoadingLikes = true);
@@ -214,9 +243,9 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Lazily loads saved recipes when the Saved tab is first selected.
-  Future<void> _loadSavedRecipes() async {
-    if (_savedRecipes.isNotEmpty) return;
+  /// Loads saved recipes.
+  Future<void> _loadSavedRecipes({bool force = false}) async {
+    if (!force && _savedRecipes.isNotEmpty) return;
     final uid = _displayedUid;
     if (uid == null) return;
     if (mounted) setState(() => _isLoadingSaved = true);
@@ -305,8 +334,8 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   void _onTabSelected(int index) {
     setState(() => _selectedTabIndex = index);
-    if (index == 1) _loadLikedRecipes();
-    if (index == 2) _loadSavedRecipes();
+    if (index == 1) _loadLikedRecipes(force: true);
+    if (index == 2) _loadSavedRecipes(force: true);
   }
 
   void _onRecipeTap(RecipeModel recipe) {
@@ -315,7 +344,13 @@ class ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(
         builder: (context) => RecipeDetailScreen(recipe: recipe),
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        _loadProfileData();
+        if (_selectedTabIndex == 1) _loadLikedRecipes(force: true);
+        if (_selectedTabIndex == 2) _loadSavedRecipes(force: true);
+      }
+    });
   }
 
   List<RecipeModel> _getTabRecipes() {
@@ -620,6 +655,16 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ? 'Browsing as guest foodie. Sign in to post family recipes!'
                       : null))
             : _userModel?.bio;
+    final achievementXp = AchievementCatalog.forUser(
+      _userModel,
+      isChefOfMonth: _isChefOfMonth,
+    ).where((achievement) => achievement.isUnlocked).fold<int>(
+      0,
+      (total, achievement) => total + achievement.xpReward,
+    );
+    final achievementLevel = _userModel == null
+        ? null
+        : AchievementLevel.fromXp(achievementXp);
 
     final tabRecipes = _getTabRecipes();
 
@@ -690,7 +735,43 @@ class ProfileScreenState extends State<ProfileScreen> {
                           displayName: displayName,
                           photoUrl: photoUrl,
                           bio: bio,
-                          ranking: _userRank != null ? '#$_userRank ranking' : null,
+                          achievementLevelLabel: achievementLevel == null
+                              ? null
+                              : 'Level ${achievementLevel.number} ${achievementLevel.title}',
+                          onAchievementsTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AchievementsScreen(
+                                  isGuest: widget.isGuest,
+                                  user: _userModel,
+                                  isChefOfMonth: _isChefOfMonth,
+                                ),
+                              ),
+                            );
+                          },
+                          recognitions: [
+                            if (_topContributorRank != null)
+                              ProfileRecognition(
+                                label: 'Top Contributor',
+                                detail: '#$_topContributorRank',
+                                icon: Icons.people_alt_rounded,
+                                color: AppColors.secondary,
+                              ),
+                            if (_mostCookedRank != null)
+                              ProfileRecognition(
+                                label: 'Most Cooked',
+                                detail: '#$_mostCookedRank',
+                                icon: Icons.restaurant_menu_rounded,
+                                color: AppColors.primary,
+                              ),
+                            if (_isChefOfMonth)
+                              const ProfileRecognition(
+                                label: 'Chef of the Month',
+                                icon: Icons.workspace_premium_rounded,
+                                color: AppColors.accent,
+                              ),
+                          ],
                           followingCount: widget.isGuest
                               ? '0'
                               : (_followingCount?.toString() ??

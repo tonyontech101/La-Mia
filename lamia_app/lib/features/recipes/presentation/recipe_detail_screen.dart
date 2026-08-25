@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
@@ -148,20 +149,31 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       return;
     }
     final recipeId = widget.recipe.id;
-    if (recipeId == null) return;
-    final newState = await _likeRepo.toggleLike(
-      recipeId: recipeId,
-      userId: user.uid,
-      recipeAuthorId: widget.recipe.authorId,
-      senderName: user.displayName,
-      senderPhotoUrl: user.photoURL,
-      recipeTitle: widget.recipe.name,
-    );
-    if (mounted) {
-      setState(() {
-        _isLiked = newState;
-        _localLikeCount += newState ? 1 : -1;
-      });
+    if (recipeId == null || recipeId.isEmpty) {
+      AppSnackbar.show(context, message: 'Cannot like this recipe');
+      return;
+    }
+    try {
+      final newState = await _likeRepo.toggleLike(
+        recipeId: recipeId,
+        userId: user.uid,
+        recipeAuthorId: widget.recipe.authorId,
+        senderName: user.displayName,
+        senderPhotoUrl: user.photoURL,
+        recipeTitle: widget.recipe.name,
+      );
+      if (mounted) {
+        setState(() {
+          _isLiked = newState;
+          _localLikeCount += newState ? 1 : -1;
+          if (_localLikeCount < 0) _localLikeCount = 0;
+        });
+      }
+    } catch (e, st) {
+      AppLogger.error('Error toggling like: $e', error: e, stackTrace: st);
+      if (mounted) {
+        AppSnackbar.show(context, message: 'Could not update like: $e');
+      }
     }
   }
 
@@ -172,20 +184,31 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       return;
     }
     final recipeId = widget.recipe.id;
-    if (recipeId == null) return;
-    final newState = await _favoritesRepo.toggleSave(
-      recipeId: recipeId,
-      userId: user.uid,
-    );
-    if (mounted) {
-      setState(() {
-        _isBookmarked = newState;
-        _localFavoriteCount += newState ? 1 : -1;
-      });
-      AppSnackbar.show(
-        context,
-        message: newState ? 'Recipe saved' : 'Recipe removed from saved',
+    if (recipeId == null || recipeId.isEmpty) {
+      AppSnackbar.show(context, message: 'Cannot save this recipe');
+      return;
+    }
+    try {
+      final newState = await _favoritesRepo.toggleSave(
+        recipeId: recipeId,
+        userId: user.uid,
       );
+      if (mounted) {
+        setState(() {
+          _isBookmarked = newState;
+          _localFavoriteCount += newState ? 1 : -1;
+          if (_localFavoriteCount < 0) _localFavoriteCount = 0;
+        });
+        AppSnackbar.show(
+          context,
+          message: newState ? 'Recipe saved' : 'Recipe removed from saved',
+        );
+      }
+    } catch (e, st) {
+      AppLogger.error('Error toggling bookmark: $e', error: e, stackTrace: st);
+      if (mounted) {
+        AppSnackbar.show(context, message: 'Could not save recipe: $e');
+      }
     }
   }
 
@@ -416,9 +439,11 @@ $instructions
 Discovered on La Mia — Filipino Recipes App 🇵🇭
 ''';
 
-    await Share.share(
-      text,
-      subject: recipe.name,
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: recipe.name,
+      ),
     );
   }
 
