@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,8 +12,10 @@ import '../../../core/widgets/pressable_scale.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
+import '../data/grocery_list_repository.dart';
 import '../data/meal_plan_model.dart';
 import '../data/meal_plan_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Full-featured Weekly Meal Planner Screen for home cooks and meal preppers.
 ///
@@ -83,33 +86,59 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     }
   }
 
+  StreamSubscription<WeeklyMealPlanModel>? _planSubscription;
+
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _currentMonday = MealPlanRepository.getMondayOf(now);
     _selectedDayDate = DateTime(now.year, now.month, now.day);
-    _loadWeekPlan();
+    _listenToWeekPlan();
   }
 
-  Future<void> _loadWeekPlan() async {
+  @override
+  void dispose() {
+    _planSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToWeekPlan() {
+    _planSubscription?.cancel();
     setState(() => _isLoading = true);
+
+    if (_cachedRecipes.isEmpty) {
+      _recipeRepo.allRecipes(limit: 200).then((recipes) {
+        if (mounted) {
+          setState(() => _cachedRecipes = recipes);
+        }
+      }).catchError((_) {});
+    }
+
+    _planSubscription = _plannerRepo.watchWeeklyPlan(_currentMonday).listen(
+      (plan) {
+        if (mounted) {
+          setState(() {
+            _currentPlan = plan;
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (err) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      },
+    );
+  }
+
+  Future<void> _refreshWeekPlan() async {
     try {
       final plan = await _plannerRepo.getWeeklyPlan(_currentMonday);
-      if (_cachedRecipes.isEmpty) {
-        _cachedRecipes = await _recipeRepo.allRecipes(limit: 200);
-      }
       if (mounted) {
-        setState(() {
-          _currentPlan = plan;
-          _isLoading = false;
-        });
+        setState(() => _currentPlan = plan);
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    } catch (_) {}
   }
 
   void _changeWeek(int deltaWeeks) {
@@ -117,7 +146,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
       _currentMonday = _currentMonday.add(Duration(days: 7 * deltaWeeks));
       _selectedDayDate = _currentMonday;
     });
-    _loadWeekPlan();
+    _listenToWeekPlan();
   }
 
   void _resetToThisWeek() {
@@ -128,7 +157,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
         _currentMonday = thisMonday;
         _selectedDayDate = DateTime(now.year, now.month, now.day);
       });
-      _loadWeekPlan();
+      _listenToWeekPlan();
     } else {
       setState(() {
         _selectedDayDate = DateTime(now.year, now.month, now.day);
@@ -267,6 +296,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
       builder: (ctx) => _GroceryListModal(
         items: items,
         weekDateRange: _formatWeekRangeHeader(),
+        userId: FirebaseAuth.instance.currentUser?.uid,
       ),
     );
   }
@@ -321,7 +351,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary))
           : RefreshIndicator(
-              onRefresh: _loadWeekPlan,
+              onRefresh: _refreshWeekPlan,
               color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -1039,10 +1069,12 @@ class _GroceryListModal extends StatefulWidget {
   const _GroceryListModal({
     required this.items,
     required this.weekDateRange,
+    this.userId,
   });
 
   final List<String> items;
   final String weekDateRange;
+  final String? userId;
 
   @override
   State<_GroceryListModal> createState() => _GroceryListModalState();
@@ -1050,6 +1082,40 @@ class _GroceryListModal extends StatefulWidget {
 
 class _GroceryListModalState extends State<_GroceryListModal> {
   final Set<String> _checkedItems = {};
+  bool _isSaving = false;
+  final _groceryRepo = GroceryListRepository();
+
+  Future<void> _saveToChecklist() async {
+    if (widget.userId == null) return;
+    setState(() => _isSaving = true);
+    try {
+      await _groceryRepo.addIngredients(
+        userId: widget.userId!,
+        ingredients: widget.items,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Added to your persistent Grocery Checklist!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save ingredients.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
 
   void _copyToClipboard() {
     final buffer = StringBuffer();
@@ -1196,6 +1262,36 @@ class _GroceryListModalState extends State<_GroceryListModal> {
                     },
                   ),
           ),
+          if (widget.userId != null && widget.items.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.button),
+                    ),
+                  ),
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.add_shopping_cart_rounded),
+                  label: const Text('Add All to Grocery Checklist'),
+                  onPressed: _isSaving ? null : _saveToChecklist,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

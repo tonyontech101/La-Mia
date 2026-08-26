@@ -26,11 +26,13 @@ class FeedRecipeCard extends StatelessWidget {
     required this.recipe,
     this.onTap,
     this.onFollowTap,
+    this.onLongPress,
   });
 
   final RecipeModel recipe;
   final VoidCallback? onTap;
   final VoidCallback? onFollowTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,7 @@ class FeedRecipeCard extends StatelessWidget {
       pressedScale: 0.985,
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Container(
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(

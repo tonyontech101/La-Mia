@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../recipes/data/recipe_model.dart';
 
 class GroceryItem {
@@ -58,22 +59,57 @@ class GroceryListRepository {
     required String userId,
     required RecipeModel recipe,
   }) async {
-    final batch = _firestore.batch();
-    final col = _groceryCollection(userId);
-
-    for (final ingredient in recipe.ingredients) {
-      if (ingredient.trim().isEmpty) continue;
-      final docRef = col.doc(); // auto-generate ID
-      batch.set(docRef, {
-        'name': ingredient.trim(),
-        'recipeId': recipe.id,
-        'recipeName': recipe.name,
-        'checked': false,
-        'addedAt': FieldValue.serverTimestamp(),
-      });
+    try {
+      await addIngredients(
+        userId: userId,
+        ingredients: recipe.ingredients,
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+      );
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to add recipe ingredients to grocery list',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
     }
+  }
 
-    await batch.commit();
+  /// Batch adds a list of ingredient names directly to the user's grocery list.
+  Future<void> addIngredients({
+    required String userId,
+    required List<String> ingredients,
+    String? recipeId,
+    String? recipeName,
+  }) async {
+    try {
+      final batch = _firestore.batch();
+      final col = _groceryCollection(userId);
+
+      for (final ingredient in ingredients) {
+        if (ingredient.trim().isEmpty) continue;
+        final docRef = col.doc();
+        batch.set(docRef, {
+          'name': ingredient.trim(),
+          if (recipeId != null) 'recipeId': recipeId,
+          if (recipeName != null) 'recipeName': recipeName,
+          'checked': false,
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to batch add ingredients',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
+    }
   }
 
   /// Stream of user's grocery items ordered by addedAt.
@@ -83,7 +119,15 @@ class GroceryListRepository {
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => GroceryItem.fromFirestore(doc.data(), doc.id))
-            .toList());
+            .toList())
+        .handleError((e, stack) {
+      AppLogger.error(
+        'Error streaming grocery items',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+    });
   }
 
   /// Toggles the checked status of a grocery item.
@@ -92,7 +136,17 @@ class GroceryListRepository {
     required String itemId,
     required bool checked,
   }) async {
-    await _groceryCollection(userId).doc(itemId).update({'checked': checked});
+    try {
+      await _groceryCollection(userId).doc(itemId).update({'checked': checked});
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to toggle grocery item checked status',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
+    }
   }
 
   /// Deletes a specific grocery item.
@@ -100,28 +154,58 @@ class GroceryListRepository {
     required String userId,
     required String itemId,
   }) async {
-    await _groceryCollection(userId).doc(itemId).delete();
+    try {
+      await _groceryCollection(userId).doc(itemId).delete();
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to delete grocery item',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
+    }
   }
 
   /// Clears all checked grocery items.
   Future<void> clearCheckedItems(String userId) async {
-    final snap = await _groceryCollection(userId)
-        .where('checked', isEqualTo: true)
-        .get();
-    final batch = _firestore.batch();
-    for (final doc in snap.docs) {
-      batch.delete(doc.reference);
+    try {
+      final snap = await _groceryCollection(userId)
+          .where('checked', isEqualTo: true)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to clear checked grocery items',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
     }
-    await batch.commit();
   }
 
   /// Clears the entire grocery list.
   Future<void> clearAllItems(String userId) async {
-    final snap = await _groceryCollection(userId).get();
-    final batch = _firestore.batch();
-    for (final doc in snap.docs) {
-      batch.delete(doc.reference);
+    try {
+      final snap = await _groceryCollection(userId).get();
+      final batch = _firestore.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to clear all grocery items',
+        error: e,
+        stackTrace: stack,
+        category: 'GROCERY_LIST',
+      );
+      rethrow;
     }
-    await batch.commit();
   }
 }

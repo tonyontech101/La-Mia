@@ -281,14 +281,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 },
               ),
               _buildMenuRow(
-                icon: Icons.print_rounded,
-                label: 'Print / Save as PDF',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _printRecipe();
-                },
-              ),
-              _buildMenuRow(
                 icon: Icons.calendar_today_rounded,
                 label: 'Add to planner',
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),

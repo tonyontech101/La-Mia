@@ -13,8 +13,10 @@ import '../../auth/data/user_repository.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
+import '../../recipes/presentation/recipe_creating_screen.dart';
 import '../../search/presentation/universal_search_screen.dart';
 import '../../social/data/follow_repository.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import 'widgets/feed_app_bar.dart';
 import 'widgets/feed_recipe_card.dart';
 import 'widgets/search_bar_widget.dart';
@@ -157,6 +159,130 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
     );
   }
 
+  void _showPostOptionsSheet(RecipeModel recipe) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppColors.textPrimary),
+                title: Text(
+                  'Edit Recipe',
+                  style: AppTypography.body(color: AppColors.textPrimary)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close sheet
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecipeCreatingScreen(recipeToEdit: recipe),
+                    ),
+                  ).then((_) => refresh());
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                title: Text(
+                  'Delete Recipe',
+                  style: AppTypography.body(color: AppColors.error)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close sheet
+                  _showDeleteConfirmationDialog(recipe);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(RecipeModel recipe) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Delete Post?',
+            style: AppTypography.headline(color: AppColors.textPrimary)
+                .copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'This will permanently remove "${recipe.name}" and all its data. This action cannot be undone.',
+            style: AppTypography.body(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: AppTypography.body(color: AppColors.textSecondary)
+                    .copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context); // Close dialog
+                try {
+                  if (recipe.id != null) {
+                    await _recipeRepository.deleteRecipe(recipe.id!);
+                    if (mounted) {
+                      AppSnackbar.show(
+                        context,
+                        message: 'Post deleted successfully.',
+                      );
+                      refresh();
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    AppSnackbar.show(
+                      context,
+                      message: 'Failed to delete recipe: $e',
+                      isError: true,
+                    );
+                  }
+                }
+              },
+              child: Text(
+                'Delete',
+                style: AppTypography.body(color: AppColors.error)
+                    .copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -259,6 +385,11 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
                                   child: FeedRecipeCard(
                                     recipe: recipe,
                                     onTap: () => _onRecipeTap(recipe),
+                                    onLongPress: (user != null &&
+                                            recipe.authorId == user.uid &&
+                                            !widget.isGuest)
+                                        ? () => _showPostOptionsSheet(recipe)
+                                        : null,
                                   ),
                                 );
                               },

@@ -16,6 +16,7 @@ class UserModel {
     this.followingCount = 0,
     this.savedCount = 0,
     this.role = 'user',
+    this.featuredAchievementId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -29,6 +30,7 @@ class UserModel {
   final int followingCount;
   final int savedCount;
   final String role; // "user" | "trusted" | "admin"
+  final String? featuredAchievementId;
   final DateTime createdAt;
 
   /// Creates a [UserModel] from a Firestore document snapshot.
@@ -47,6 +49,7 @@ class UserModel {
       followingCount: (data['followingCount'] as num?)?.toInt() ?? 0,
       savedCount: (data['savedCount'] as num?)?.toInt() ?? 0,
       role: data['role'] as String? ?? 'user',
+      featuredAchievementId: data['featuredAchievementId'] as String?,
       createdAt: () {
         final raw = data['createdAt'];
         if (raw is Timestamp) return raw.toDate();
@@ -69,6 +72,7 @@ class UserModel {
       'followingCount': followingCount,
       'savedCount': savedCount,
       'role': role,
+      'featuredAchievementId': featuredAchievementId,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -84,6 +88,7 @@ class UserModel {
     int? followingCount,
     int? savedCount,
     String? role,
+    String? featuredAchievementId,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -97,6 +102,8 @@ class UserModel {
       followingCount: followingCount ?? this.followingCount,
       savedCount: savedCount ?? this.savedCount,
       role: role ?? this.role,
+      featuredAchievementId:
+          featuredAchievementId ?? this.featuredAchievementId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

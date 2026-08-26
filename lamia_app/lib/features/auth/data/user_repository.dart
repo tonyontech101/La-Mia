@@ -47,6 +47,8 @@ class UserRepository {
     String? displayName,
     String? bio,
     String? photoUrl,
+    String? featuredAchievementId,
+    bool clearFeaturedAchievement = false,
   }) async {
     final updates = <String, dynamic>{};
     if (displayName != null) updates['displayName'] = displayName;
@@ -58,6 +60,11 @@ class UserRepository {
     if (photoUrl != null) {
       // Empty string means clear the field
       updates['photoUrl'] = photoUrl.isEmpty ? FieldValue.delete() : photoUrl;
+    }
+    if (clearFeaturedAchievement) {
+      updates['featuredAchievementId'] = FieldValue.delete();
+    } else if (featuredAchievementId != null) {
+      updates['featuredAchievementId'] = featuredAchievementId;
     }
     if (updates.isEmpty) return;
     // Use set with merge: true for maximum resilience

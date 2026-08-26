@@ -16,12 +16,14 @@ class DishCardGrid extends StatelessWidget {
     super.key,
     required this.recipes,
     this.onRecipeTap,
+    this.onRecipeLongPress,
     this.emptyMessage = 'No items to display',
     this.isLoading = false,
   });
 
   final List<RecipeModel> recipes;
   final ValueChanged<RecipeModel>? onRecipeTap;
+  final ValueChanged<RecipeModel>? onRecipeLongPress;
   final String emptyMessage;
   final bool isLoading;
 
@@ -80,6 +82,9 @@ class DishCardGrid extends StatelessWidget {
           child: _DishCard(
             recipe: recipe,
             onTap: () => onRecipeTap?.call(recipe),
+            onLongPress: onRecipeLongPress != null
+                ? () => onRecipeLongPress?.call(recipe)
+                : null,
           ),
         );
       },
@@ -88,10 +93,15 @@ class DishCardGrid extends StatelessWidget {
 }
 
 class _DishCard extends StatelessWidget {
-  const _DishCard({required this.recipe, required this.onTap});
+  const _DishCard({
+    required this.recipe,
+    required this.onTap,
+    this.onLongPress,
+  });
 
   final RecipeModel recipe;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +109,7 @@ class _DishCard extends StatelessWidget {
       pressedScale: 0.96,
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
