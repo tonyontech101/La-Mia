@@ -784,16 +784,28 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ? 'Browsing as guest foodie. Sign in to post family recipes!'
                       : null))
             : _userModel?.bio;
-    final achievementXp = AchievementCatalog.forUser(
+    final achievements = AchievementCatalog.forUser(
       _userModel,
       isChefOfMonth: _isChefOfMonth,
-    ).where((achievement) => achievement.isUnlocked).fold<int>(
-      0,
-      (total, achievement) => total + achievement.xpReward,
     );
+    final achievementXp = achievements
+        .where((achievement) => achievement.isUnlocked)
+        .fold<int>(
+          0,
+          (total, achievement) => total + achievement.xpReward,
+        );
     final achievementLevel = _userModel == null
         ? null
         : AchievementLevel.fromXp(achievementXp);
+    final featuredAchievement = _userModel?.featuredAchievementId != null
+        ? achievements
+            .where(
+              (a) =>
+                  a.id == _userModel!.featuredAchievementId &&
+                  a.isUnlocked,
+            )
+            .firstOrNull
+        : null;
 
     final tabRecipes = _getTabRecipes();
 
@@ -880,6 +892,13 @@ class ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                           recognitions: [
+                            if (featuredAchievement != null)
+                              ProfileRecognition(
+                                label: featuredAchievement.title,
+                                icon: featuredAchievement.icon,
+                                color: featuredAchievement.badgeColor,
+                                detail: '⭐ Featured',
+                              ),
                             if (_topContributorRank != null)
                               ProfileRecognition(
                                 label: 'Top Contributor',

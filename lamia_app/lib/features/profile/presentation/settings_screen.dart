@@ -12,6 +12,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
+import 'edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.isGuest = false});
@@ -759,12 +760,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 child: Column(
                                   children: [
-                                    // Accordion Tile 1: Profile Info
-                                    _buildAccordionTile(
-                                      index: 0,
+                                    // Tile 1: Profile Information
+                                    _buildNavigationTile(
                                       icon: Icons.person_outline_rounded,
-                                      title: 'Profile Info',
-                                      expandedWidget: _buildProfileInfoForm(),
+                                      title: 'Profile Information',
+                                      isFirst: true,
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => const EditProfileScreen(),
+                                          ),
+                                        ).then((_) => _loadUserData());
+                                      },
                                     ),
                                     const Divider(height: 1, color: AppColors.border),
 
@@ -955,6 +962,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  // --- REUSABLE NAVIGATION TILE ---
+  Widget _buildNavigationTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(isFirst ? 20 : 0),
+        topRight: Radius.circular(isFirst ? 20 : 0),
+        bottomLeft: Radius.circular(isLast ? 20 : 0),
+        bottomRight: Radius.circular(isLast ? 20 : 0),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textPrimary, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.body(color: AppColors.textPrimary)
+                    .copyWith(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
