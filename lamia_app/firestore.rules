@@ -249,6 +249,19 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
+    match /users/{userId}/mealPlans/{weekId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/grocery_items/{itemId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/notifications/{notifId} {
+      allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn();
+    }
+
     // ── Follow / Followers ─────────────────────────────────────────────────
 
     match /following/{userId}/users/{targetUid} {

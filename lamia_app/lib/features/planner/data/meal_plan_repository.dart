@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../../notifications/services/local_notification_service.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
@@ -76,8 +77,13 @@ class MealPlanRepository {
           _memoryCache[cacheKey] = plan;
           return plan;
         }
-      } catch (_) {
-        // Fallback to memory or empty week
+      } catch (e, stack) {
+        AppLogger.error(
+          'Failed to fetch weekly plan from Firestore',
+          error: e,
+          stackTrace: stack,
+          category: 'MEAL_PLANNER',
+        );
       }
     }
 
@@ -86,7 +92,58 @@ class MealPlanRepository {
     return newPlan;
   }
 
+  /// Returns a stream of the weekly meal plan for a specific Monday date.
+  /// Automatically emits the cached/initial plan immediately, then streams updates.
+  Stream<WeeklyMealPlanModel> watchWeeklyPlan(DateTime mondayDate) async* {
+    final weekId = formatWeekId(mondayDate);
+    final user = _auth.currentUser;
+    final cacheKey = '${user?.uid ?? "guest"}_$weekId';
+
+    // 1. Immediately yield cached or fresh empty plan so UI renders instantly
+    final initialPlan = _memoryCache[cacheKey] ?? WeeklyMealPlanModel.empty(mondayDate: mondayDate);
+    _memoryCache[cacheKey] = initialPlan;
+    yield initialPlan;
+
+    if (user != null) {
+      try {
+        final docRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('mealPlans')
+            .doc(weekId);
+
+        yield* docRef.snapshots().map((docSnap) {
+          if (docSnap.exists && docSnap.data() != null) {
+            final plan = WeeklyMealPlanModel.fromFirestore(
+              docSnap.data()!,
+              weekId: weekId,
+              startDate: mondayDate,
+            );
+            _memoryCache[cacheKey] = plan;
+            return plan;
+          }
+          return _memoryCache[cacheKey] ?? WeeklyMealPlanModel.empty(mondayDate: mondayDate);
+        }).handleError((e, stack) {
+          AppLogger.error(
+            'Error streaming weekly plan',
+            error: e,
+            stackTrace: stack,
+            category: 'MEAL_PLANNER',
+          );
+        });
+      } catch (e, stack) {
+        AppLogger.error(
+          'Error opening weekly plan stream',
+          error: e,
+          stackTrace: stack,
+          category: 'MEAL_PLANNER',
+        );
+      }
+    }
+  }
+
   /// Saves the updated weekly plan to Firestore and local memory cache.
+  /// Overwrites the full document to guarantee slot deletions are saved.
   Future<void> saveWeeklyPlan(WeeklyMealPlanModel plan) async {
     final user = _auth.currentUser;
     final weekId = plan.weekId;
@@ -102,9 +159,16 @@ class MealPlanRepository {
             .collection('mealPlans')
             .doc(weekId);
 
-        await docRef.set(plan.toFirestore(), SetOptions(merge: true));
-      } catch (_) {
-        // Firestore rules or offline handling
+        // Standard set without merge completely replaces the document,
+        // which deletes any omitted keys (i.e. deleted meal slots).
+        await docRef.set(plan.toFirestore());
+      } catch (e, stack) {
+        AppLogger.error(
+          'Failed to save weekly plan to Firestore',
+          error: e,
+          stackTrace: stack,
+          category: 'MEAL_PLANNER',
+        );
       }
     }
 
