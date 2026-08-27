@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_service.dart';
+import '../../../core/providers/auth_service_provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
@@ -19,16 +21,17 @@ import 'widgets/auth_scaffold.dart';
 /// displays a success state with clear instructions. The user taps
 /// "I've reset my password — Log in" when they're ready, since the reset
 /// happens in an external browser and we can't detect it automatically.
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
     with SingleTickerProviderStateMixin {
-  final _authService = AuthService();
+  AuthService get _authService => ref.read(authServiceProvider);
   final _emailController = TextEditingController();
   final _emailFocus = FocusNode();
 

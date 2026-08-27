@@ -1,17 +1,20 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../auth/data/user_model.dart';
 import '../../social/data/follow_repository.dart';
 import 'profile_screen.dart';
 
 /// Full standalone screen displaying Followers and Following lists for a user.
-class FollowersScreen extends StatefulWidget {
+class FollowersScreen extends ConsumerStatefulWidget {
   const FollowersScreen({
     super.key,
     required this.userId,
@@ -24,11 +27,11 @@ class FollowersScreen extends StatefulWidget {
   final int initialTab;
 
   @override
-  State<FollowersScreen> createState() => _FollowersScreenState();
+  ConsumerState<FollowersScreen> createState() => _FollowersScreenState();
 }
 
-class _FollowersScreenState extends State<FollowersScreen> {
-  final FollowRepository _followRepo = FollowRepository();
+class _FollowersScreenState extends ConsumerState<FollowersScreen> {
+  FollowRepository get _followRepo => ref.read(followRepositoryProvider);
   final TextEditingController _searchController = TextEditingController();
 
   late int _activeTab; // 0: Followers, 1: Following
@@ -55,7 +58,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final currentUid = ref.read(currentUserIdProvider);
       final followers = await _followRepo.getFollowers(widget.userId);
       final following = await _followRepo.getFollowing(widget.userId);
       final myFollowingList = currentUid != null
@@ -111,7 +114,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
   }
 
   Future<void> _toggleFollowUser(UserModel user) async {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = ref.read(currentUserIdProvider);
     if (currentUid == null || currentUid == user.uid) return;
 
     final isCurrentlyFollowing = _followingIds.contains(user.uid);
@@ -124,7 +127,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
     });
 
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser = ref.read(authServiceProvider).currentUser;
       await _followRepo.toggleFollow(
         currentUid: currentUid,
         targetUid: user.uid,
@@ -146,7 +149,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = ref.read(currentUserIdProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,

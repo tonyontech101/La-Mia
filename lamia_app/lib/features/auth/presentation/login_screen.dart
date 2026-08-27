@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_service.dart';
+import '../../../core/providers/auth_service_provider.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -20,15 +22,15 @@ import 'widgets/auth_scaffold.dart';
 
 /// Login screen. All auth actions go through [AuthService] which is
 /// fully wired to Firebase Auth and Google Sign-In.
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _authService = AuthService();
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  AuthService get _authService => ref.read(authServiceProvider);
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _emailFocus = FocusNode();

@@ -2,6 +2,7 @@
 // for the whole-app fluid-motion pass.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -76,7 +77,11 @@ void main() {
     testWidgets('slides content between Top Contributors / Most Cooked', (
       tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: LeaderboardScreen()));
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: LeaderboardScreen()),
+        ),
+      );
       await tester.pump();
 
       expect(find.text('Top Contributors'), findsOneWidget);

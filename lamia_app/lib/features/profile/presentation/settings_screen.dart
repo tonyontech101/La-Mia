@@ -3,32 +3,36 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import 'edit_profile_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isGuest = false});
 
   final bool isGuest;
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Accordion state: null = all collapsed, 0 = Profile Info, 1 = Change Password, 2 = Change Email
   int? _expandedIndex;
 
-  final UserRepository _userRepo = UserRepository();
-  final NotificationRepository _notifRepo = NotificationRepository();
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
+  NotificationRepository get _notifRepo => ref.read(notificationRepositoryProvider);
   final ImagePicker _imagePicker = ImagePicker();
 
   // Loading state for initial data fetch
@@ -98,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
       setState(() => _isLoadingProfile = false);
       return;
@@ -109,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final pref = await _notifRepo.getNotificationPreferences(user.uid);
       
       // Also load notifications pref from Firestore user doc if present, default to true
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).get();
       final hasNotifPref = userDoc.data()?.containsKey('enableNotifications') ?? false;
       final notifPref = hasNotifPref ? (userDoc.data()?['enableNotifications'] as bool) : true;
 
@@ -258,7 +262,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!_profileFormKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
     setState(() => _isSavingProfile = true);
@@ -350,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!_passwordFormKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
     setState(() => _isUpdatingPassword = true);
@@ -399,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!_emailFormKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
     setState(() => _isUpdatingEmail = true);
@@ -450,10 +454,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (widget.isGuest) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).set({
           'enableNotifications': value,
         }, SetOptions(merge: true));
       } catch (_) {}
@@ -491,7 +495,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _notifPrefs = updated;
     });
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       try {
         await _notifRepo.updateNotificationPreferences(user.uid, updated);

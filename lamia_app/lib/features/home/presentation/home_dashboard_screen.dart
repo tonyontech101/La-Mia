@@ -1,11 +1,13 @@
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
@@ -22,7 +24,7 @@ import 'widgets/hero_action_cards.dart';
 import 'widgets/popular_choices_section.dart';
 
 /// Main Home Dashboard Screen for La Mia, designed based on image.png wireframe.
-class HomeDashboardScreen extends StatefulWidget {
+class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({
     super.key,
     this.isGuest = false,
@@ -33,14 +35,14 @@ class HomeDashboardScreen extends StatefulWidget {
   final ValueChanged<int>? onNavigateToTab;
 
   @override
-  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+  ConsumerState<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
 }
 
-class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   // Kept while the legacy loader is retained for a later cleanup migration.
   String? _selectedCategoryId;
 
-  final RecipeRepository _recipeRepository = RecipeRepository();
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
 
   List<RecipeModel> _featuredRecipes = [];
   List<RecipeModel> _popularRecipes = [];
@@ -188,7 +190,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     final displayName = widget.isGuest
         ? 'Guest'
         : (user?.displayName ?? user?.email?.split('@').first ?? 'Foodie');

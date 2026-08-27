@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -16,18 +18,18 @@ import 'recipe_detail_screen.dart';
 
 /// "Cook by Ingredients" screen allowing users to input/select available pantry ingredients as tags,
 /// view quick suggestion tags, find matching recipes, and see match scores with missing ingredients.
-class CookByIngredientsScreen extends StatefulWidget {
+class CookByIngredientsScreen extends ConsumerStatefulWidget {
   const CookByIngredientsScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
   @override
-  State<CookByIngredientsScreen> createState() =>
+  ConsumerState<CookByIngredientsScreen> createState() =>
       _CookByIngredientsScreenState();
 }
 
-class _CookByIngredientsScreenState extends State<CookByIngredientsScreen> {
-  final RecipeRepository _recipeRepository = RecipeRepository();
+class _CookByIngredientsScreenState extends ConsumerState<CookByIngredientsScreen> {
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
   final TextEditingController _ingredientController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _resultsKey = GlobalKey();

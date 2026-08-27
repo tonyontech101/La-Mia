@@ -1,50 +1,52 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../auth/data/user_model.dart';
-import '../../auth/data/user_repository.dart';
 import 'achievements_screen.dart';
+import 'notifiers/edit_profile_notifier.dart';
 
 /// Screen allowing the user to edit their profile photo, display name, bio, and featured achievement badge.
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen>
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     with SingleTickerProviderStateMixin {
-  final UserRepository _userRepo = UserRepository();
+  // ── Notifier-backed getters ──────────────────────────────────────────
+  EditProfileState get _profileState => ref.watch(editProfileNotifierProvider);
+  UserModel? get _currentUserModel => _profileState.userModel;
+  bool get _isLoading => _profileState.isLoading;
+  bool get _isSaving => _profileState.isSaving;
+  bool get _loadError => _profileState.loadError;
+  String? get _currentPhotoUrl => _profileState.currentPhotoUrl;
+  List<AchievementItem> get _userAchievements => _profileState.userAchievements;
+  String? get _selectedAchievementId => _profileState.selectedAchievementId;
+  String? get _initialAchievementId => _profileState.initialAchievementId;
+
+  // ── Widget-owned fields ──────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _imagePicker = ImagePicker();
 
   late TextEditingController _nameController;
   late TextEditingController _bioController;
-  bool _isLoading = true;
-  bool _isSaving = false;
-  bool _loadError = false;
   File? _selectedImage;
   bool _removePhoto = false;
-  String? _currentPhotoUrl;
-
-  UserModel? _currentUserModel;
-  List<AchievementItem> _userAchievements = [];
-  String? _selectedAchievementId;
-  String? _initialAchievementId;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -69,7 +71,25 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    _loadCurrentProfile();
+    // Listen for profile load completion to sync controllers & trigger animation
+    ref.listen<EditProfileState>(editProfileNotifierProvider, (prev, next) {
+      if (prev?.isLoading == true && next.isLoading == false && mounted) {
+        _animationController.forward();
+        if (next.userModel != null) {
+          final user = ref.read(authServiceProvider).currentUser;
+          _nameController.text =
+              next.userModel!.displayName.isNotEmpty
+                  ? next.userModel!.displayName
+                  : (user?.displayName ?? '');
+          _bioController.text = next.userModel!.bio ?? '';
+        }
+      }
+    });
+
+    // Trigger initial load after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(editProfileNotifierProvider.notifier).loadProfile();
+    });
   }
 
   @override
@@ -92,10 +112,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   void _onSelectAchievement(String? achievementId) {
-    if (_selectedAchievementId == achievementId) return;
-    setState(() {
-      _selectedAchievementId = achievementId;
-    });
+    ref.read(editProfileNotifierProvider.notifier).selectAchievement(achievementId);
   }
 
   void _showDiscardGuardDialog() {
@@ -138,45 +155,6 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         ],
       ),
     );
-  }
-
-  Future<void> _loadCurrentProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _animationController.forward();
-      }
-      return;
-    }
-    try {
-      final model = await _userRepo.getUser(user.uid);
-      final achievements =
-          AchievementCatalog.forUser(model, isChefOfMonth: false);
-      if (mounted) {
-        setState(() {
-          _currentUserModel = model;
-          _userAchievements = achievements;
-          _selectedAchievementId = model?.featuredAchievementId;
-          _initialAchievementId = model?.featuredAchievementId;
-          _nameController.text =
-              model?.displayName ?? user.displayName ?? '';
-          _bioController.text = model?.bio ?? '';
-          _currentPhotoUrl = model?.photoUrl ?? user.photoURL;
-          _isLoading = false;
-          _loadError = false;
-        });
-        _animationController.forward();
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _loadError = true;
-        });
-        _animationController.forward();
-      }
-    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -288,89 +266,37 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
-    setState(() => _isSaving = true);
-
-    final name = _nameController.text.trim();
-    final bio = _bioController.text.trim();
-    String? photoUrl = _currentPhotoUrl;
-    bool photoChanged = false;
-    String? photoError;
-
-    // Step 1: Upload photo to Firebase Storage (if changed)
-    if (_selectedImage != null) {
-      try {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('users')
-            .child(user.uid)
-            .child('profile_${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-        final uploadTask = storageRef.putFile(
-          _selectedImage!,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-
-        await uploadTask;
-        photoUrl = await storageRef.getDownloadURL();
-        photoChanged = true;
-      } catch (e) {
-        photoError = e.toString();
-      }
-    } else if (_removePhoto) {
-      photoUrl = '';
-      photoChanged = true;
-    }
-
-    // Step 2: Update Firestore (bio + name + photo URL + featured achievement)
-    try {
-      await _userRepo.updateProfile(
-        user.uid,
-        displayName: name,
-        bio: bio,
-        photoUrl: photoChanged ? photoUrl : null,
-        featuredAchievementId: _selectedAchievementId,
-        clearFeaturedAchievement: _selectedAchievementId == null,
-      );
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'Couldn\'t save your profile. Please try again.',
-          isError: true,
-        );
-        setState(() => _isSaving = false);
-      }
-      return;
-    }
-
-    // Step 3: Sync Firebase Auth profile (non-critical)
-    try {
-      await user.updateDisplayName(name);
-      if (photoChanged) {
-        await user.updatePhotoURL(
-          photoUrl?.isEmpty ?? true ? null : photoUrl,
-        );
-      }
-      await user.reload();
-    } catch (_) {
-      // Ignore — Firestore has the truth
-    }
+    final result = await ref.read(editProfileNotifierProvider.notifier).saveProfile(
+      name: _nameController.text.trim(),
+      bio: _bioController.text.trim(),
+      uid: user.uid,
+      selectedImage: _selectedImage,
+      removePhoto: _removePhoto,
+    );
 
     if (mounted) {
-      if (photoError != null) {
-        AppSnackbar.show(
-          context,
-          message:
-              'Profile saved, but your photo didn\'t upload. Try again later.',
-          isError: true,
-        );
-      } else {
-        AppSnackbar.show(context, message: 'Profile updated successfully!');
+      switch (result) {
+        case SaveProfileStatus.success:
+          AppSnackbar.show(context, message: 'Profile updated successfully!');
+          Navigator.pop(context, true);
+        case SaveProfileStatus.photoUploadFailed:
+          AppSnackbar.show(
+            context,
+            message:
+                'Profile saved, but your photo didn\'t upload. Try again later.',
+            isError: true,
+          );
+          Navigator.pop(context, true);
+        case SaveProfileStatus.error:
+          AppSnackbar.show(
+            context,
+            message: 'Couldn\'t save your profile. Please try again.',
+            isError: true,
+          );
       }
-      Navigator.pop(context, true);
     }
   }
 
@@ -685,12 +611,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             PrimaryButton(
               label: 'Try again',
               onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _loadError = false;
-                });
                 _animationController.reset();
-                _loadCurrentProfile();
+                ref.read(editProfileNotifierProvider.notifier).loadProfile();
               },
             ),
           ],

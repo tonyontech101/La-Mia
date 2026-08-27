@@ -54,8 +54,10 @@ dependencies:
   image_picker: ^1.1.2
   logger: ^2.7.0
   firebase_crashlytics: ^4.3.10
-  printing: ^5.15.0
-  pdf: ^3.13.0
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
 
   # Share recipes via system share sheet.
   share_plus: ^13.3.0
@@ -73,6 +75,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # Riverpod code generation
+  riverpod_generator: ^2.6.3
+  build_runner: ^2.4.15
+  custom_lint: ^0.7.5
+  riverpod_lint: ^2.6.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

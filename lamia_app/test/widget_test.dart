@@ -1,6 +1,7 @@
 // Smoke tests for the La Mia auth front-end.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -27,7 +28,9 @@ void main() {
     view.resetDevicePixelRatio();
   });
 
-  Widget wrap(Widget child) => MaterialApp(home: child);
+  Widget wrap(Widget child) => ProviderScope(
+        child: MaterialApp(home: child),
+      );
 
   testWidgets('Login screen renders its key elements', (tester) async {
     await tester.pumpWidget(wrap(const LoginScreen()));

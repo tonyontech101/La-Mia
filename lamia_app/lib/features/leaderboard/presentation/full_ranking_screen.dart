@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
@@ -14,19 +16,19 @@ import 'widgets/ranked_chef_tile.dart';
 ///
 /// Navigated to from the leaderboard's "See Full Rank" button or
 /// "TRENDING COOKS" See All link.
-class FullRankingScreen extends StatefulWidget {
+class FullRankingScreen extends ConsumerStatefulWidget {
   const FullRankingScreen({super.key, this.initialTab = 0});
 
   /// 0 = Top Contributors, 1 = Most Cooked.
   final int initialTab;
 
   @override
-  State<FullRankingScreen> createState() => _FullRankingScreenState();
+  ConsumerState<FullRankingScreen> createState() => _FullRankingScreenState();
 }
 
-class _FullRankingScreenState extends State<FullRankingScreen> {
+class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
   int _activeTab = 0;
-  final UserRepository _userRepo = UserRepository();
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
 
   List<UserModel> _topContributors = [];
   List<UserModel> _mostCooked = [];

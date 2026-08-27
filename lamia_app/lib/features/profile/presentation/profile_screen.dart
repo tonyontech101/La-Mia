@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
@@ -34,7 +38,7 @@ import 'widgets/profile_header_widget.dart';
 /// - **Own profile**: when [targetUserId] is null, shows the logged-in user
 /// - **Other user**: when [targetUserId] is set, shows that user's profile
 ///   with a follow button instead of edit.
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({
     super.key,
     this.isGuest = false,
@@ -52,17 +56,17 @@ class ProfileScreen extends StatefulWidget {
   final int initialTabIndex;
 
   @override
-  State<ProfileScreen> createState() => ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends ConsumerState<ProfileScreen> {
   late int _selectedTabIndex; // 0: Posts, 1: Likes, 2: Saved Recipes
 
-  final UserRepository _userRepo = UserRepository();
-  final RecipeRepository _recipeRepo = RecipeRepository();
-  final LikeRepository _likeRepo = LikeRepository();
-  final FavoritesRepository _favoritesRepo = FavoritesRepository();
-  final FollowRepository _followRepo = FollowRepository();
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
+  RecipeRepository get _recipeRepo => ref.read(recipeRepositoryProvider);
+  LikeRepository get _likeRepo => ref.read(likeRepositoryProvider);
+  FavoritesRepository get _favoritesRepo => ref.read(favoritesRepositoryProvider);
+  FollowRepository get _followRepo => ref.read(followRepositoryProvider);
 
   UserModel? _userModel;
   List<RecipeModel> _userRecipes = [];
@@ -101,13 +105,13 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   /// Whether we are viewing our own profile or another user's.
   bool get _isOwnProfile {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = ref.read(currentUserIdProvider);
     return widget.targetUserId == null || widget.targetUserId == currentUid;
   }
 
   /// The UID being displayed.
   String? get _displayedUid =>
-      widget.targetUserId ?? FirebaseAuth.instance.currentUser?.uid;
+      widget.targetUserId ?? ref.read(currentUserIdProvider);
 
   @override
   void initState() {
@@ -151,7 +155,7 @@ class ProfileScreenState extends State<ProfileScreen> {
 
       // Check follow status if viewing another user.
       bool following = false;
-      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final currentUid = ref.read(currentUserIdProvider);
       if (!_isOwnProfile && currentUid != null) {
         following = await _followRepo.isFollowing(
           currentUid: currentUid,
@@ -208,7 +212,7 @@ class ProfileScreenState extends State<ProfileScreen> {
             followingCount != null &&
             user != null &&
             user.followingCount != followingCount) {
-          FirebaseFirestore.instance.collection('users').doc(uid).set({
+          ref.read(firebaseFirestoreProvider).collection('users').doc(uid).set({
             'followingCount': followingCount,
           }, SetOptions(merge: true));
         }
@@ -264,11 +268,11 @@ class ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _toggleFollow() async {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = ref.read(currentUserIdProvider);
     final targetUid = _displayedUid;
     if (currentUid == null || targetUid == null) return;
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser = ref.read(authServiceProvider).currentUser;
       final newState = await _followRepo.toggleFollow(
         currentUid: currentUid,
         targetUid: targetUid,
@@ -761,7 +765,7 @@ class ProfileScreenState extends State<ProfileScreen> {
       return _buildGuestView(context);
     }
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     final displayName =
         _isOwnProfile
             ? (_userModel?.displayName ??

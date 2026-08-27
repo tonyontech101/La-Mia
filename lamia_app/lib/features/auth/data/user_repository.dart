@@ -7,7 +7,7 @@ import 'user_model.dart';
 ///
 /// Provides methods for fetching, streaming, and updating user profiles.
 class UserRepository {
-  UserRepository({this._firestore});
+  UserRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
 
   final FirebaseFirestore? _firestore;
 
@@ -94,27 +94,6 @@ class UserRepository {
     }
   }
 
-  /// Fetches users sorted by [totalLikesReceived] descending — "Most Liked".
-  Future<List<UserModel>> mostLiked({int limit = 20}) async {
-    try {
-      final snap = await _usersRef
-          .orderBy('totalLikesReceived', descending: true)
-          .limit(limit)
-          .get();
-      final users = <UserModel>[];
-      for (final d in snap.docs) {
-        try {
-          if (d.data()['totalLikesReceived'] != null) {
-            users.add(UserModel.fromFirestore(d));
-          }
-        } catch (_) {}
-      }
-      return users;
-    } catch (_) {
-      return [];
-    }
-  }
-
   /// Fetches users sorted by [followerCount] descending — "Top Contributors".
   ///
   /// Ranks cooks by how many followers they have, reflecting their
@@ -150,44 +129,6 @@ class UserRepository {
           } catch (_) {}
         }
         users.sort((a, b) => b.followerCount.compareTo(a.followerCount));
-        return users.take(limit).toList();
-      } catch (_) {
-        return [];
-      }
-    }
-  }
-
-  /// Fetches users sorted by [recipeCount] descending — "Most Cooked".
-  ///
-  /// Ranks cooks by how many recipes they have shared on the platform.
-  Future<List<UserModel>> mostCookedByRecipeCount({int limit = 20}) async {
-    try {
-      final snap = await _usersRef
-          .orderBy('recipeCount', descending: true)
-          .limit(limit)
-          .get();
-      final users = <UserModel>[];
-      for (final d in snap.docs) {
-        try {
-          users.add(UserModel.fromFirestore(d));
-        } catch (e) {
-          AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
-        }
-      }
-      if (users.isNotEmpty) return users;
-      throw Exception('No users returned from ordered query');
-    } catch (e) {
-      AppLogger.warning('Error fetching most cooked (falling back): $e', 'UserRepository');
-      // Fallback: fetch a larger batch without order, sort in Dart.
-      try {
-        final fallbackSnap = await _usersRef.limit(200).get();
-        final users = <UserModel>[];
-        for (final d in fallbackSnap.docs) {
-          try {
-            users.add(UserModel.fromFirestore(d));
-          } catch (_) {}
-        }
-        users.sort((a, b) => b.recipeCount.compareTo(a.recipeCount));
         return users.take(limit).toList();
       } catch (_) {
         return [];
