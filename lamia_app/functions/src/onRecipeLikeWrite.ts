@@ -21,6 +21,28 @@ export const onRecipeLikeWrite = onDocumentWritten(
       .collection("users")
       .count()
       .get();
-    await recipeRef.update({ likeCount: likes.data().count });
+    const newLikeCount = likes.data().count;
+    await recipeRef.update({ likeCount: newLikeCount });
+
+    // Recount and sync author's total likes received across all their recipe posts
+    const authorId = recipe.data()?.authorId;
+    if (authorId) {
+      const authorRecipes = await db
+        .collection("recipes")
+        .where("authorId", "==", authorId)
+        .get();
+      let totalLikes = 0;
+      authorRecipes.forEach((doc) => {
+        if (doc.id === recipeId) {
+          totalLikes += newLikeCount;
+        } else {
+          totalLikes += ((doc.data().likeCount as number) || 0);
+        }
+      });
+      await db.collection("users").doc(authorId).set(
+        { totalLikesReceived: totalLikes },
+        { merge: true },
+      );
+    }
   },
 );

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,12 +9,14 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/banig_divider.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../recipes/data/recipe_model.dart';
-import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import '../data/grocery_list_repository.dart';
 import '../data/meal_plan_model.dart';
 import '../data/meal_plan_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'notifiers/weekly_plan_notifier.dart';
 
 /// Full-featured Weekly Meal Planner Screen for home cooks and meal preppers.
 ///
@@ -25,7 +26,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// - Recipe picker modal with favorites and category filter
 /// - Smart Auto-Fill Week action
 /// - Grocery Checklist modal with copy-to-clipboard
-class WeeklyMealPlannerScreen extends StatefulWidget {
+class WeeklyMealPlannerScreen extends ConsumerStatefulWidget {
   const WeeklyMealPlannerScreen({
     super.key,
     this.isGuest = false,
@@ -36,24 +37,18 @@ class WeeklyMealPlannerScreen extends StatefulWidget {
   final VoidCallback? onNavigateHome;
 
   @override
-  State<WeeklyMealPlannerScreen> createState() =>
+  ConsumerState<WeeklyMealPlannerScreen> createState() =>
       _WeeklyMealPlannerScreenState();
 }
 
-class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
-  final _plannerRepo = MealPlanRepository();
-  final _recipeRepo = RecipeRepository();
-
-  late DateTime _currentMonday;
-  late DateTime _selectedDayDate;
-  WeeklyMealPlanModel? _currentPlan;
-  bool _isLoading = true;
-  List<RecipeModel> _cachedRecipes = [];
-
-  static String _shortMonth(int month) {
-    const m = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return (month >= 1 && month <= 12) ? m[month] : '';
-  }
+class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScreen> {
+  // ── Convenience getters (delegate to notifier state) ───────────────────
+  WeeklyPlanState get _planState => ref.watch(weeklyPlanNotifierProvider);
+  WeeklyMealPlanModel? get _currentPlan => _planState.currentPlan;
+  bool get _isLoading => _planState.isLoading;
+  List<RecipeModel> get _cachedRecipes => _planState.cachedRecipes;
+  DateTime get _selectedDayDate => _planState.selectedDayDate;
+  DateTime get _currentMonday => _planState.currentMonday;
 
   static String _fullMonth(int month) {
     const m = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -86,99 +81,32 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     }
   }
 
-  StreamSubscription<WeeklyMealPlanModel>? _planSubscription;
-
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _currentMonday = MealPlanRepository.getMondayOf(now);
-    _selectedDayDate = DateTime(now.year, now.month, now.day);
-    _listenToWeekPlan();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(weeklyPlanNotifierProvider.notifier);
+      notifier.loadPlan();
+      notifier.loadRecipes();
+    });
   }
 
-  @override
-  void dispose() {
-    _planSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _listenToWeekPlan() {
-    _planSubscription?.cancel();
-    setState(() => _isLoading = true);
-
-    if (_cachedRecipes.isEmpty) {
-      _recipeRepo.allRecipes(limit: 200).then((recipes) {
-        if (mounted) {
-          setState(() => _cachedRecipes = recipes);
-        }
-      }).catchError((_) {});
-    }
-
-    _planSubscription = _plannerRepo.watchWeeklyPlan(_currentMonday).listen(
-      (plan) {
-        if (mounted) {
-          setState(() {
-            _currentPlan = plan;
-            _isLoading = false;
-          });
-        }
-      },
-      onError: (err) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      },
-    );
-  }
-
-  Future<void> _refreshWeekPlan() async {
-    try {
-      final plan = await _plannerRepo.getWeeklyPlan(_currentMonday);
-      if (mounted) {
-        setState(() => _currentPlan = plan);
-      }
-    } catch (_) {}
-  }
+  MealPlanDay get _currentSelectedDay => _planState.currentSelectedDay;
 
   void _changeWeek(int deltaWeeks) {
-    setState(() {
-      _currentMonday = _currentMonday.add(Duration(days: 7 * deltaWeeks));
-      _selectedDayDate = _currentMonday;
-    });
-    _listenToWeekPlan();
+    ref.read(weeklyPlanNotifierProvider.notifier).changeWeek(deltaWeeks);
   }
 
   void _resetToThisWeek() {
-    final now = DateTime.now();
-    final thisMonday = MealPlanRepository.getMondayOf(now);
-    if (_currentMonday != thisMonday) {
-      setState(() {
-        _currentMonday = thisMonday;
-        _selectedDayDate = DateTime(now.year, now.month, now.day);
-      });
-      _listenToWeekPlan();
-    } else {
-      setState(() {
-        _selectedDayDate = DateTime(now.year, now.month, now.day);
-      });
-    }
+    ref.read(weeklyPlanNotifierProvider.notifier).resetToThisWeek();
   }
 
-  String get _selectedDateKey => MealPlanRepository.formatDateKey(_selectedDayDate);
+  Future<void> _refreshWeekPlan() async {
+    await ref.read(weeklyPlanNotifierProvider.notifier).refreshPlan();
+  }
 
-  MealPlanDay get _currentSelectedDay {
-    if (_currentPlan == null) {
-      return MealPlanDay(
-        dateKey: _selectedDateKey,
-        dayOfWeek: _dayOfWeek(_selectedDayDate.weekday),
-      );
-    }
-    return _currentPlan!.days[_selectedDateKey] ??
-        MealPlanDay(
-          dateKey: _selectedDateKey,
-          dayOfWeek: _dayOfWeek(_selectedDayDate.weekday),
-        );
+  String _formatWeekRangeHeader() {
+    return ref.read(weeklyPlanNotifierProvider.notifier).formatWeekRangeHeader();
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -193,15 +121,14 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
         allRecipes: _cachedRecipes,
         onRecipeSelected: (recipe) async {
           Navigator.pop(ctx);
-          if (_currentPlan == null) return;
-          final updated = await _plannerRepo.assignMealSlot(
-            currentPlan: _currentPlan!,
-            dateKey: _selectedDateKey,
-            slot: slotKey,
+          final planState = ref.read(weeklyPlanNotifierProvider);
+          if (planState.currentPlan == null) return;
+          await ref.read(weeklyPlanNotifierProvider.notifier).updateSlot(
+            dateKey: planState.selectedDateKey,
+            slotKey: slotKey,
             recipe: recipe,
           );
           if (mounted) {
-            setState(() => _currentPlan = updated);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('"${recipe.name}" added to $slotTitle.'),
@@ -216,15 +143,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
   }
 
   Future<void> _removeMeal(String slotKey) async {
-    if (_currentPlan == null) return;
-    final updated = await _plannerRepo.removeMealSlot(
-      currentPlan: _currentPlan!,
-      dateKey: _selectedDateKey,
-      slot: slotKey,
-    );
-    if (mounted) {
-      setState(() => _currentPlan = updated);
-    }
+    await ref.read(weeklyPlanNotifierProvider.notifier).removeFromSlot(slotKey);
   }
 
   Future<void> _handleAutoFillWeek() async {
@@ -269,13 +188,8 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
     );
 
     if (confirm == true) {
-      setState(() => _isLoading = true);
-      final generated = await _plannerRepo.autoFillWeek(_currentMonday);
+      await ref.read(weeklyPlanNotifierProvider.notifier).autoFill();
       if (mounted) {
-        setState(() {
-          _currentPlan = generated;
-          _isLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Week filled in.'),
@@ -287,25 +201,19 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
   }
 
   void _openGroceryList() {
-    if (_currentPlan == null) return;
-    final items = _plannerRepo.generateGroceryList(_currentPlan!);
+    final planState = ref.read(weeklyPlanNotifierProvider);
+    if (planState.currentPlan == null) return;
+    final items = ref.read(weeklyPlanNotifierProvider.notifier).generateGroceryList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _GroceryListModal(
         items: items,
-        weekDateRange: _formatWeekRangeHeader(),
+        weekDateRange: ref.read(weeklyPlanNotifierProvider.notifier).formatWeekRangeHeader(),
         userId: FirebaseAuth.instance.currentUser?.uid,
       ),
     );
-  }
-
-  String _formatWeekRangeHeader() {
-    final sunday = _currentMonday.add(const Duration(days: 6));
-    final startFormat = '${_shortMonth(_currentMonday.month)} ${_currentMonday.day}';
-    final endFormat = '${_shortMonth(sunday.month)} ${sunday.day}, ${sunday.year}';
-    return '$startFormat – $endFormat';
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -497,7 +405,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: PressableScale(
                 onTap: () {
-                  setState(() => _selectedDayDate = dayDate);
+                  ref.read(weeklyPlanNotifierProvider.notifier).selectDay(dayDate);
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_service.dart';
+import '../../../core/providers/auth_service_provider.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:math' as math;
 
@@ -23,16 +25,16 @@ import 'widgets/password_strength_meter.dart';
 
 /// Sign Up screen. All auth actions go through [AuthService] which is
 /// fully wired to Firebase Auth and Google Sign-In.
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen>
+class _SignUpScreenState extends ConsumerState<SignUpScreen>
     with SingleTickerProviderStateMixin {
-  final _authService = AuthService();
+  AuthService get _authService => ref.read(authServiceProvider);
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();

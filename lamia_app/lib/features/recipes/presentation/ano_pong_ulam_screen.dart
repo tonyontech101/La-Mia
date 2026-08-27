@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -27,17 +29,17 @@ class SuggestedRecipeItem {
 
 /// "Ano Pong Ulam?" daily meal suggestion screen designed strictly according to
 /// the wireframe and La Mia visual design system.
-class AnoPongUlamScreen extends StatefulWidget {
+class AnoPongUlamScreen extends ConsumerStatefulWidget {
   const AnoPongUlamScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
   @override
-  State<AnoPongUlamScreen> createState() => _AnoPongUlamScreenState();
+  ConsumerState<AnoPongUlamScreen> createState() => _AnoPongUlamScreenState();
 }
 
-class _AnoPongUlamScreenState extends State<AnoPongUlamScreen> {
-  final RecipeRepository _recipeRepository = RecipeRepository();
+class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
   late Future<List<RecipeModel>> _recipesFuture;
 
   // Full recipe list cached after the initial load; filtering happens in memory.

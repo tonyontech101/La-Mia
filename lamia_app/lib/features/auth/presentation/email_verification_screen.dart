@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_service.dart';
+import '../../../core/providers/auth_service_provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
@@ -20,17 +21,17 @@ import 'widgets/auth_scaffold.dart';
 /// the user to also check their spam/junk folder. Periodically polls Firebase
 /// to detect when the user has clicked the verification link, then
 /// auto-navigates to the home screen with a success animation.
-class EmailVerificationScreen extends StatefulWidget {
+class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() =>
+  ConsumerState<EmailVerificationScreen> createState() =>
       _EmailVerificationScreenState();
 }
 
-class _EmailVerificationScreenState extends State<EmailVerificationScreen>
+class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen>
     with SingleTickerProviderStateMixin {
-  final _authService = AuthService();
+  AuthService get _authService => ref.read(authServiceProvider);
   Timer? _pollTimer;
   bool _resending = false;
   bool _navigated = false;
@@ -46,7 +47,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
   late final Animation<double> _successFadeAnim;
 
   String get _userEmail =>
-      FirebaseAuth.instance.currentUser?.email ?? 'your email';
+      _authService.currentUser?.email ?? 'your email';
 
   @override
   void initState() {

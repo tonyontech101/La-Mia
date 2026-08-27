@@ -1,35 +1,35 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import 'edit_profile_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isGuest = false});
 
   final bool isGuest;
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Accordion state: null = all collapsed, 0 = Profile Info, 1 = Change Password, 2 = Change Email
   int? _expandedIndex;
 
-  final UserRepository _userRepo = UserRepository();
-  final NotificationRepository _notifRepo = NotificationRepository();
-  final ImagePicker _imagePicker = ImagePicker();
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
+  NotificationRepository get _notifRepo => ref.read(notificationRepositoryProvider);
 
   // Loading state for initial data fetch
   bool _isLoadingProfile = true;
@@ -39,13 +39,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   NotificationPreferenceModel _notifPrefs = NotificationPreferenceModel.defaults();
 
   // --- Profile Info Fields ---
-  final _profileFormKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _bioController;
-  File? _selectedImage;
-  String? _currentPhotoUrl;
-  bool _removePhoto = false;
-  bool _isSavingProfile = false;
 
   // --- Change Password Fields ---
   final _passwordFormKey = GlobalKey<FormState>();
@@ -98,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
       setState(() => _isLoadingProfile = false);
       return;
@@ -109,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final pref = await _notifRepo.getNotificationPreferences(user.uid);
       
       // Also load notifications pref from Firestore user doc if present, default to true
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).get();
       final hasNotifPref = userDoc.data()?.containsKey('enableNotifications') ?? false;
       final notifPref = hasNotifPref ? (userDoc.data()?['enableNotifications'] as bool) : true;
 
@@ -117,7 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {
           _nameController.text = model?.displayName ?? user.displayName ?? '';
           _bioController.text = model?.bio ?? '';
-          _currentPhotoUrl = model?.photoUrl ?? user.photoURL;
           _enableNotifications = notifPref;
           _notifPrefs = pref;
           _isLoadingProfile = false;
@@ -140,207 +134,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // --- Profile Picture Pick Options ---
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-      if (pickedFile != null && mounted) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-          _removePhoto = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'Failed to pick image: ${e.toString()}',
-        );
-      }
-    }
-  }
-
-  void _showImageSourceDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Change Profile Photo',
-                style: AppTypography.title(
-                  color: AppColors.textPrimary,
-                ).copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ImageSourceButton(
-                      icon: Icons.camera_alt_rounded,
-                      label: 'Camera',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _pickImage(ImageSource.camera);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _ImageSourceButton(
-                      icon: Icons.photo_library_rounded,
-                      label: 'Gallery',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _pickImage(ImageSource.gallery);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (_currentPhotoUrl != null || _selectedImage != null)
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _selectedImage = null;
-                        _removePhoto = true;
-                      });
-                    },
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: AppColors.error,
-                    ),
-                    label: const Text(
-                      'Remove Photo',
-                      style: TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- Profile Info Actions ---
-  Future<void> _saveProfile() async {
-    if (widget.isGuest) {
-      AppSnackbar.show(context, message: 'Guests cannot modify profile settings!');
-      return;
-    }
-
-    if (!_profileFormKey.currentState!.validate()) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    setState(() => _isSavingProfile = true);
-
-    final name = _nameController.text.trim();
-    final bio = _bioController.text.trim();
-    String? photoUrl = _currentPhotoUrl;
-    bool photoChanged = false;
-    String? photoError;
-
-    if (_selectedImage != null) {
-      try {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('users')
-            .child(user.uid)
-            .child('profile_${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-        final uploadTask = storageRef.putFile(
-          _selectedImage!,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-
-        await uploadTask;
-        photoUrl = await storageRef.getDownloadURL();
-        photoChanged = true;
-      } catch (e) {
-        photoError = 'Photo upload failed: ${e.toString()}';
-      }
-    } else if (_removePhoto) {
-      photoUrl = '';
-      photoChanged = true;
-    }
-
-    try {
-      await _userRepo.updateProfile(
-        user.uid,
-        displayName: name,
-        bio: bio,
-        photoUrl: photoChanged ? photoUrl : null,
-      );
-
-      await user.updateDisplayName(name);
-      if (photoChanged) {
-        await user.updatePhotoURL(photoUrl?.isEmpty ?? true ? null : photoUrl);
-      }
-      await user.reload();
-
-      if (mounted) {
-        setState(() {
-          if (photoChanged) {
-            _currentPhotoUrl = photoUrl?.isEmpty ?? true ? null : photoUrl;
-            _selectedImage = null;
-            _removePhoto = false;
-          }
-          _isSavingProfile = false;
-        });
-
-        final msg = photoError != null
-            ? 'Profile saved! $photoError'
-            : 'Profile updated successfully!';
-        AppSnackbar.show(context, message: msg);
-      }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'Failed to save profile: ${e.toString()}',
-        );
-        setState(() => _isSavingProfile = false);
-      }
-    }
-  }
-
-  void _clearProfileFields() {
-    _loadUserData();
-    setState(() {
-      _selectedImage = null;
-      _removePhoto = false;
-    });
-  }
-
   // --- Password Actions ---
   Future<void> _updatePassword() async {
     if (widget.isGuest) {
@@ -350,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!_passwordFormKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
     setState(() => _isUpdatingPassword = true);
@@ -399,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!_emailFormKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) return;
 
     setState(() => _isUpdatingEmail = true);
@@ -450,10 +243,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (widget.isGuest) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).set({
           'enableNotifications': value,
         }, SetOptions(merge: true));
       } catch (_) {}
@@ -491,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _notifPrefs = updated;
     });
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       try {
         await _notifRepo.updateNotificationPreferences(user.uid, updated);
@@ -1064,124 +857,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- PANEL 1 FORM: Profile Info ---
-  Widget _buildProfileInfoForm() {
-    return Form(
-      key: _profileFormKey,
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar edit column
-              Column(
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.surfaceAlt,
-                      border: Border.all(color: AppColors.primary, width: 2),
-                    ),
-                    child: ClipOval(
-                      child: _buildAvatarImage(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: _showImageSourceDialog,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Text(
-                        'Edit',
-                        style: AppTypography.caption(color: AppColors.textPrimary)
-                            .copyWith(fontWeight: FontWeight.w700, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-
-              // Inputs column
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSettingsTextField(
-                      label: 'Name',
-                      hint: 'Enter your nickname...',
-                      controller: _nameController,
-                      maxLength: 50,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Name cannot be empty';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSettingsTextField(
-                      label: 'Bio',
-                      hint: 'Enter your bio...',
-                      controller: _bioController,
-                      maxLength: 150,
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _buildSecondaryButton(
-                label: 'Clear',
-                onPressed: _isSavingProfile ? null : _clearProfileFields,
-              ),
-              const SizedBox(width: 12),
-              _buildPrimaryActionButton(
-                label: 'Save',
-                isLoading: _isSavingProfile,
-                onPressed: _saveProfile,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarImage() {
-    if (_selectedImage != null) {
-      return Image.file(_selectedImage!, fit: BoxFit.cover);
-    }
-    if (!_removePhoto && _currentPhotoUrl != null && _currentPhotoUrl!.isNotEmpty) {
-      return Image.network(
-        _currentPhotoUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (c, e, s) => _buildAvatarFallback(),
-      );
-    }
-    return _buildAvatarFallback();
-  }
-
-  Widget _buildAvatarFallback() {
-    return const Icon(
-      Icons.person_rounded,
-      size: 40,
-      color: AppColors.textSecondary,
-    );
-  }
-
   // --- PANEL 2 FORM: Change Password ---
   Widget _buildChangePasswordForm() {
     if (widget.isGuest) {
@@ -1468,45 +1143,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: AppTypography.body(color: AppColors.onPrimary)
                   .copyWith(fontWeight: FontWeight.w700, fontSize: 13),
             ),
-    );
-  }
-}
-
-class _ImageSourceButton extends StatelessWidget {
-  const _ImageSourceButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: AppColors.primary),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: AppTypography.body(color: AppColors.textPrimary)
-                  .copyWith(fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

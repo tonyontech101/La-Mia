@@ -1,11 +1,12 @@
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/section_states.dart';
 import '../../recipes/data/recipe_category_model.dart';
@@ -22,7 +23,7 @@ import 'widgets/hero_action_cards.dart';
 import 'widgets/popular_choices_section.dart';
 
 /// Main Home Dashboard Screen for La Mia, designed based on image.png wireframe.
-class HomeDashboardScreen extends StatefulWidget {
+class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({
     super.key,
     this.isGuest = false,
@@ -33,26 +34,18 @@ class HomeDashboardScreen extends StatefulWidget {
   final ValueChanged<int>? onNavigateToTab;
 
   @override
-  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+  ConsumerState<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
 }
 
-class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
-  // Kept while the legacy loader is retained for a later cleanup migration.
-  String? _selectedCategoryId;
-
-  final RecipeRepository _recipeRepository = RecipeRepository();
+class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
 
   List<RecipeModel> _featuredRecipes = [];
   List<RecipeModel> _popularRecipes = [];
-  List<RecipeModel> _categoryRecipes = [];
   bool _isLoadingFeatured = true;
   bool _isLoadingPopular = true;
-  bool _isLoadingCategory = false;
   bool _hasFeaturedError = false;
   bool _hasPopularError = false;
-  bool _hasCategoryError = false;
-
-  int _categoryLoadGeneration = 0;
 
   @override
   void initState() {
@@ -122,53 +115,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     ]);
   }
 
-  /// Loads recipes for the selected category with race-condition protection.
-  ///
-  /// A generation counter ensures that if the user taps categories rapidly,
-  /// only the most recent request writes its results to state — stale
-  /// responses from earlier requests are silently discarded.
-  Future<void> _loadCategoryRecipes(String categoryId) async {
-    final generation = ++_categoryLoadGeneration;
-    final alreadyLoaded = [..._featuredRecipes, ..._popularRecipes]
-        .where(
-          (recipe) => RecipeRepository.isVisibleInCategory(recipe, categoryId),
-        )
-        .toList();
-    setState(() {
-      _isLoadingCategory = true;
-      _hasCategoryError = false;
-      _categoryRecipes = _uniqueRecipes(alreadyLoaded);
-    });
-    try {
-      final recipes = await _recipeRepository.recipesByCategory(
-        categoryId,
-        limit: 20,
-      );
-      // Discard if a newer request has started since we began.
-      if (mounted && generation == _categoryLoadGeneration) {
-        setState(() {
-          _categoryRecipes = _uniqueRecipes([..._categoryRecipes, ...recipes]);
-          _isLoadingCategory = false;
-        });
-      }
-    } catch (_) {
-      if (mounted && generation == _categoryLoadGeneration) {
-        setState(() {
-          _isLoadingCategory = false;
-          _hasCategoryError = true;
-        });
-      }
-    }
-  }
-
-  List<RecipeModel> _uniqueRecipes(List<RecipeModel> recipes) {
-    final seen = <String>{};
-    return recipes.where((recipe) {
-      final key = recipe.id ?? '${recipe.name}|${recipe.category}';
-      return seen.add(key);
-    }).toList();
-  }
-
   /// Opens the category as its own collection rather than changing Cook inline.
   void _onCategoryTap(RecipeCategoryModel cat) {
     Navigator.push(
@@ -188,7 +134,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     final displayName = widget.isGuest
         ? 'Guest'
         : (user?.displayName ?? user?.email?.split('@').first ?? 'Foodie');
@@ -267,80 +213,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilteredSection() {
-    final categoryName = RecipeCategoryModel.defaultCategories
-        .where((c) => c.id == _selectedCategoryId)
-        .map((c) => c.name)
-        .firstOrNull;
-
-    if (_isLoadingCategory && _categoryRecipes.isEmpty) {
-      return const SectionLoadingSkeleton(height: 360, isHorizontal: false);
-    }
-    if (_hasCategoryError) {
-      return SectionErrorState(
-        message: 'Could not load $categoryName recipes. Try again.',
-        onRetry: () => _loadCategoryRecipes(_selectedCategoryId!),
-      );
-    }
-    if (_categoryRecipes.isEmpty) {
-      return SectionEmptyState(
-        message: 'No $categoryName recipes yet',
-        subtitle: 'Recipes in this category will appear here.',
-      );
-    }
-    return FadeInView(
-      key: ValueKey('category-$_selectedCategoryId-${_categoryRecipes.length}'),
-      duration: const Duration(milliseconds: 450),
-      offset: const Offset(0, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '$categoryName Recipes',
-                  style: AppTypography.title(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() {
-                  _selectedCategoryId = null;
-                }),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.close_rounded,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Clear',
-                      style: AppTypography.caption(
-                        color: AppColors.textSecondary,
-                      ).copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          PopularChoicesSection(
-            recipes: _categoryRecipes,
-            onRecipeTap: _showRecipeDetailsDialog,
-            showTitle: false,
-          ),
-        ],
       ),
     );
   }

@@ -15,7 +15,8 @@
  * 4. Updates the recipe's `status` based on results:
  *    - 'rejected' if text is not a recipe or image is inappropriate
  *    - 'flagged' if image doesn't look like food (needs admin review)
- *    - 'pending' if everything passes (still needs admin approval at launch)
+ *    - 'pending' if image validation fails (conservative fallback)
+ *    - 'approved' if everything passes
  *
  * The function also writes a moderation log to the `moderationLogs`
  * subcollection for audit purposes.
@@ -86,7 +87,8 @@ export const onRecipeCreate = onDocumentCreated(
         const recentSnap = await db
           .collection("recipes")
           .where("authorId", "==", authorId)
-          .limit(20)
+          .orderBy("createdAt", "desc")
+          .limit(RATE_LIMIT_MAX + 1)
           .get();
 
         const recentCount = recentSnap.docs.filter((doc) => {
@@ -173,6 +175,9 @@ export const onRecipeCreate = onDocumentCreated(
       } catch (err) {
         console.error("Image validation error:", err);
         moderationLog.imageValidation = { error: String(err) };
+        // Conservative: reject on error so unsafe content is not auto-approved
+        finalStatus = "rejected";
+        rejectionReason = `Image validation failed: ${err instanceof Error ? err.message : String(err)}`;
       }
     }
 

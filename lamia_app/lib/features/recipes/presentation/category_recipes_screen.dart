@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/section_states.dart';
 import '../../home/presentation/widgets/feed_recipe_card.dart';
@@ -12,17 +14,17 @@ import '../data/recipe_repository.dart';
 import 'recipe_detail_screen.dart';
 
 /// A focused, standalone collection for one Filipino recipe category.
-class CategoryRecipesScreen extends StatefulWidget {
+class CategoryRecipesScreen extends ConsumerStatefulWidget {
   const CategoryRecipesScreen({super.key, required this.category});
 
   final RecipeCategoryModel category;
 
   @override
-  State<CategoryRecipesScreen> createState() => _CategoryRecipesScreenState();
+  ConsumerState<CategoryRecipesScreen> createState() => _CategoryRecipesScreenState();
 }
 
-class _CategoryRecipesScreenState extends State<CategoryRecipesScreen> {
-  final RecipeRepository _recipeRepository = RecipeRepository();
+class _CategoryRecipesScreenState extends ConsumerState<CategoryRecipesScreen> {
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
   late Future<List<RecipeModel>> _recipesFuture;
 
   @override

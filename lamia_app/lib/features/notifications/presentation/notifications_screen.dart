@@ -1,30 +1,33 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../profile/presentation/settings_screen.dart';
 import '../data/notification_model.dart';
 import '../data/notification_repository.dart';
 import 'widgets/notification_tile.dart';
 
-class NotificationsScreen extends StatefulWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key, this.isGuest = false});
 
   final bool isGuest;
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationRepository _notifRepo = NotificationRepository();
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  NotificationRepository get _notifRepo => ref.read(notificationRepositoryProvider);
   String _selectedFilter = 'all'; // 'all', 'social', 'planner', 'system'
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final isGuestMode = widget.isGuest || user == null;
+    final currentUserId = ref.read(currentUserIdProvider);
+    final isGuestMode = widget.isGuest || currentUserId == null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,7 +45,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           if (!isGuestMode)
             StreamBuilder<int>(
-              stream: _notifRepo.watchUnreadCount(user.uid),
+              stream: _notifRepo.watchUnreadCount(currentUserId),
               builder: (context, snapshot) {
                 final hasUnread = (snapshot.data ?? 0) > 0;
                 if (!hasUnread) return const SizedBox.shrink();
@@ -50,7 +53,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 return IconButton(
                   icon: const Icon(Icons.done_all_rounded, color: AppColors.primary),
                   tooltip: 'Mark all as read',
-                  onPressed: () => _notifRepo.markAllAsRead(user.uid),
+                  onPressed: () => _notifRepo.markAllAsRead(currentUserId),
                 );
               },
             ),
@@ -78,7 +81,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 // List
                 Expanded(
                   child: StreamBuilder<List<NotificationModel>>(
-                    stream: _notifRepo.watchNotifications(user.uid, filter: _selectedFilter),
+                    stream: _notifRepo.watchNotifications(currentUserId, filter: _selectedFilter),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -96,8 +99,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           final notif = notifications[index];
                           return NotificationTile(
                             notification: notif,
-                            onMarkAsRead: () => _notifRepo.markAsRead(user.uid, notif.id),
-                            onDelete: () => _notifRepo.deleteNotification(user.uid, notif.id),
+                            onMarkAsRead: () => _notifRepo.markAsRead(currentUserId, notif.id),
+                            onDelete: () => _notifRepo.deleteNotification(currentUserId, notif.id),
                           );
                         },
                       );

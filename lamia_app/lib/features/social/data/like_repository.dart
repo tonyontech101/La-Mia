@@ -51,10 +51,21 @@ class LikeRepository {
 
     final batch = _firestore.batch();
     final recipeRef = _firestore.collection('recipes').doc(recipeId);
-    final authorRef = recipeAuthorId != null &&
-            recipeAuthorId.isNotEmpty &&
-            recipeAuthorId != 'null'
-        ? _firestore.collection('users').doc(recipeAuthorId)
+
+    String? targetAuthorId = recipeAuthorId;
+    if (targetAuthorId == null ||
+        targetAuthorId.isEmpty ||
+        targetAuthorId == 'null') {
+      final recipeDoc = await recipeRef.get();
+      if (recipeDoc.exists) {
+        targetAuthorId = recipeDoc.data()?['authorId'] as String?;
+      }
+    }
+
+    final authorRef = targetAuthorId != null &&
+            targetAuthorId.isNotEmpty &&
+            targetAuthorId != 'null'
+        ? _firestore.collection('users').doc(targetAuthorId)
         : null;
 
     if (isCurrentlyLiked) {

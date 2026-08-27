@@ -1,34 +1,25 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/utils/app_logger.dart';
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
-import '../../planner/data/meal_plan_model.dart';
-import '../../planner/data/meal_plan_repository.dart';
-import '../../planner/data/grocery_list_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
-import '../../social/data/favorites_repository.dart';
 import '../../social/presentation/widgets/comment_section.dart';
-import '../../social/data/follow_repository.dart';
-import '../../social/data/like_repository.dart';
-import '../../social/data/rating_repository.dart';
 import '../data/recipe_model.dart';
-import '../data/recipe_repository.dart';
+import 'notifiers/recipe_detail_notifier.dart';
 import 'recipe_creating_screen.dart';
+import 'widgets/planner_slot_picker.dart';
+import 'widgets/popping_rating_bar.dart';
+import 'widgets/vertical_popping_button.dart';
 
 /// Parses a raw instruction string into a `(title, body)` pair.
 ///
@@ -60,7 +51,7 @@ const List<String> _defaultChefsTips = [
 /// - Header image & back navigation
 /// - Floating summary card with ratings, likes, author action bar, and metric boxes
 /// - Folder-style tabbed section for Ingredients, Instructions, and Chef's Tips
-class RecipeDetailScreen extends StatefulWidget {
+class RecipeDetailScreen extends ConsumerStatefulWidget {
   const RecipeDetailScreen({
     super.key,
     required this.recipe,
@@ -71,43 +62,22 @@ class RecipeDetailScreen extends StatefulWidget {
   final String screenTitle;
 
   @override
-  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+  ConsumerState<RecipeDetailScreen> createState() =>
+      _RecipeDetailScreenState();
 }
 
-class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   int _activeTabIndex = 0; // 0: Ingredients, 1: Instructions, 2: Chef's Tips
-
-  late RecipeModel _recipe;
-
-  // ── Social state ────────────────────────────────────────────────────────
-  final LikeRepository _likeRepo = LikeRepository();
-  final FavoritesRepository _favoritesRepo = FavoritesRepository();
-  final FollowRepository _followRepo = FollowRepository();
-  final RatingRepository _ratingRepo = RatingRepository();
-  final GroceryListRepository _groceryRepo = GroceryListRepository();
-
-  bool _isLiked = false;
-  bool _isBookmarked = false;
-  bool _isFollowing = false;
-  bool _socialLoading = true;
-  int _localLikeCount = 0;
-  int _localFavoriteCount = 0;
-  int _userRating = 0;
-  double _localRatingAvg = 0.0;
-  int _localRatingCount = 0;
-
-  // ── Planner state ────────────────────────────────────────────────────────
-  final _plannerRepo = MealPlanRepository();
 
   @override
   void initState() {
     super.initState();
-    _recipe = widget.recipe;
-    _localLikeCount = _recipe.likeCount;
-    _localFavoriteCount = _recipe.favoriteCount;
-    _localRatingAvg = _recipe.ratingAvg;
-    _localRatingCount = _recipe.ratingCount;
-    _loadSocialState();
+    // Schedule social-state load after the first frame so ref is available.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(recipeDetailNotifierProvider(widget.recipe).notifier)
+          .loadSocialState();
+    });
   }
 
   @override
@@ -115,136 +85,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _loadSocialState() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => _socialLoading = false);
-      return;
-    }
-    final recipeId = _recipe.id;
-    if (recipeId == null) {
-      if (mounted) setState(() => _socialLoading = false);
-      return;
-    }
-    try {
-      final results = await Future.wait([
-        _likeRepo.isLiked(recipeId: recipeId, userId: user.uid),
-        _favoritesRepo.isSaved(recipeId: recipeId, userId: user.uid),
-        if (_recipe.authorId != null && !_recipe.isSystemRecipe)
-          _followRepo.isFollowing(
-            currentUid: user.uid,
-            targetUid: _recipe.authorId!,
-          )
-        else
-          Future.value(false),
-        _ratingRepo.getUserRating(recipeId: recipeId, userId: user.uid),
-      ]);
-      if (mounted) {
-        setState(() {
-          _isLiked = results[0] as bool;
-          _isBookmarked = results[1] as bool;
-          _isFollowing = results[2] as bool;
-          _userRating = (results[3] as int?) ?? 0;
-          _socialLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _socialLoading = false);
-    }
-  }
-
-  Future<void> _toggleLike() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      AppSnackbar.show(context, message: 'Sign in to like recipes');
-      return;
-    }
-    final recipeId = _recipe.id;
-    if (recipeId == null || recipeId.isEmpty) {
-      AppSnackbar.show(context, message: 'Cannot like this recipe');
-      return;
-    }
-    try {
-      final newState = await _likeRepo.toggleLike(
-        recipeId: recipeId,
-        userId: user.uid,
-        recipeAuthorId: _recipe.authorId,
-        senderName: user.displayName,
-        senderPhotoUrl: user.photoURL,
-        recipeTitle: _recipe.name,
-      );
-      if (mounted) {
-        setState(() {
-          _isLiked = newState;
-          _localLikeCount += newState ? 1 : -1;
-          if (_localLikeCount < 0) _localLikeCount = 0;
-        });
-      }
-    } catch (e, st) {
-      AppLogger.error('Error toggling like: $e', error: e, stackTrace: st);
-      if (mounted) {
-        AppSnackbar.show(context, message: 'Could not update like: $e');
-      }
-    }
-  }
-
-  Future<void> _toggleBookmark() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      AppSnackbar.show(context, message: 'Sign in to save recipes');
-      return;
-    }
-    final recipeId = _recipe.id;
-    if (recipeId == null || recipeId.isEmpty) {
-      AppSnackbar.show(context, message: 'Cannot save this recipe');
-      return;
-    }
-    try {
-      final newState = await _favoritesRepo.toggleSave(
-        recipeId: recipeId,
-        userId: user.uid,
-      );
-      if (mounted) {
-        setState(() {
-          _isBookmarked = newState;
-          _localFavoriteCount += newState ? 1 : -1;
-          if (_localFavoriteCount < 0) _localFavoriteCount = 0;
-        });
-        AppSnackbar.show(
-          context,
-          message: newState ? 'Recipe saved' : 'Recipe removed from saved',
-        );
-      }
-    } catch (e, st) {
-      AppLogger.error('Error toggling bookmark: $e', error: e, stackTrace: st);
-      if (mounted) {
-        AppSnackbar.show(context, message: 'Could not save recipe: $e');
-      }
-    }
-  }
-
-  Future<void> _reloadRecipe() async {
-    final recipeId = _recipe.id;
-    if (recipeId == null) return;
-    try {
-      final updated = await RecipeRepository().getRecipe(recipeId);
-      if (updated != null && mounted) {
-        setState(() {
-          _recipe = updated;
-          _localLikeCount = updated.likeCount;
-          _localFavoriteCount = updated.favoriteCount;
-          _localRatingAvg = updated.ratingAvg;
-          _localRatingCount = updated.ratingCount;
-        });
-      }
-    } catch (_) {}
-  }
-
   void _openMoreMenu() {
-    final user = FirebaseAuth.instance.currentUser;
-    final isAuthor = user != null &&
-        _recipe.authorId == user.uid &&
-        !_recipe.isSystemRecipe;
+    final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
+    final recipe = detailState.recipe;
+    final userId = ref.read(currentUserIdProvider);
+    final isAuthor = userId != null &&
+        recipe.authorId == userId &&
+        !recipe.isSystemRecipe;
 
     showModalBottomSheet(
       context: context,
@@ -294,20 +141,21 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 label: 'Add ingredients to grocery list',
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) {
+                  final userId = ref.read(currentUserIdProvider);
+                  if (userId == null) {
                     AppSnackbar.show(context, message: 'Please sign in to add to grocery list');
                     return;
                   }
                   try {
-                    await _groceryRepo.addIngredientsFromRecipe(
-                      userId: user.uid,
-                      recipe: _recipe,
+                    final groceryRepo = ref.read(groceryListRepositoryProvider);
+                    await groceryRepo.addIngredientsFromRecipe(
+                      userId: userId,
+                      recipe: recipe,
                     );
                     if (mounted) {
                       AppSnackbar.show(
                         context,
-                        message: '${_recipe.ingredients.length} ingredients added to grocery list.',
+                        message: '${recipe.ingredients.length} ingredients added to grocery list.',
                       );
                     }
                   } catch (e) {
@@ -322,7 +170,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 label: 'Copy link',
                 onTap: () {
                   Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(text: 'https://lamia.app/recipe/${_recipe.id}'));
+                  Clipboard.setData(ClipboardData(text: 'https://lamia.app/recipe/${recipe.id}'));
                   AppSnackbar.show(context, message: 'Link copied.');
                 },
               ),
@@ -337,11 +185,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     Navigator.push<bool>(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => RecipeCreatingScreen(recipeToEdit: _recipe),
+                        builder: (_) => RecipeCreatingScreen(recipeToEdit: recipe),
                       ),
                     ).then((updated) {
                       if (updated == true) {
-                        _reloadRecipe();
+                        ref
+                            .read(recipeDetailNotifierProvider(widget.recipe).notifier)
+                            .reloadRecipe();
                       }
                     });
                   },
@@ -403,6 +253,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   void _confirmDeleteRecipe() {
+    final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
+    final recipe = detailState.recipe;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -416,10 +268,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final recipeId = _recipe.id;
+              final recipeId = recipe.id;
               if (recipeId != null) {
                 try {
-                  await RecipeRepository().deleteRecipe(recipeId);
+                  final recipeRepo = ref.read(recipeRepositoryProvider);
+                  await recipeRepo.deleteRecipe(recipeId);
                   if (mounted) {
                     AppSnackbar.show(context, message: 'Recipe deleted successfully.');
                     Navigator.pop(context, true); // Pop details screen with refresh trigger
@@ -439,71 +292,21 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   void _openAddToPlannerPicker() {
+    final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
+    final plannerRepo = ref.read(mealPlanRepositoryProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PlannerSlotPicker(recipe: _recipe, plannerRepo: _plannerRepo),
+      builder: (_) => PlannerSlotPicker(recipe: detailState.recipe, plannerRepo: plannerRepo),
     );
-  }
-
-  Future<void> _handleRateRecipe(int rating) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      AppSnackbar.show(context, message: 'Please sign in to rate this recipe');
-      return;
-    }
-    final recipeId = _recipe.id;
-    if (recipeId == null) return;
-
-    try {
-      await _ratingRepo.submitRating(
-        recipeId: recipeId,
-        userId: user.uid,
-        rating: rating,
-      );
-      if (mounted) {
-        setState(() {
-          _userRating = rating;
-        });
-        _reloadRecipe();
-        AppSnackbar.show(context, message: 'Thank you for rating this recipe!');
-      }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(context, message: 'Could not submit rating: $e', isError: true);
-      }
-    }
-  }
-
-  Future<void> _toggleFollow() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      AppSnackbar.show(context, message: 'Sign in to follow chefs');
-      return;
-    }
-    final authorId = widget.recipe.authorId;
-    if (authorId == null || widget.recipe.isSystemRecipe) return;
-    final newState = await _followRepo.toggleFollow(
-      currentUid: user.uid,
-      targetUid: authorId,
-      currentUserName: user.displayName,
-      currentUserPhotoUrl: user.photoURL,
-    );
-    if (mounted) {
-      setState(() => _isFollowing = newState);
-      AppSnackbar.show(
-        context,
-        message: newState
-            ? 'Following ${widget.recipe.authorName}'
-            : 'Unfollowed ${widget.recipe.authorName}',
-      );
-    }
   }
 
   void _navigateToAuthorProfile() {
-    final authorId = widget.recipe.authorId;
-    if (authorId == null || widget.recipe.isSystemRecipe) return;
+    final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
+    final recipe = detailState.recipe;
+    final authorId = recipe.authorId;
+    if (authorId == null || recipe.isSystemRecipe) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => ProfileScreen(targetUserId: authorId)),
@@ -512,7 +315,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   /// Shares a human-readable text summary of the recipe via the OS share sheet.
   Future<void> _shareRecipe() async {
-    final recipe = widget.recipe;
+    final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
+    final recipe = detailState.recipe;
     final ingredients = recipe.ingredients
         .asMap()
         .entries
@@ -550,139 +354,10 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
     );
   }
 
-  /// Generates a PDF of the recipe and opens the system print/share dialog.
-  Future<void> _printRecipe() async {
-    final recipe = widget.recipe;
-    await Printing.layoutPdf(
-      name: recipe.name,
-      onLayout: (PdfPageFormat format) async {
-        final doc = pw.Document();
-
-        doc.addPage(
-          pw.MultiPage(
-            pageFormat: format,
-            margin: const pw.EdgeInsets.all(36),
-            build: (pw.Context ctx) {
-              return [
-                // Title
-                pw.Text(
-                  recipe.name,
-                  style: pw.TextStyle(
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'By ${recipe.authorName}  •  ${recipe.category}  •  ${recipe.difficulty}',
-                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'Prep: ${recipe.approximatePrepTime}  •  Cook: ${recipe.approximateCookTime}  •  Serves: ${recipe.approximateServings}  •  ${recipe.approximateBudget}',
-                  style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-                ),
-                pw.Divider(height: 16),
-
-                // Description
-                if (recipe.description.isNotEmpty) ...[
-                  pw.Text(
-                    recipe.description,
-                    style: const pw.TextStyle(fontSize: 11),
-                  ),
-                  pw.SizedBox(height: 12),
-                ],
-
-                // Ingredients
-                pw.Text(
-                  'INGREDIENTS',
-                  style: pw.TextStyle(
-                    fontSize: 13,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.orange800,
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                ...recipe.ingredients.map(
-                  (ing) => pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 3),
-                    child: pw.Row(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('• ', style: const pw.TextStyle(fontSize: 11)),
-                        pw.Expanded(
-                          child: pw.Text(ing, style: const pw.TextStyle(fontSize: 11)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 12),
-
-                // Instructions
-                pw.Text(
-                  'INSTRUCTIONS',
-                  style: pw.TextStyle(
-                    fontSize: 13,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.orange800,
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                ...recipe.instructions.asMap().entries.map(
-                  (entry) => pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 6),
-                    child: pw.Row(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Container(
-                          width: 20,
-                          height: 20,
-                          decoration: const pw.BoxDecoration(
-                            color: PdfColors.orange800,
-                            shape: pw.BoxShape.circle,
-                          ),
-                          child: pw.Center(
-                            child: pw.Text(
-                              '${entry.key + 1}',
-                              style: pw.TextStyle(
-                                fontSize: 9,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        pw.SizedBox(width: 8),
-                        pw.Expanded(
-                          child: pw.Text(
-                            entry.value,
-                            style: const pw.TextStyle(fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 16),
-                pw.Divider(),
-                pw.Text(
-                  'La Mia — Filipino Recipes App',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-                ),
-              ];
-            },
-          ),
-        );
-
-        return doc.save();
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final recipe = _recipe;
+    final detailState = ref.watch(recipeDetailNotifierProvider(widget.recipe));
+    final recipe = detailState.recipe;
     final chefsTips = recipe.chefsTips.isNotEmpty
         ? recipe.chefsTips
         : _defaultChefsTips;
@@ -816,8 +491,8 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  _localRatingAvg > 0
-                                      ? _localRatingAvg.toStringAsFixed(1)
+                                  detailState.localRatingAvg > 0
+                                      ? detailState.localRatingAvg.toStringAsFixed(1)
                                       : '0.0',
                                   style: const TextStyle(
                                     fontSize: 13,
@@ -825,10 +500,10 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                if (_localRatingCount > 0) ...[
+                                if (detailState.localRatingCount > 0) ...[
                                   const SizedBox(width: 2),
                                   Text(
-                                    '(${_localRatingCount >= 1000 ? "${(_localRatingCount / 1000).toStringAsFixed(1)}k" : _localRatingCount})',
+                                    '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppColors.textSecondary,
@@ -958,12 +633,14 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                           ),
                                           if (!recipe.isSystemRecipe &&
                                               recipe.authorId != null &&
-                                              recipe.authorId != FirebaseAuth.instance.currentUser?.uid) ...[
+                                              recipe.authorId != ref.read(currentUserIdProvider)) ...[
                                             const SizedBox(width: 6),
                                             GestureDetector(
-                                              onTap: _socialLoading ? null : _toggleFollow,
+                                              onTap: detailState.socialLoading
+                                                  ? null
+                                                  : _handleFollowTap,
                                               child: Text(
-                                                _isFollowing ? 'following' : '+ follow',
+                                                detailState.isFollowing ? 'following' : '+ follow',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.bold,
@@ -988,21 +665,25 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                 VerticalPoppingButton(
                                   activeIcon: Icons.favorite_rounded,
                                   inactiveIcon: Icons.favorite_rounded,
-                                  isActive: _isLiked,
+                                  isActive: detailState.isLiked,
                                   activeColor: AppColors.error,
                                   inactiveColor: const Color(0xFF80756C),
-                                  count: _localLikeCount,
-                                  onTap: _socialLoading ? () {} : _toggleLike,
+                                  count: detailState.localLikeCount,
+                                  onTap: detailState.socialLoading
+                                      ? () {}
+                                      : _handleLikeTap,
                                 ),
                                 // Bookmark (Save) popping button
                                 VerticalPoppingButton(
                                   activeIcon: Icons.bookmark_rounded,
                                   inactiveIcon: Icons.bookmark_rounded,
-                                  isActive: _isBookmarked,
+                                  isActive: detailState.isBookmarked,
                                   activeColor: AppColors.primary,
                                   inactiveColor: const Color(0xFF80756C),
-                                  count: _localFavoriteCount,
-                                  onTap: _socialLoading ? () {} : _toggleBookmark,
+                                  count: detailState.localFavoriteCount,
+                                  onTap: detailState.socialLoading
+                                      ? () {}
+                                      : _handleBookmarkTap,
                                 ),
                                 // Share popping button
                                 VerticalPoppingButton(
@@ -1081,7 +762,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                         Row(
                           children: [
                             PoppingRatingBar(
-                              initialRating: _userRating,
+                              initialRating: detailState.userRating,
                               onRatingChanged: _handleRateRecipe,
                               activeColor: AppColors.accent,
                               inactiveColor: const Color(0xFFD6D1C9),
@@ -1089,8 +770,8 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              _localRatingAvg > 0
-                                  ? _localRatingAvg.toStringAsFixed(1)
+                              detailState.localRatingAvg > 0
+                                  ? detailState.localRatingAvg.toStringAsFixed(1)
                                   : '0.0',
                               style: const TextStyle(
                                 fontSize: 14,
@@ -1098,10 +779,10 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (_localRatingCount > 0) ...[
+                            if (detailState.localRatingCount > 0) ...[
                               const SizedBox(width: 4),
                               Text(
-                                '(${_localRatingCount >= 1000 ? "${(_localRatingCount / 1000).toStringAsFixed(1)}k" : _localRatingCount})',
+                                '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
@@ -1397,509 +1078,42 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
         return const SizedBox.shrink();
     }
   }
-}
 
-// ── Add-to-Planner Day + Slot Picker ───────────────────────────────────────
+  // ── Social action handlers that delegate to the notifier ──────────────
 
-class _PlannerSlotPicker extends StatefulWidget {
-  const _PlannerSlotPicker({
-    required this.recipe,
-    required this.plannerRepo,
-  });
-
-  final RecipeModel recipe;
-  final MealPlanRepository plannerRepo;
-
-  @override
-  State<_PlannerSlotPicker> createState() => _PlannerSlotPickerState();
-}
-
-class _PlannerSlotPickerState extends State<_PlannerSlotPicker> {
-  late DateTime _selectedDay;
-  WeeklyMealPlanModel? _plan;
-  bool _isLoading = true;
-
-  static String _shortDay(int weekday) {
-    switch (weekday) {
-      case DateTime.monday: return 'Mon';
-      case DateTime.tuesday: return 'Tue';
-      case DateTime.wednesday: return 'Wed';
-      case DateTime.thursday: return 'Thu';
-      case DateTime.friday: return 'Fri';
-      case DateTime.saturday: return 'Sat';
-      case DateTime.sunday: return 'Sun';
-      default: return 'Day';
+  Future<void> _handleLikeTap() async {
+    final notifier =
+        ref.read(recipeDetailNotifierProvider(widget.recipe).notifier);
+    final result = await notifier.toggleLike();
+    if (mounted && result.message != null) {
+      AppSnackbar.show(context, message: result.message!, isError: result.isError);
     }
   }
 
-  static String _dayLabel(String slotKey) {
-    switch (slotKey) {
-      case 'breakfast': return 'Almusal';
-      case 'lunch': return 'Tanghalian';
-      case 'dinner': return 'Hapunan';
-      case 'snack': return 'Meryenda';
-      default: return slotKey;
+  Future<void> _handleBookmarkTap() async {
+    final notifier =
+        ref.read(recipeDetailNotifierProvider(widget.recipe).notifier);
+    final result = await notifier.toggleBookmark();
+    if (mounted && result.message != null) {
+      AppSnackbar.show(context, message: result.message!, isError: result.isError);
     }
   }
 
-  static String _glossLabel(String slotKey) {
-    switch (slotKey) {
-      case 'breakfast': return 'Breakfast';
-      case 'lunch': return 'Lunch';
-      case 'dinner': return 'Dinner';
-      case 'snack': return 'Snack';
-      default: return slotKey;
+  Future<void> _handleFollowTap() async {
+    final notifier =
+        ref.read(recipeDetailNotifierProvider(widget.recipe).notifier);
+    final result = await notifier.toggleFollow();
+    if (mounted && result.message != null) {
+      AppSnackbar.show(context, message: result.message!, isError: result.isError);
     }
   }
 
-  static IconData _slotIcon(String slotKey) {
-    switch (slotKey) {
-      case 'breakfast': return Icons.wb_twilight_rounded;
-      case 'lunch': return Icons.wb_sunny_rounded;
-      case 'dinner': return Icons.nightlight_round;
-      case 'snack': return Icons.bakery_dining_rounded;
-      default: return Icons.restaurant;
+  Future<void> _handleRateRecipe(int rating) async {
+    final notifier =
+        ref.read(recipeDetailNotifierProvider(widget.recipe).notifier);
+    final result = await notifier.handleRate(rating);
+    if (mounted && result.message != null) {
+      AppSnackbar.show(context, message: result.message!, isError: result.isError);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _selectedDay = DateTime(now.year, now.month, now.day);
-    _loadWeek();
-  }
-
-  Future<void> _loadWeek() async {
-    setState(() => _isLoading = true);
-    final monday = MealPlanRepository.getMondayOf(_selectedDay);
-    final plan = await widget.plannerRepo.getWeeklyPlan(monday);
-    if (mounted) setState(() { _plan = plan; _isLoading = false; });
-  }
-
-  String get _dateKey => MealPlanRepository.formatDateKey(_selectedDay);
-
-  MealPlanDay get _selectedDayData =>
-      _plan?.days[_dateKey] ?? MealPlanDay(dateKey: _dateKey, dayOfWeek: '');
-
-  MealPlanItem? _slotItem(String slot) {
-    switch (slot) {
-      case 'breakfast': return _selectedDayData.breakfast;
-      case 'lunch': return _selectedDayData.lunch;
-      case 'dinner': return _selectedDayData.dinner;
-      case 'snack': return _selectedDayData.snack;
-      default: return null;
-    }
-  }
-
-  Future<void> _assignToSlot(String slot) async {
-    if (_plan == null) return;
-    final updated = await widget.plannerRepo.assignMealSlot(
-      currentPlan: _plan!,
-      dateKey: _dateKey,
-      slot: slot,
-      recipe: widget.recipe,
-    );
-    if (mounted) {
-      setState(() => _plan = updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.recipe.name} added to ${_dayLabel(slot)}.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.pop(context);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final monday = MealPlanRepository.getMondayOf(_selectedDay);
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.72,
-      margin: const EdgeInsets.fromLTRB(AppSpacing.screenH, 0, AppSpacing.screenH, 0),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add to planner',
-                  style: GoogleFonts.fraunces(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  widget.recipe.name,
-                  style: AppTypography.caption(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Day strip
-          SizedBox(
-            height: 70,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              itemCount: 7,
-              itemBuilder: (_, i) {
-                final dayDate = monday.add(Duration(days: i));
-                final isSelected = dayDate.year == _selectedDay.year &&
-                    dayDate.month == _selectedDay.month &&
-                    dayDate.day == _selectedDay.day;
-                final isToday = DateTime.now().year == dayDate.year &&
-                    DateTime.now().month == dayDate.month &&
-                    DateTime.now().day == dayDate.day;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: GestureDetector(
-                    onTap: () { setState(() => _selectedDay = dayDate); _loadWeek(); },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      width: 54,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadii.field),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : isToday
-                                  ? AppColors.primary.withValues(alpha: 0.4)
-                                  : AppColors.border,
-                          width: isSelected ? 1.5 : 1.0,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            _shortDay(dayDate.weekday).toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5,
-                              color: isSelected ? Colors.white70 : AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xxs),
-                          Text(
-                            '${dayDate.day}',
-                            style: GoogleFonts.fraunces(
-                              fontSize: 18, fontWeight: FontWeight.w700,
-                              color: isSelected ? Colors.white : AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Slots
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                    itemCount: 4,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.border),
-                    itemBuilder: (_, i) {
-                      final slotKey = ['breakfast', 'lunch', 'dinner', 'snack'][i];
-                      final item = _slotItem(slotKey);
-                      final isFilled = item != null && item.recipeName.isNotEmpty;
-                      return InkWell(
-                        onTap: () => _assignToSlot(slotKey),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: Row(
-                            children: [
-                              Icon(_slotIcon(slotKey), color: AppColors.textSecondary, size: 18),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _dayLabel(slotKey),
-                                      style: GoogleFonts.fraunces(
-                                        fontSize: 16, fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.xxs),
-                                    Text(
-                                      _glossLabel(slotKey),
-                                      style: AppTypography.caption(color: AppColors.textSecondary),
-                                    ),
-                                    if (isFilled) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item.recipeName,
-                                        style: AppTypography.caption(color: AppColors.textDisabled),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              if (!isFilled)
-                                const Icon(Icons.add_rounded, color: AppColors.primary, size: 22)
-                              else
-                                Text(
-                                  'Replace',
-                                  style: AppTypography.caption(color: AppColors.primary),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class VerticalPoppingButton extends StatefulWidget {
-  final IconData activeIcon;
-  final IconData inactiveIcon;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final int count;
-  final VoidCallback onTap;
-
-  const VerticalPoppingButton({
-    super.key,
-    required this.activeIcon,
-    required this.inactiveIcon,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.count,
-    required this.onTap,
-  });
-
-  @override
-  State<VerticalPoppingButton> createState() => _VerticalPoppingButtonState();
-}
-
-class _VerticalPoppingButtonState extends State<VerticalPoppingButton> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.4)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.4, end: 0.95)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 30,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.95, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 30,
-      ),
-    ]).animate(_controller);
-  }
-
-  @override
-  void didUpdateWidget(covariant VerticalPoppingButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive != oldWidget.isActive) {
-      _controller.forward(from: 0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        _controller.forward(from: 0.0);
-        widget.onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: Icon(
-                widget.isActive ? widget.activeIcon : widget.inactiveIcon,
-                size: 26,
-                color: widget.isActive ? widget.activeColor : widget.inactiveColor,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${widget.count}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: widget.isActive ? widget.activeColor : widget.inactiveColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class PoppingRatingBar extends StatefulWidget {
-  final int initialRating;
-  final ValueChanged<int> onRatingChanged;
-  final double starSize;
-  final Color activeColor;
-  final Color inactiveColor;
-
-  const PoppingRatingBar({
-    super.key,
-    required this.initialRating,
-    required this.onRatingChanged,
-    this.starSize = 32.0,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
-
-  @override
-  State<PoppingRatingBar> createState() => _PoppingRatingBarState();
-}
-
-class _PoppingRatingBarState extends State<PoppingRatingBar> with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
-  late List<Animation<double>> _scaleAnimations;
-  int _currentRating = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentRating = widget.initialRating;
-    _controllers = List.generate(5, (index) {
-      return AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 300),
-      );
-    });
-
-    _scaleAnimations = _controllers.map((controller) {
-      return TweenSequence<double>([
-        TweenSequenceItem(
-          tween: Tween<double>(begin: 1.0, end: 1.4)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 40,
-        ),
-        TweenSequenceItem(
-          tween: Tween<double>(begin: 1.4, end: 0.95)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 30,
-        ),
-        TweenSequenceItem(
-          tween: Tween<double>(begin: 0.95, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 30,
-        ),
-      ]).animate(controller);
-    }).toList();
-  }
-
-  @override
-  void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  void _handleStarTap(int index) {
-    final newRating = index + 1;
-    setState(() {
-      _currentRating = newRating;
-    });
-    widget.onRatingChanged(newRating);
-
-    // Cascading animation: trigger one after another with a tiny delay
-    for (int i = 0; i < 5; i++) {
-      if (i < newRating) {
-        Future.delayed(Duration(milliseconds: i * 50), () {
-          if (mounted) {
-            _controllers[i].forward(from: 0.0);
-          }
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        final isFilled = index < _currentRating;
-        return ScaleTransition(
-          scale: _scaleAnimations[index],
-          child: GestureDetector(
-            onTap: () => _handleStarTap(index),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(
-                isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
-                size: widget.starSize,
-                color: isFilled ? widget.activeColor : widget.inactiveColor,
-              ),
-            ),
-          ),
-        );
-      }),
-    );
   }
 }

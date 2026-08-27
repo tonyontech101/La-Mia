@@ -3,11 +3,13 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/firebase_providers.dart';
 import '../../../core/widgets/pressable_scale.dart';
 
 /// Result returned when the user exits the verification screen.
@@ -34,7 +36,7 @@ enum VerificationExitAction {
 ///   2a. Approved — celebration + "Luto Na!" 🎉
 ///   2b. Rejected — empathetic explanation + tips + edit/retry
 ///   2c. Timed-out — "still processing" fallback
-class AiVerificationScreen extends StatefulWidget {
+class AiVerificationScreen extends ConsumerStatefulWidget {
   const AiVerificationScreen({
     super.key,
     required this.recipeDocId,
@@ -45,10 +47,10 @@ class AiVerificationScreen extends StatefulWidget {
   final String recipeName;
 
   @override
-  State<AiVerificationScreen> createState() => _AiVerificationScreenState();
+  ConsumerState<AiVerificationScreen> createState() => _AiVerificationScreenState();
 }
 
-class _AiVerificationScreenState extends State<AiVerificationScreen>
+class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
     with TickerProviderStateMixin {
   // ── Phase state ──────────────────────────────────────────────────────────────
   // 'processing' | 'approved' | 'rejected' | 'timeout'
@@ -141,7 +143,7 @@ class _AiVerificationScreenState extends State<AiVerificationScreen>
   }
 
   void _startListening() {
-    final docRef = FirebaseFirestore.instance
+    final docRef = ref.read(firebaseFirestoreProvider)
         .collection('recipes')
         .doc(widget.recipeDocId);
 
@@ -196,7 +198,7 @@ class _AiVerificationScreenState extends State<AiVerificationScreen>
     _messageTimer?.cancel();
 
     // Delete the rejected document
-    FirebaseFirestore.instance
+    ref.read(firebaseFirestoreProvider)
         .collection('recipes')
         .doc(widget.recipeDocId)
         .delete()

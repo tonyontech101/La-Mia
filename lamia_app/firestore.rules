@@ -3,14 +3,14 @@ rules_version = '2';
 // La Mia — Firestore Security Rules
 //
 // Implements the security model described in `La Mia - Architecture
-// (Flutter + Firebase).md` §5. The current data model does not yet carry
-// every field the doc lists (status, authorId, likeCount, ratingAvg), so
-// these rules are written to:
+// (Flutter + Firebase).md` §5.
 //   1. Forward-enable the documented model (guarded by field presence),
 //   2. Lock down writes today to signed-in users + their own data,
 //   3. Treat popularity/moderation fields as server-authoritative — clients
-//      can never directly set status, likeCount, ratingAvg, ratingCount,
-//      trendingScore, or commentCount, even when those fields exist.
+//      can never directly set status, ratingAvg, ratingCount, trendingScore,
+//      or commentCount, even when those fields exist.
+//   4. Counter fields (likeCount, favoriteCount, followerCount, etc.) are
+//      restricted to ±1 increments/decrements to prevent spoofing.
 //
 // Deploy with: firebase deploy --only firestore:rules
 
@@ -50,7 +50,8 @@ service cloud.firestore {
           .hasAny(['status']);
     }
 
-    /// Server-authoritative fields on CREATE. Clients can never set these fields on creation.
+    /// Server-authoritative fields on CREATE. Clients can never set these
+    /// fields on creation.
     function notSettingServerFieldsOnCreate() {
       return !request.resource.data.keys().hasAny([
         'approvedAt', 'likeCount', 'commentCount',
@@ -58,13 +59,28 @@ service cloud.firestore {
       ]);
     }
 
-    /// Server-authoritative fields on UPDATE. Clients can never update these.
+    /// Server-authoritative fields on UPDATE. Clients can never update these
+    /// directly (counters go through their own ±1 rules).
     function notSettingServerFieldsOnUpdate() {
       return !request.resource.data.diff(resource.data)
           .affectedKeys().hasAny([
-            'status', 'approvedAt', 'likeCount', 'commentCount',
-            'favoriteCount', 'ratingAvg', 'ratingCount', 'trendingScore'
+            'status', 'approvedAt', 'commentCount',
+            'ratingAvg', 'ratingCount', 'trendingScore'
           ]);
+    }
+
+    /// Helper: a single counter field changed by exactly +1.
+    function counterIncremented(field) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly([field])
+          && request.resource.data[field] == resource.data[field] + 1;
+    }
+
+    /// Helper: a single counter field changed by exactly -1.
+    function counterDecremented(field) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly([field])
+          && request.resource.data[field] == resource.data[field] - 1;
     }
 
     // ── Recipes ────────────────────────────────────────────────────────────
@@ -87,9 +103,7 @@ service cloud.firestore {
       // Structural validation ensures the document resembles a real recipe.
       allow create: if isSignedIn()
           && request.resource.data.authorId == request.auth.uid
-          // ── Force pending status (no self-approval) ──
           && request.resource.data.status == 'pending'
-          // ── Structural: required fields exist & have correct types ──
           && request.resource.data.name is string
           && request.resource.data.name.size() >= 3
           && request.resource.data.name.size() <= 150
@@ -97,7 +111,7 @@ service cloud.firestore {
           && request.resource.data.category is string
           && request.resource.data.category in [
                'Almusal', 'Ulam', 'Sabaw', 'Merienda',
-               'Panghimagas', 'Gulay', 'Inihaw', 'Lamang Dagat'
+               'Panghimagas', 'Gulay', 'Inihaw', 'Lamang Dagat', 'Pulutan'
              ]
           && request.resource.data.difficulty is string
           && request.resource.data.difficulty in ['Easy', 'Medium', 'Hard']
@@ -111,16 +125,12 @@ service cloud.firestore {
           && request.resource.data.coverPhotoUrl.size() > 0
           && request.resource.data.prepTime is string
           && request.resource.data.cookTime is string
-          // ── Deny server-authoritative fields on create ──
           && notSettingServerFieldsOnCreate();
 
       // Update: author may edit non-status fields of their own recipe;
-      // admin may update anything (including status approval). Clients
-      // can never mutate the server-authoritative counters via either path.
-      // Update: author may edit non-status fields of their own recipe;
-      // admin may update anything (including status approval). Clients
-      // can never mutate the server-authoritative counters via either path,
-      // EXCEPT signed-in users can update only `likeCount` and `favoriteCount` (for likes and saves).
+      // admin may update anything (including status approval).
+      // Counter fields (likeCount, favoriteCount) are restricted to ±1
+      // increments/decrements only — Cloud Functions handle reconciliation.
       allow update: if (
         (
           isAuthor()
@@ -129,7 +139,12 @@ service cloud.firestore {
         )
         || (
           isSignedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'favoriteCount'])
+          && (
+            counterIncremented('likeCount')
+            || counterDecremented('likeCount')
+            || counterIncremented('favoriteCount')
+            || counterDecremented('favoriteCount')
+          )
         )
         || isAdmin()
       );
@@ -178,21 +193,28 @@ service cloud.firestore {
       allow create: if isUser(uid)
           && request.resource.data.role == 'user';
 
-      // Update own profile — but never the role or recipeCount fields, and only
-      // allow owner to modify savedCount/followingCount. Other authenticated users
-      // are permitted to modify totalLikesReceived/followerCount.
+      // Update own profile — but never the role or recipeCount fields.
+      // Counter fields (followerCount, followingCount, totalLikesReceived,
+      // savedCount) are restricted to ±1 increments/decrements.
       allow update: if (
         (
           isUser(uid)
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-            'role', 'recipeCount', 'totalLikesReceived', 'followerCount'
+            'role', 'recipeCount'
           ])
         )
         || (
           isSignedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'totalLikesReceived', 'followerCount'
-          ])
+          && (
+            counterIncremented('followerCount')
+            || counterDecremented('followerCount')
+            || counterIncremented('followingCount')
+            || counterDecremented('followingCount')
+            || counterIncremented('totalLikesReceived')
+            || counterDecremented('totalLikesReceived')
+            || counterIncremented('savedCount')
+            || counterDecremented('savedCount')
+          )
         )
         || isAdmin()
       );
@@ -224,6 +246,30 @@ service cloud.firestore {
       allow write: if isUser(userId);
     }
 
+    // ── User sub-collections ────────────────────────────────────────────────
+
+    match /users/{userId}/likes/{recipeId} {
+      allow read: if true;
+      allow write: if isUser(userId);
+    }
+
+    match /users/{userId}/saved/{recipeId} {
+      allow read, write: if isUser(userId);
+    }
+
+    match /users/{userId}/mealPlans/{weekId} {
+      allow read, write: if isUser(userId);
+    }
+
+    match /users/{userId}/grocery_items/{itemId} {
+      allow read, write: if isUser(userId);
+    }
+
+    match /users/{userId}/notifications/{notifId} {
+      allow read, update, delete: if isUser(userId);
+      allow create: if isSignedIn();
+    }
+
     // ── Moderation Logs (written by Cloud Functions, readable by admins) ────
 
     match /moderationLogs/{logId} {
@@ -233,51 +279,10 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions can write
     }
 
-    // ── Likes & Favorites ──────────────────────────────────────────────────
-
-    match /likes/{recipeId}/users/{userId} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /users/{userId}/likes/{recipeId} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /users/{userId}/saved/{recipeId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /users/{userId}/mealPlans/{weekId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /users/{userId}/grocery_items/{itemId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /users/{userId}/notifications/{notifId} {
-      allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn();
-    }
-
-    // ── Follow / Followers ─────────────────────────────────────────────────
-
-    match /following/{userId}/users/{targetUid} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    match /followers/{userId}/users/{followerUid} {
-      allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == followerUid;
-    }
-
     // ── Everything else: deny by default ─────────────────────────────────────
 
     // Collections not explicitly named above are inaccessible to clients.
-    // (新时期) New collections must add a deliberate rule here.
+    // New collections must add a deliberate rule here.
     match /{document=**} {
       allow read, write: if false;
     }

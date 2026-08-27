@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../home/presentation/widgets/feed_recipe_card.dart';
@@ -15,19 +17,19 @@ import '../../recipes/presentation/recipe_detail_screen.dart';
 import 'widgets/chef_search_tile.dart';
 
 /// Full Universal Search screen for finding both Recipes and Chefs/Users.
-class UniversalSearchScreen extends StatefulWidget {
+class UniversalSearchScreen extends ConsumerStatefulWidget {
   const UniversalSearchScreen({super.key, this.initialQuery = ''});
 
   final String initialQuery;
 
   @override
-  State<UniversalSearchScreen> createState() => _UniversalSearchScreenState();
+  ConsumerState<UniversalSearchScreen> createState() => _UniversalSearchScreenState();
 }
 
-class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
+class _UniversalSearchScreenState extends ConsumerState<UniversalSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final RecipeRepository _recipeRepo = RecipeRepository();
-  final UserRepository _userRepo = UserRepository();
+  RecipeRepository get _recipeRepo => ref.read(recipeRepositoryProvider);
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
 
   Timer? _debounceTimer;
   int _activeTab = 0; // 0: All, 1: Recipes, 2: Chefs

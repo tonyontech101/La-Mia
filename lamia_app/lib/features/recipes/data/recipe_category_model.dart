@@ -65,5 +65,11 @@ class RecipeCategoryModel {
       tagline: 'Seafood Classics',
       icon: Icons.set_meal_outlined,
     ),
+    RecipeCategoryModel(
+      id: 'pulutan',
+      name: 'Pulutan',
+      tagline: 'Bar Bites & Appetizers',
+      icon: Icons.local_bar_outlined,
+    ),
   ];
 }

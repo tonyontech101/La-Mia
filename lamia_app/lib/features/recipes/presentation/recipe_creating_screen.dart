@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../auth/presentation/login_screen.dart';
@@ -15,10 +15,10 @@ import 'ai_verification_screen.dart';
 import '../../auth/presentation/sign_up_screen.dart';
 import '../data/recipe_category_model.dart';
 import '../data/recipe_model.dart';
-import '../data/recipe_repository.dart';
 import '../../home/presentation/widgets/feed_recipe_card.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
+import 'notifiers/recipe_form_notifier.dart';
 
 /// Models an ingredient row item in the step 3 builder.
 class _IngredientRowData {
@@ -65,71 +65,36 @@ class _InstructionStepData {
 /// Screen for creating and uploading a new recipe.
 /// Redesigned as a modern 5-step wizard in a clean elevated card matching
 /// the reference design.
-class RecipeCreatingScreen extends StatefulWidget {
+class RecipeCreatingScreen extends ConsumerStatefulWidget {
   const RecipeCreatingScreen({super.key, this.recipeToEdit});
 
   final RecipeModel? recipeToEdit;
 
   @override
-  State<RecipeCreatingScreen> createState() => _RecipeCreatingScreenState();
+  ConsumerState<RecipeCreatingScreen> createState() =>
+      _RecipeCreatingScreenState();
 }
 
-class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
-  final _recipeRepo = RecipeRepository();
-  int _currentStep = 1; // 1 to 5
-  bool _isSaving = false;
+class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
+  late final RecipeFormNotifier _formNotifier;
   int _previewActiveTabIndex = 0;
 
-  // ── Step 1: Basic Info ──────────────────────────────────────────────────────
+  // ── TextEditingControllers (owned by the widget) ─────────────────────────
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String? _selectedCoverPhotoUrl;
-  File? _selectedImageFile;
+  final _tagsController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // ── Step 2: Details & Times ─────────────────────────────────────────────────
-  String? _selectedCategoryId;
-  String _selectedRegion = 'Any region';
-  String _selectedDifficulty = 'Easy';
-  String _selectedBudget = '< ₱150 (Budget friendly)';
-  int _servings = 4;
-  int _prepTimeMin = 15;
-  int _cookTimeMin = 30;
-  final _tagsController = TextEditingController();
-
-  String get _servingsDisplay {
-    if (_servings <= 2) return '< 2 serves';
-    if (_servings <= 4) return '~ 3-4 serves';
-    if (_servings <= 6) return '~ 5-6 serves';
-    if (_servings <= 8) return '~ 7-8 serves';
-    return '> 8 serves';
-  }
-
-  String get _prepTimeDisplay {
-    if (_prepTimeMin <= 10) return '< 10 mins';
-    if (_prepTimeMin <= 20) return '~ 15 mins';
-    if (_prepTimeMin <= 30) return '~ 20-30 mins';
-    return '> 30 mins';
-  }
-
-  String get _cookTimeDisplay {
-    if (_cookTimeMin <= 15) return '< 15 mins';
-    if (_cookTimeMin <= 30) return '~ 30 mins';
-    if (_cookTimeMin <= 45) return '~ 45 mins';
-    if (_cookTimeMin <= 60) return '~ 60 mins';
-    return '> 1 hr';
-  }
-
-  // ── Step 3: Ingredients ─────────────────────────────────────────────────────
+  // ── Step 3: Ingredients ─────────────────────────────────────────────────
   final List<_IngredientRowData> _ingredientItems = [];
 
-  // ── Step 4: Instructions ────────────────────────────────────────────────────
+  // ── Step 4: Instructions ────────────────────────────────────────────────
   final List<_InstructionStepData> _instructionItems = [];
 
-  // ── Chef's Tips ─────────────────────────────────────────────────────────────
+  // ── Chef's Tips ─────────────────────────────────────────────────────────
   final List<TextEditingController> _chefsTipControllers = [];
 
-  // Region options
+  // Region options (for the dropdown — data lives in the notifier's state)
   final List<String> _regionOptions = [
     'Any region',
     'Tagalog',
@@ -161,80 +126,46 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
   @override
   void initState() {
     super.initState();
+    _formNotifier = ref.read(recipeFormNotifierProvider.notifier);
+
     if (widget.recipeToEdit != null) {
-      final r = widget.recipeToEdit!;
-      _titleController.text = r.name;
-      _descriptionController.text = r.description;
-      _selectedCoverPhotoUrl = r.coverPhotoUrl;
+      // Let the notifier parse the existing recipe's fields
+      _formNotifier.loadRecipeForEdit(widget.recipeToEdit!);
 
-      // Category matching
-      final cat = RecipeCategoryModel.defaultCategories.firstWhere(
-        (c) => c.name.toLowerCase() == r.category.toLowerCase(),
-        orElse: () => RecipeCategoryModel.defaultCategories.first,
-      );
-      _selectedCategoryId = cat.id;
+      // Sync TextEditingControllers with the notifier state
+      final state = ref.read(recipeFormNotifierProvider);
+      _titleController.text = state.name;
+      _descriptionController.text = state.description;
+      _tagsController.text = state.tags;
 
-      // Region matching
-      if (_regionOptions.contains(r.region)) {
-        _selectedRegion = r.region;
-      } else if (r.region == 'Philippines') {
-        _selectedRegion = 'Any region';
-      } else {
-        _selectedRegion = 'Other / Fusion';
-      }
-
-      // Difficulty matching
-      if (_difficultyOptions.contains(r.difficulty)) {
-        _selectedDifficulty = r.difficulty;
-      }
-
-      // Budget matching
-      final budgetStr = r.budget;
-      if (budgetStr != null) {
-        final matchedBudget = _budgetOptions.firstWhere(
-          (b) => b.toLowerCase().contains(budgetStr.toLowerCase()) || budgetStr.toLowerCase().contains(b.toLowerCase()),
-          orElse: () => _budgetOptions.first,
-        );
-        _selectedBudget = matchedBudget;
-      }
-
-      _servings = r.servings;
-
-      // Parse cook & prep times
-      final prepDigits = int.tryParse(r.prepTime.replaceAll(RegExp(r'[^0-9]'), ''));
-      if (prepDigits != null) _prepTimeMin = prepDigits;
-
-      final cookDigits = int.tryParse(r.cookTime.replaceAll(RegExp(r'[^0-9]'), ''));
-      if (cookDigits != null) _cookTimeMin = cookDigits;
-
-      _tagsController.text = r.tags.join(', ');
-
-      // Ingredients loading
-      for (final ingredient in r.ingredients) {
+      // Parse ingredient strings from the notifier into row controllers
+      for (final ingredient in state.ingredientStrings) {
         String name = ingredient;
         String notes = '';
         if (ingredient.contains('(') && ingredient.endsWith(')')) {
           final openParen = ingredient.lastIndexOf('(');
           name = ingredient.substring(0, openParen).trim();
-          notes = ingredient.substring(openParen + 1, ingredient.length - 1).trim();
+          notes =
+              ingredient.substring(openParen + 1, ingredient.length - 1).trim();
         }
         _ingredientItems.add(_IngredientRowData(name: name, notes: notes));
       }
 
-      // Instructions loading
-      for (final step in r.instructions) {
+      // Parse instruction strings from the notifier into step controllers
+      for (final step in state.instructionStrings) {
         String desc = step;
         String tip = '';
         if (step.contains('(Tip:') && step.endsWith(')')) {
           final openTip = step.lastIndexOf('(Tip:');
           desc = step.substring(0, openTip).trim();
-          tip = step.substring(openTip + 5, step.length - 1).trim();
+          tip =
+              step.substring(openTip + 5, step.length - 1).trim();
         }
         _instructionItems.add(_InstructionStepData(description: desc, tip: tip));
       }
 
-      // Chef's tips loading
-      for (final tip in r.chefsTips) {
+      // Parse tip strings from the notifier
+      for (final tip in state.tipStrings) {
         _chefsTipControllers.add(TextEditingController(text: tip));
       }
     }
@@ -268,106 +199,67 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     super.dispose();
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────
 
   List<String> get _formattedChefsTips {
-    final list = <String>[];
-    for (final controller in _chefsTipControllers) {
-      final text = controller.text.trim();
-      if (text.isNotEmpty) {
-        list.add(text);
-      }
-    }
-    return list;
+    return RecipeFormNotifier.formatChefsTips(
+      _chefsTipControllers.map((c) => c.text).toList(),
+    );
   }
 
   List<String> get _formattedIngredients {
-    final list = <String>[];
-    for (final item in _ingredientItems) {
-      final amt = item.amountController.text.trim();
-      final unit = item.unitController.text.trim();
-      final name = item.nameController.text.trim();
-      final notes = item.notesController.text.trim();
-
-      if (name.isEmpty && amt.isEmpty) continue;
-
-      final parts = <String>[];
-      if (amt.isNotEmpty) parts.add(amt);
-      if (unit.isNotEmpty) parts.add(unit);
-      if (name.isNotEmpty) parts.add(name);
-      var str = parts.join(' ');
-      if (notes.isNotEmpty) {
-        str += ' ($notes)';
-      }
-      if (str.isNotEmpty) {
-        list.add(str);
-      }
-    }
-    return list;
+    return RecipeFormNotifier.formatIngredients(
+      _ingredientItems
+          .map((item) => (
+                amount: item.amountController.text,
+                unit: item.unitController.text,
+                name: item.nameController.text,
+                notes: item.notesController.text,
+              ))
+          .toList(),
+    );
   }
 
   List<String> get _formattedInstructions {
-    final list = <String>[];
-    for (final item in _instructionItems) {
-      final desc = item.descriptionController.text.trim();
-      final tip = item.tipController.text.trim();
-      if (desc.isEmpty) continue;
-      if (tip.isNotEmpty) {
-        list.add('$desc (Tip: $tip)');
-      } else {
-        list.add(desc);
-      }
-    }
-    return list;
+    return RecipeFormNotifier.formatInstructions(
+      _instructionItems
+          .map((item) => (
+                description: item.descriptionController.text,
+                tip: item.tipController.text,
+              ))
+          .toList(),
+    );
   }
 
-  List<String> get _parsedTags {
-    if (_tagsController.text.trim().isEmpty) return [];
-    return _tagsController.text
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  // ── Step Navigation & Validation ────────────────────────────────────────────
+  // ── Step Navigation & Validation ────────────────────────────────────────
 
   void _nextStep() {
     FocusScope.of(context).unfocus();
 
-    if (_currentStep == 1) {
-      if (_titleController.text.trim().isEmpty) {
-        _showToast('Please enter a recipe title');
+    final currentStep = ref.read(recipeFormNotifierProvider).currentStep;
+
+    if (currentStep < 5) {
+      // Validate current step
+      final error = _formNotifier.validateStep(
+        currentStep,
+        formattedIngredients: _formattedIngredients,
+        formattedInstructions: _formattedInstructions,
+      );
+      if (error != null) {
+        _showToast(error);
         return;
       }
-      setState(() => _currentStep = 2);
-    } else if (_currentStep == 2) {
-      if (_selectedCategoryId == null) {
-        _showToast('Please select a recipe category');
-        return;
-      }
-      setState(() => _currentStep = 3);
-    } else if (_currentStep == 3) {
-      if (_formattedIngredients.length < 2) {
-        _showToast('Please add at least 2 ingredients');
-        return;
-      }
-      setState(() => _currentStep = 4);
-    } else if (_currentStep == 4) {
-      if (_formattedInstructions.length < 2) {
-        _showToast('Please add at least 2 instruction steps');
-        return;
-      }
-      setState(() => _currentStep = 5);
-    } else if (_currentStep == 5) {
+      _formNotifier.nextStep();
+    } else {
       _submitRecipe();
     }
   }
 
   void _prevStep() {
     FocusScope.of(context).unfocus();
-    if (_currentStep > 1) {
-      setState(() => _currentStep--);
+    final currentStep = ref.read(recipeFormNotifierProvider).currentStep;
+    if (currentStep > 1) {
+      _formNotifier.prevStep();
     } else {
       Navigator.pop(context);
     }
@@ -382,7 +274,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Photo Picker ───────────────────────────────────────────────────────────
+  // ── Photo Picker ───────────────────────────────────────────────────────
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -393,10 +285,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         imageQuality: 85,
       );
       if (pickedFile != null) {
-        setState(() {
-          _selectedImageFile = File(pickedFile.path);
-          _selectedCoverPhotoUrl = null;
-        });
+        _formNotifier.setSelectedImageFile(File(pickedFile.path));
       }
     } catch (e) {
       if (mounted) {
@@ -433,7 +322,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 const SizedBox(height: 18),
                 Text(
                   'Add Dish Photo',
-                  style: AppTypography.title().copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.title()
+                      .copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -442,7 +332,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                  leading: const Icon(Icons.camera_alt_rounded,
+                      color: AppColors.primary),
                   title: const Text('Take a Photo'),
                   onTap: () {
                     Navigator.pop(context);
@@ -450,7 +341,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                  leading: const Icon(Icons.photo_library_rounded,
+                      color: AppColors.primary),
                   title: const Text('Choose from Gallery'),
                   onTap: () {
                     Navigator.pop(context);
@@ -465,7 +357,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Submit Recipe to Firestore ──────────────────────────────────────────────
+  // ── Submit Recipe to Firestore ──────────────────────────────────────────
 
   Future<void> _submitRecipe() async {
     final ingredients = _formattedIngredients;
@@ -473,132 +365,50 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
 
     if (ingredients.length < 2) {
       _showToast('Please add at least 2 ingredients');
-      setState(() => _currentStep = 3);
+      _formNotifier.goToStep(3);
       return;
     }
 
     if (instructions.length < 2) {
       _showToast('Please add at least 2 instruction steps');
-      setState(() => _currentStep = 4);
+      _formNotifier.goToStep(4);
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _showToast('Please sign in to upload a recipe');
-      return;
-    }
-
-    setState(() => _isSaving = true);
+    setState(() {}); // trigger rebuild for _isSaving visual
 
     try {
-      String coverUrl = _selectedCoverPhotoUrl ?? '';
+      final result = await _formNotifier.submitRecipe(
+        ingredients: ingredients,
+        instructions: instructions,
+        chefsTips: _formattedChefsTips,
+        recipeToEdit: widget.recipeToEdit,
+      );
 
-      // Upload selected image file to Firebase Storage
-      if (_selectedImageFile != null) {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('users/${user.uid}/recipes/recipe_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      if (!mounted) return;
 
-        final uploadTask = await storageRef.putFile(
-          _selectedImageFile!,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        coverUrl = await uploadTask.ref.getDownloadURL();
-      }
-
-      if (coverUrl.isEmpty) {
-        _showToast('Please add a cover photo of your dish');
-        setState(() => _currentStep = 1);
-        setState(() => _isSaving = false);
+      if (!result.success) {
+        if (result.message == 'Please add a cover photo of your dish') {
+          _formNotifier.goToStep(1);
+        }
+        _showToast(result.message ?? 'Upload failed');
         return;
       }
 
-      final categoryModel = RecipeCategoryModel.defaultCategories.firstWhere(
-        (cat) => cat.id == _selectedCategoryId,
-        orElse: () => RecipeCategoryModel.defaultCategories.first,
-      );
-
-      final tags = _parsedTags.isNotEmpty
-          ? _parsedTags
-          : [categoryModel.name.toLowerCase()];
-
+      // Update recipe — no verification needed
       if (widget.recipeToEdit != null) {
-        final updatedRecipe = RecipeModel(
-          id: widget.recipeToEdit!.id,
-          name: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          category: categoryModel.name,
-          region: _selectedRegion == 'Any region' ? 'Philippines' : _selectedRegion,
-          prepTime: '$_prepTimeMin mins',
-          cookTime: '$_cookTimeMin mins',
-          servings: _servings,
-          difficulty: _selectedDifficulty,
-          ingredients: ingredients,
-          instructions: instructions,
-          chefsTips: _formattedChefsTips,
-          tags: tags,
-          coverPhotoUrl: coverUrl,
-          source: widget.recipeToEdit!.source,
-          authorId: widget.recipeToEdit!.authorId,
-          authorName: widget.recipeToEdit!.authorName,
-          authorPhotoUrl: widget.recipeToEdit!.authorPhotoUrl,
-          isSystemRecipe: widget.recipeToEdit!.isSystemRecipe,
-          createdAt: widget.recipeToEdit!.createdAt,
-          budget: _selectedBudget,
-          status: widget.recipeToEdit!.status,
-          likeCount: widget.recipeToEdit!.likeCount,
-          commentCount: widget.recipeToEdit!.commentCount,
-          favoriteCount: widget.recipeToEdit!.favoriteCount,
-          ratingAvg: widget.recipeToEdit!.ratingAvg,
-          ratingCount: widget.recipeToEdit!.ratingCount,
-          trendingScore: widget.recipeToEdit!.trendingScore,
-        );
-
-        await _recipeRepo.updateRecipe(widget.recipeToEdit!.id!, updatedRecipe);
-
-        if (!mounted) return;
-        _showToast('Recipe updated successfully!');
+        _showToast(result.message ?? 'Recipe updated successfully!');
         Navigator.pop(context, true);
         return;
       }
 
-      final newRecipe = RecipeModel(
-        name: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        category: categoryModel.name,
-        region: _selectedRegion == 'Any region' ? 'Philippines' : _selectedRegion,
-        prepTime: '$_prepTimeMin mins',
-        cookTime: '$_cookTimeMin mins',
-        servings: _servings,
-        difficulty: _selectedDifficulty,
-        ingredients: ingredients,
-        instructions: instructions,
-        chefsTips: _formattedChefsTips,
-        tags: tags,
-        coverPhotoUrl: coverUrl,
-        source: '',
-        authorId: user.uid,
-        authorName: user.displayName ??
-            'Chef ${user.email?.split('@').first ?? 'Foodie'}',
-        authorPhotoUrl: user.photoURL,
-        isSystemRecipe: false,
-        createdAt: DateTime.now(),
-        budget: _selectedBudget,
-        status: 'pending',
-      );
-
-      final newDocId = await _recipeRepo.addRecipe(newRecipe);
-
-      if (!mounted) return;
-
-      // Navigate to the full-screen AI verification screen
+      // New recipe — navigate to AI verification
       final exitAction = await Navigator.push<VerificationExitAction>(
         context,
         MaterialPageRoute(
           builder: (_) => AiVerificationScreen(
-            recipeDocId: newDocId,
-            recipeName: newRecipe.name,
+            recipeDocId: result.recipeDocId!,
+            recipeName: ref.read(recipeFormNotifierProvider).name,
           ),
         ),
       );
@@ -610,7 +420,6 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           // Stay on the recipe editor — fields are still filled in
           break;
         case VerificationExitAction.startFresh:
-          // Pop back to the previous screen so the user can open a fresh editor
           Navigator.pop(context, true);
           break;
         case VerificationExitAction.approved:
@@ -625,18 +434,15 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       if (mounted) {
         _showToast('Upload failed: $e');
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
     }
   }
 
-  // ── Main Build ──────────────────────────────────────────────────────────────
+  // ── Main Build ──────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
+    final formState = ref.watch(recipeFormNotifierProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -645,12 +451,14 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Share a Recipe',
-          style: AppTypography.title(color: AppColors.textPrimary).copyWith(
+          style:
+              AppTypography.title(color: AppColors.textPrimary).copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -685,7 +493,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Stepper Indicator
-                              _buildStepperHeader(),
+                              _buildStepperHeader(formState.currentStep),
                               const SizedBox(height: 20),
                               const Divider(
                                 height: 1,
@@ -695,11 +503,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                               const SizedBox(height: 20),
 
                               // Dynamic Step Body
-                              _buildStepContent(),
+                              _buildStepContent(formState),
                               const SizedBox(height: 24),
 
                               // Bottom Buttons
-                              _buildBottomNavigationRow(),
+                              _buildBottomNavigationRow(formState),
                             ],
                           ),
                         ),
@@ -713,7 +521,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Visual Page Header ──────────────────────────────────────────────────────
+  // ── Visual Page Header ──────────────────────────────────────────────────
 
   Widget _buildPageHeader() {
     return Column(
@@ -742,7 +550,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Card Container ──────────────────────────────────────────────────────────
+  // ── Card Container ──────────────────────────────────────────────────────
 
   Widget _buildCardContainer({required Widget child}) {
     return Container(
@@ -764,28 +572,28 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Stepper Header Indicator ────────────────────────────────────────────────
+  // ── Stepper Header Indicator ────────────────────────────────────────────
 
-  Widget _buildStepperHeader() {
+  Widget _buildStepperHeader(int currentStep) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildStepBadge(1),
-        _buildStepLine(1),
-        _buildStepBadge(2),
-        _buildStepLine(2),
-        _buildStepBadge(3),
-        _buildStepLine(3),
-        _buildStepBadge(4),
-        _buildStepLine(4),
-        _buildStepBadge(5),
+        _buildStepBadge(1, currentStep),
+        _buildStepLine(1, currentStep),
+        _buildStepBadge(2, currentStep),
+        _buildStepLine(2, currentStep),
+        _buildStepBadge(3, currentStep),
+        _buildStepLine(3, currentStep),
+        _buildStepBadge(4, currentStep),
+        _buildStepLine(4, currentStep),
+        _buildStepBadge(5, currentStep),
       ],
     );
   }
 
-  Widget _buildStepBadge(int stepNumber) {
-    final isCompleted = _currentStep > stepNumber;
-    final isActive = _currentStep == stepNumber;
+  Widget _buildStepBadge(int stepNumber, int currentStep) {
+    final isCompleted = currentStep > stepNumber;
+    final isActive = currentStep == stepNumber;
 
     Widget content;
     BoxDecoration decoration;
@@ -841,8 +649,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
 
     return GestureDetector(
       onTap: () {
-        if (_currentStep > stepNumber) {
-          setState(() => _currentStep = stepNumber);
+        if (currentStep > stepNumber) {
+          _formNotifier.goToStep(stepNumber);
         }
       },
       child: Container(
@@ -855,8 +663,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  Widget _buildStepLine(int afterStepNumber) {
-    final isPassed = _currentStep > afterStepNumber;
+  Widget _buildStepLine(int afterStepNumber, int currentStep) {
+    final isPassed = currentStep > afterStepNumber;
 
     return Expanded(
       child: Container(
@@ -867,14 +675,14 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Step Content Router ─────────────────────────────────────────────────────
+  // ── Step Content Router ─────────────────────────────────────────────────
 
-  Widget _buildStepContent() {
-    switch (_currentStep) {
+  Widget _buildStepContent(RecipeFormState formState) {
+    switch (formState.currentStep) {
       case 1:
-        return _buildStep1BasicInfo();
+        return _buildStep1BasicInfo(formState);
       case 2:
-        return _buildStep2DetailsAndTimes();
+        return _buildStep2DetailsAndTimes(formState);
       case 3:
         return _buildStep3Ingredients();
       case 4:
@@ -886,9 +694,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     }
   }
 
-  // ── Step 1: Basic Information ───────────────────────────────────────────────
+  // ── Step 1: Basic Information ───────────────────────────────────────────
 
-  Widget _buildStep1BasicInfo() {
+  Widget _buildStep1BasicInfo(RecipeFormState formState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -910,87 +718,87 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 borderRadius: BorderRadius.circular(12),
                 color: const Color(0xFFFAFAFA),
               ),
-              child: (_selectedImageFile != null || _selectedCoverPhotoUrl != null)
-                  ? Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: _selectedImageFile != null
-                              ? Image.file(
-                                  _selectedImageFile!,
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                )
-                              : CachedNetworkImage(
-                                  imageUrl: _selectedCoverPhotoUrl!,
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Cover Image Selected',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1F2937),
-                                ),
+              child:
+                  (formState.selectedImageFile != null ||
+                          formState.coverPhotoUrl != null)
+                      ? Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: formState.selectedImageFile != null
+                                  ? Image.file(
+                                      formState.selectedImageFile!,
+                                      width: 72,
+                                      height: 72,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : CachedNetworkImage(
+                                      imageUrl: formState.coverPhotoUrl!,
+                                      width: 72,
+                                      height: 72,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Cover Image Selected',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap to change photo',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tap to change photo',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded,
+                                  color: Colors.grey),
+                              onPressed: () {
+                                _formNotifier.clearPhoto();
+                              },
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.cloud_upload_outlined,
+                              size: 38,
+                              color: Colors.grey.shade500,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Drop an image here, or click to browse',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade800,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Max 5MB. JPEG, PNG, WebP, or GIF.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                          onPressed: () {
-                            setState(() {
-                              _selectedImageFile = null;
-                              _selectedCoverPhotoUrl = null;
-                            });
-                          },
-                        ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.cloud_upload_outlined,
-                          size: 38,
-                          color: Colors.grey.shade500,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Drop an image here, or click to browse',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Max 5MB. JPEG, PNG, WebP, or GIF.',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ),
             ),
           ),
         ),
@@ -1005,6 +813,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           decoration: _buildInputDecoration(
             hint: 'e.g., Sinigang na Baboy',
           ),
+          onChanged: (val) => _formNotifier.updateName(val),
         ),
         const SizedBox(height: 18),
 
@@ -1018,14 +827,15 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           decoration: _buildInputDecoration(
             hint: 'A comforting sour soup perfect for rainy days...',
           ),
+          onChanged: (val) => _formNotifier.updateDescription(val),
         ),
       ],
     );
   }
 
-  // ── Step 2: Category & Cooking Details ──────────────────────────────────────
+  // ── Step 2: Category & Cooking Details ──────────────────────────────────
 
-  Widget _buildStep2DetailsAndTimes() {
+  Widget _buildStep2DetailsAndTimes(RecipeFormState formState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1033,8 +843,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Category *'),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _selectedCategoryId,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF4B5563)),
+          initialValue: formState.selectedCategoryId,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF4B5563)),
           decoration: _buildInputDecoration(hint: 'Select...'),
           items: RecipeCategoryModel.defaultCategories.map((category) {
             return DropdownMenuItem<String>(
@@ -1043,12 +854,13 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 children: [
                   Icon(category.icon, size: 18, color: const Color(0xFFF59E0B)),
                   const SizedBox(width: 8),
-                  Text(category.name, style: const TextStyle(fontSize: 14)),
+                  Text(category.name,
+                      style: const TextStyle(fontSize: 14)),
                 ],
               ),
             );
           }).toList(),
-          onChanged: (val) => setState(() => _selectedCategoryId = val),
+          onChanged: (val) => _formNotifier.updateCategoryId(val),
         ),
         const SizedBox(height: 16),
 
@@ -1056,8 +868,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Region'),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _selectedRegion,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF4B5563)),
+          initialValue: formState.region,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF4B5563)),
           decoration: _buildInputDecoration(hint: 'Any region'),
           items: _regionOptions.map((reg) {
             return DropdownMenuItem<String>(
@@ -1066,7 +879,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             );
           }).toList(),
           onChanged: (val) {
-            if (val != null) setState(() => _selectedRegion = val);
+            if (val != null) _formNotifier.updateRegion(val);
           },
         ),
         const SizedBox(height: 16),
@@ -1075,8 +888,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Difficulty'),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _selectedDifficulty,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF4B5563)),
+          initialValue: formState.difficulty,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF4B5563)),
           decoration: _buildInputDecoration(hint: 'Easy'),
           items: _difficultyOptions.map((diff) {
             return DropdownMenuItem<String>(
@@ -1085,7 +899,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             );
           }).toList(),
           onChanged: (val) {
-            if (val != null) setState(() => _selectedDifficulty = val);
+            if (val != null) _formNotifier.updateDifficulty(val);
           },
         ),
         const SizedBox(height: 16),
@@ -1094,8 +908,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Cost / Budget *'),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: _selectedBudget,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF4B5563)),
+          initialValue: formState.budget,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF4B5563)),
           decoration: _buildInputDecoration(hint: 'Select Budget...'),
           items: _budgetOptions.map((budget) {
             return DropdownMenuItem<String>(
@@ -1104,7 +919,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             );
           }).toList(),
           onChanged: (val) {
-            if (val != null) setState(() => _selectedBudget = val);
+            if (val != null) _formNotifier.updateBudget(val);
           },
         ),
         const SizedBox(height: 16),
@@ -1113,11 +928,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Servings (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: _servingsDisplay,
-          onMinus: () {
-            if (_servings > 1) setState(() => _servings--);
-          },
-          onPlus: () => setState(() => _servings++),
+          value: _formNotifier.servingsDisplay,
+          onMinus: () => _formNotifier.decrementServings(),
+          onPlus: () => _formNotifier.incrementServings(),
         ),
         const SizedBox(height: 16),
 
@@ -1125,15 +938,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Prep Time (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: _prepTimeDisplay,
-          onMinus: () {
-            if (_prepTimeMin >= 5) {
-              setState(() => _prepTimeMin -= 5);
-            } else if (_prepTimeMin > 0) {
-              setState(() => _prepTimeMin = 0);
-            }
-          },
-          onPlus: () => setState(() => _prepTimeMin += 5),
+          value: _formNotifier.prepTimeDisplay,
+          onMinus: () => _formNotifier.decrementPrepTime(),
+          onPlus: () => _formNotifier.incrementPrepTime(),
         ),
         const SizedBox(height: 16),
 
@@ -1141,15 +948,9 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         _buildFieldLabel('Cook Time (Approximate)'),
         const SizedBox(height: 6),
         _buildCounterBox(
-          value: _cookTimeDisplay,
-          onMinus: () {
-            if (_cookTimeMin >= 5) {
-              setState(() => _cookTimeMin -= 5);
-            } else if (_cookTimeMin > 0) {
-              setState(() => _cookTimeMin = 0);
-            }
-          },
-          onPlus: () => setState(() => _cookTimeMin += 5),
+          value: _formNotifier.cookTimeDisplay,
+          onMinus: () => _formNotifier.decrementCookTime(),
+          onPlus: () => _formNotifier.incrementCookTime(),
         ),
         const SizedBox(height: 16),
 
@@ -1162,12 +963,13 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           decoration: _buildInputDecoration(
             hint: 'budget, lenten, freezer-friendly, kids-love-it',
           ),
+          onChanged: (val) => _formNotifier.updateTags(val),
         ),
       ],
     );
   }
 
-  // ── Step 3: Ingredients ─────────────────────────────────────────────────────
+  // ── Step 3: Ingredients ─────────────────────────────────────────────────
 
   Widget _buildStep3Ingredients() {
     return Column(
@@ -1242,7 +1044,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                   child: TextFormField(
                     controller: row.nameController,
                     style: const TextStyle(fontSize: 13),
-                    decoration: _buildMiniInputDecoration(hint: 'Ingredient name'),
+                    decoration:
+                        _buildMiniInputDecoration(hint: 'Ingredient name'),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1261,9 +1064,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 if (_ingredientItems.length > 1) ...[
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444), size: 20),
+                    icon: const Icon(Icons.remove_circle_outline,
+                        color: Color(0xFFEF4444), size: 20),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints:
+                        const BoxConstraints(minWidth: 28, minHeight: 28),
                     onPressed: () {
                       setState(() {
                         row.dispose();
@@ -1280,7 +1085,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Step 4: Instructions ────────────────────────────────────────────────────
+  // ── Step 4: Instructions ────────────────────────────────────────────────
 
   Widget _buildStep4Instructions() {
     return Column(
@@ -1375,28 +1180,34 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                             color: Colors.grey.shade400,
                           ),
                           prefixIcon: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 10),
                             child: Icon(
                               Icons.lightbulb_outline_rounded,
                               size: 16,
                               color: Colors.grey.shade400,
                             ),
                           ),
-                          prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          prefixIconConstraints:
+                              const BoxConstraints(minWidth: 32, minHeight: 32),
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE5E7EB)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+                            borderSide: const BorderSide(
+                                color: Color(0xFFF59E0B), width: 1.5),
                           ),
                         ),
                       ),
@@ -1408,9 +1219,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 if (_instructionItems.length > 1) ...[
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Color(0xFFEF4444), size: 20),
                     padding: const EdgeInsets.only(top: 8),
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints:
+                        const BoxConstraints(minWidth: 28, minHeight: 28),
                     onPressed: () {
                       setState(() {
                         step.dispose();
@@ -1457,7 +1270,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(4),
@@ -1511,7 +1325,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
             },
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFDF5),
                 borderRadius: BorderRadius.circular(12),
@@ -1519,7 +1334,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
               ),
               child: Row(
                 children: const [
-                  Icon(Icons.add_circle_outline_rounded, color: Color(0xFFD97706), size: 20),
+                  Icon(Icons.add_circle_outline_rounded,
+                      color: Color(0xFFD97706), size: 20),
                   SizedBox(width: 10),
                   Text(
                     'Tap to add your first Chef\'s Tip...',
@@ -1551,7 +1367,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFFBEB),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                      border: Border.all(
+                          color: const Color(0xFFF59E0B), width: 1.2),
                     ),
                     child: const Icon(
                       Icons.lightbulb_rounded,
@@ -1576,27 +1393,33 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE5E7EB)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE5E7EB)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFF59E0B), width: 1.5),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444), size: 20),
+                    icon: const Icon(Icons.remove_circle_outline,
+                        color: Color(0xFFEF4444), size: 20),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints:
+                        const BoxConstraints(minWidth: 28, minHeight: 28),
                     onPressed: () {
                       setState(() {
                         controller.dispose();
@@ -1613,36 +1436,39 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Step 5: Review & Publish ────────────────────────────────────────────────
+  // ── Step 5: Review & Publish ────────────────────────────────────────────
 
   Widget _buildStep5Review() {
+    final formState = ref.read(recipeFormNotifierProvider);
+
     final categoryModel = RecipeCategoryModel.defaultCategories.firstWhere(
-      (cat) => cat.id == _selectedCategoryId,
+      (cat) => cat.id == formState.selectedCategoryId,
       orElse: () => RecipeCategoryModel.defaultCategories.first,
     );
 
-    final tags = _parsedTags.isNotEmpty
-        ? _parsedTags
+    final tags = _formNotifier.parsedTags.isNotEmpty
+        ? _formNotifier.parsedTags
         : [categoryModel.name.toLowerCase()];
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
 
     final tempRecipe = RecipeModel(
-      name: _titleController.text.trim().isEmpty
+      name: formState.name.trim().isEmpty
           ? 'Untitled Recipe'
-          : _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
+          : formState.name.trim(),
+      description: formState.description.trim(),
       category: categoryModel.name,
-      region: _selectedRegion == 'Any region' ? 'Philippines' : _selectedRegion,
-      prepTime: '$_prepTimeMin mins',
-      cookTime: '$_cookTimeMin mins',
-      servings: _servings,
-      difficulty: _selectedDifficulty,
+      region:
+          formState.region == 'Any region' ? 'Philippines' : formState.region,
+      prepTime: '${formState.prepTimeMin} mins',
+      cookTime: '${formState.cookTimeMin} mins',
+      servings: formState.servings,
+      difficulty: formState.difficulty,
       ingredients: _formattedIngredients,
       instructions: _formattedInstructions,
       chefsTips: _formattedChefsTips,
       tags: tags,
-      coverPhotoUrl: _selectedCoverPhotoUrl ??
+      coverPhotoUrl: formState.coverPhotoUrl ??
           'https://images.unsplash.com/photo-1541014711122-4532ebbf7a94?w=600&auto=format&fit=crop&q=60',
       source: '',
       authorId: user?.uid,
@@ -1650,7 +1476,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       authorPhotoUrl: user?.photoURL,
       isSystemRecipe: false,
       createdAt: DateTime.now(),
-      budget: _selectedBudget,
+      budget: formState.budget,
     );
 
     return Column(
@@ -1699,7 +1525,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFAF9F6), // Slightly warm background matching reference detail screen
+            color: const Color(0xFFFAF9F6),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
@@ -1710,10 +1536,12 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
               // Mock AppBar header
               Container(
                 color: const Color(0xFFFAF9F6),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 22),
+                    const Icon(Icons.arrow_back,
+                        color: Color(0xFF111827), size: 22),
                     const Spacer(),
                     Text(
                       'Recipe Preview',
@@ -1728,11 +1556,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                   ],
                 ),
               ),
-              
+
               // Cover Photo Banner
-              _selectedImageFile != null
+              formState.selectedImageFile != null
                   ? Image.file(
-                      _selectedImageFile!,
+                      formState.selectedImageFile!,
                       height: 200,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -1745,10 +1573,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                       errorWidget: (_, _, _) => Container(
                         height: 200,
                         color: Colors.grey.shade300,
-                        child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                        child: const Icon(Icons.broken_image,
+                            size: 50, color: Colors.grey),
                       ),
                     ),
-              
+
               // Overlaid floating card
               Transform.translate(
                 offset: const Offset(0, -20),
@@ -1757,7 +1586,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                   child: _buildDetailSummaryCardPreview(tempRecipe),
                 ),
               ),
-              
+
               // Interactive tabs section
               Transform.translate(
                 offset: const Offset(0, -10),
@@ -1776,7 +1605,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                       children: [
                         // Folder Tab Bar
                         Container(
-                          padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                          padding:
+                              const EdgeInsets.only(top: 8, left: 8, right: 8),
                           decoration: const BoxDecoration(
                             color: Color(0xFFEBE6E0),
                             borderRadius: BorderRadius.vertical(
@@ -1794,7 +1624,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                                 ),
                               ),
                             ),
-                            onChanged: (i) => setState(() => _previewActiveTabIndex = i),
+                            onChanged: (i) =>
+                                setState(() => _previewActiveTabIndex = i),
                             builder: (context, i, isActive) {
                               const titles = [
                                 'Ingredients',
@@ -1803,9 +1634,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                               ];
                               return Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10),
                                   child: AnimatedDefaultTextStyle(
-                                    duration: const Duration(milliseconds: 240),
+                                    duration:
+                                        const Duration(milliseconds: 240),
                                     curve: Curves.easeOutCubic,
                                     style: TextStyle(
                                       fontSize: 12.5,
@@ -1827,8 +1660,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                         SlideTabSwitcher(
                           index: _previewActiveTabIndex,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                            child: _buildPreviewActiveTabContent(tempRecipe),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 24),
+                            child:
+                                _buildPreviewActiveTabContent(tempRecipe),
                           ),
                         ),
                       ],
@@ -2117,7 +1952,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                        color:
+                            const Color(0xFFF59E0B).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: recipe.authorPhotoUrl != null
@@ -2170,10 +2006,12 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF0F0),
-                              border: Border.all(color: const Color(0xFFFFC1C1)),
+                              border:
+                                  Border.all(color: const Color(0xFFFFC1C1)),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -2312,12 +2150,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Bottom Navigation Row ───────────────────────────────────────────────────
+  // ── Bottom Navigation Row ───────────────────────────────────────────────
 
-  Widget _buildBottomNavigationRow() {
-    final isLastStep = _currentStep == 5;
-    final isStep4 = _currentStep == 4;
-
+  Widget _buildBottomNavigationRow(RecipeFormState formState) {
+    final isLastStep = formState.currentStep == 5;
+    final isStep4 = formState.currentStep == 4;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2327,7 +2164,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             child: Text(
-              _currentStep == 1 ? 'Cancel' : '← Back',
+              formState.currentStep == 1 ? 'Cancel' : '← Back',
               style: const TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
@@ -2340,9 +2177,10 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
         // Right Red Pill Button
         PressableScale(
           child: GestureDetector(
-            onTap: _isSaving ? null : _nextStep,
+            onTap: _nextStep,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
               decoration: BoxDecoration(
                 color: const Color(0xFFD61A1A),
                 borderRadius: BorderRadius.circular(24),
@@ -2354,37 +2192,14 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
                   ),
                 ],
               ),
-              child: _isSaving
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'AI Checking... 🍳',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      isLastStep || isStep4 ? 'Luto Na! →' : 'Next →',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              child: Text(
+                isLastStep || isStep4 ? 'Luto Na! →' : 'Next →',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),
@@ -2415,7 +2230,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           Text(
             'Join the Chef Community',
             textAlign: TextAlign.center,
-            style: AppTypography.headline(color: AppColors.textPrimary).copyWith(
+            style:
+                AppTypography.headline(color: AppColors.textPrimary).copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -2455,7 +2271,7 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
     );
   }
 
-  // ── Helper Form Widgets ─────────────────────────────────────────────────────
+  // ── Helper Form Widgets ─────────────────────────────────────────────────
 
   Widget _buildFieldLabel(String label) {
     return Text(
@@ -2487,9 +2303,11 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           Expanded(
             child: InkWell(
               onTap: onMinus,
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(9)),
               child: const Center(
-                child: Icon(Icons.remove, size: 16, color: Color(0xFF4B5563)),
+                child:
+                    Icon(Icons.remove, size: 16, color: Color(0xFF4B5563)),
               ),
             ),
           ),
@@ -2518,7 +2336,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
           Expanded(
             child: InkWell(
               onTap: onPlus,
-              borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+              borderRadius:
+                  const BorderRadius.horizontal(right: Radius.circular(9)),
               child: const Center(
                 child: Icon(Icons.add, size: 16, color: Color(0xFF4B5563)),
               ),
@@ -2541,7 +2360,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -2552,7 +2372,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+        borderSide:
+            const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
       ),
     );
   }
@@ -2569,7 +2390,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -2580,7 +2402,8 @@ class _RecipeCreatingScreenState extends State<RecipeCreatingScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+        borderSide:
+            const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
       ),
     );
   }

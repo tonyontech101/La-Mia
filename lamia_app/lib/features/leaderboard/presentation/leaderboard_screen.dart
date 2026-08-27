@@ -1,9 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
@@ -23,19 +25,19 @@ import 'widgets/your_ranking_card.dart';
 ///    total likes + favorites their recipes received during the current month.
 /// 2. **Top Contributors** — ranks cooks by their follower count (community reach).
 /// 3. **Most Cooked** — ranks cooks by how many recipes they've shared on the platform.
-class LeaderboardScreen extends StatefulWidget {
+class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key, this.onNavigateHome});
 
   final VoidCallback? onNavigateHome;
 
   @override
-  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+  ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   int _activeTab = 0; // 0 = Top Contributors, 1 = Most Cooked
-  final UserRepository _userRepo = UserRepository();
-  final RecipeRepository _recipeRepo = RecipeRepository();
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
+  RecipeRepository get _recipeRepo => ref.read(recipeRepositoryProvider);
 
   List<UserModel> _topContributors = [];
   List<UserModel> _mostCooked = [];
@@ -110,8 +112,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   /// Finds the current user's placement in each ranking category.
   Future<void> _getCurrentUserRanking() async {
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return;
+      final currentUserId = ref.read(currentUserIdProvider);
+      if (currentUserId == null) return;
 
       final rankings = await Future.wait([
         _userRepo.topContributorsByFollowers(limit: 100),
@@ -119,9 +121,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ]);
       final contributorRank = _rankForUser(
         rankings[0],
-        currentUser.uid,
+        currentUserId,
       );
-      final cookedRank = _rankForUser(rankings[1], currentUser.uid);
+      final cookedRank = _rankForUser(rankings[1], currentUserId);
 
       if (mounted) {
         setState(() {
@@ -429,7 +431,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 mostCookedRank: _mostCookedRank,
                                 isChefOfMonth:
                                     _chefOfMonth?.uid ==
-                                    FirebaseAuth.instance.currentUser?.uid,
+                                    ref.read(currentUserIdProvider),
                                 onSeeFullRank: () {
                                   Navigator.push(
                                     context,

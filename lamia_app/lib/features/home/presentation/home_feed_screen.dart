@@ -1,11 +1,13 @@
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/auth_service_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../auth/data/user_model.dart';
@@ -23,21 +25,21 @@ import 'widgets/search_bar_widget.dart';
 
 /// New Home Feed Screen — social-style recipe feed with
 /// "Following" / "For You" tabs, matching the wireframe.
-class HomeFeedScreen extends StatefulWidget {
+class HomeFeedScreen extends ConsumerStatefulWidget {
   const HomeFeedScreen({super.key, this.isGuest = false, this.onNavigateToTab});
 
   final bool isGuest;
   final ValueChanged<int>? onNavigateToTab;
 
   @override
-  State<HomeFeedScreen> createState() => HomeFeedScreenState();
+  ConsumerState<HomeFeedScreen> createState() => HomeFeedScreenState();
 }
 
-class HomeFeedScreenState extends State<HomeFeedScreen> {
+class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   int _activeTab = 1; // 0 = Following, 1 = For You (default)
-  final RecipeRepository _recipeRepository = RecipeRepository();
-  final FollowRepository _followRepo = FollowRepository();
-  final UserRepository _userRepo = UserRepository();
+  RecipeRepository get _recipeRepository => ref.read(recipeRepositoryProvider);
+  FollowRepository get _followRepo => ref.read(followRepositoryProvider);
+  UserRepository get _userRepo => ref.read(userRepositoryProvider);
 
   List<RecipeModel> _recipes = [];
   List<RecipeModel> _followingRecipes = [];
@@ -68,7 +70,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Future<void> _loadCurrentUser() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null || widget.isGuest) return;
     try {
       final userModel = await _userRepo.getUser(user.uid);
@@ -108,7 +110,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
   /// Loads recipes from authors the current user follows.
   Future<void> _loadFollowingRecipes() async {
     if (_followingLoaded) return;
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
       setState(() => _followingLoaded = true);
       return;
@@ -285,7 +287,7 @@ class HomeFeedScreenState extends State<HomeFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     final displayName = widget.isGuest
         ? 'Guest'
         : (_currentUserModel?.displayName ??
