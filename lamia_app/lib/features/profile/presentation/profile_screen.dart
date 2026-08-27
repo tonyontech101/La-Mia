@@ -81,6 +81,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isChefOfMonth = false;
   int? _followingCount;
   int? _followerCount;
+  int? _totalPostLikes;
 
   /// Generation counter to discard stale profile loads when navigating
   /// between different users rapidly.
@@ -163,8 +164,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
 
-      // Load every recognition independently; a profile should not reduce a
-      // cook's achievements to only their follower-based placement.
       int? topContributorRank;
       int? mostCookedRank;
       bool isChefOfMonth = false;
@@ -195,10 +194,21 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         followerCount = counts[1].length;
       } catch (_) {}
 
+      // Calculate total likes received across all of the author's recipe posts
+      final totalPostLikes = recipes.fold<int>(
+        0,
+        (sum, recipe) => sum + recipe.likeCount,
+      );
+
       // Discard if a newer profile load has started.
       if (mounted && generation == _profileLoadGeneration) {
+        final updatedUser = (user ?? _userModel)?.copyWith(
+          totalLikesReceived: totalPostLikes,
+        );
         setState(() {
+          _userModel = updatedUser ?? _userModel;
           _userRecipes = recipes;
+          _totalPostLikes = totalPostLikes;
           _isFollowing = following;
           _topContributorRank = topContributorRank;
           _mostCookedRank = mostCookedRank;
@@ -207,14 +217,21 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           _followerCount = followerCount;
         });
 
-        // Self-heal user document in Firestore if followingCount is out of sync and it is own profile
-        if (_isOwnProfile &&
-            followingCount != null &&
-            user != null &&
-            user.followingCount != followingCount) {
-          ref.read(firebaseFirestoreProvider).collection('users').doc(uid).set({
-            'followingCount': followingCount,
-          }, SetOptions(merge: true));
+        // Self-heal user document in Firestore if followingCount or totalLikesReceived is out of sync and it is own profile
+        if (_isOwnProfile && user != null) {
+          final updates = <String, dynamic>{};
+          if (followingCount != null && user.followingCount != followingCount) {
+            updates['followingCount'] = followingCount;
+          }
+          if (user.totalLikesReceived != totalPostLikes) {
+            updates['totalLikesReceived'] = totalPostLikes;
+          }
+          if (updates.isNotEmpty) {
+            ref.read(firebaseFirestoreProvider).collection('users').doc(uid).set(
+              updates,
+              SetOptions(merge: true),
+            );
+          }
         }
       }
     } catch (_) {
@@ -934,9 +951,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               : (_followerCount?.toString() ??
                                   _userModel?.followerCount.toString() ??
                                   '0'),
-                          likesCount:
-                              _userModel?.totalLikesReceived.toString() ??
-                              (widget.isGuest ? '0' : '0'),
+                          likesCount: widget.isGuest
+                              ? '0'
+                              : (_totalPostLikes?.toString() ??
+                                  _userModel?.totalLikesReceived.toString() ??
+                                  '0'),
                           isGuest: widget.isGuest,
                           isOwnProfile: _isOwnProfile,
                           isFollowing: _isFollowing,
