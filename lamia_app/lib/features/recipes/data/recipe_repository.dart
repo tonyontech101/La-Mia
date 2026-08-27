@@ -157,6 +157,8 @@ class RecipeRepository {
       'inihaw': 'inihaw',
       'seafood': 'lamang dagat',
       'lamang dagat': 'lamang dagat',
+      'bar food': 'pulutan',
+      'pulutan': 'pulutan',
     };
     if (aliases.containsKey(normalized)) return aliases[normalized]!;
 
@@ -179,6 +181,9 @@ class RecipeRepository {
     }
     if (normalized.contains('grill') || normalized.contains('barbecue')) {
       return 'inihaw';
+    }
+    if (normalized.contains('bar') || normalized.contains('appetizer')) {
+      return 'pulutan';
     }
     if (normalized.contains('main') ||
         normalized.contains('dish') ||

@@ -12,7 +12,7 @@ import { GoogleGenAI } from "@google/genai";
 // Valid categories the app uses — must match Firestore rules & Flutter app
 const VALID_CATEGORIES = [
   "Almusal", "Ulam", "Sabaw", "Merienda",
-  "Panghimagas", "Gulay", "Inihaw", "Lamang Dagat",
+  "Panghimagas", "Gulay", "Inihaw", "Lamang Dagat", "Pulutan",
 ];
 
 interface TextValidationResult {
@@ -89,7 +89,7 @@ Submission:
 Respond with ONLY a JSON object (no markdown, no backticks, no code fences):
 {"is_recipe": true/false, "reason": "brief explanation"}`;
 
-    const candidateModels = ["gemini-3.6-flash", "gemini-2.5-flash"];
+    const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash"];
     let responseText = "";
     let lastError: unknown = null;
 
