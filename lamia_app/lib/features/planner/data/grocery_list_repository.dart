@@ -124,7 +124,7 @@ class GroceryListRepository {
       AppLogger.error(
         'Error streaming grocery items',
         error: e,
-        stackTrace: stack,
+        stackTrace: stack is StackTrace ? stack : null,
         category: 'GROCERY_LIST',
       );
     });

@@ -85,12 +85,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('Top Contributors'), findsOneWidget);
-      expect(find.text('Most Cooked'), findsOneWidget);
+      expect(find.text('Most Cooked'), findsNWidgets(2));
 
       // Both labels are centered inside their half of the tab bar.
       final barRect = tester.getRect(find.byType(SlidingTabBar));
       final tcCenter = tester.getCenter(find.text('Top Contributors')).dx;
-      final mcCenter = tester.getCenter(find.text('Most Cooked')).dx;
+      final mcCenter = tester.getCenter(find.text('Most Cooked').at(0)).dx;
       expect(
         (tcCenter - (barRect.left + barRect.width * 0.25)).abs(),
         lessThan(3.0),
@@ -107,7 +107,7 @@ void main() {
       expect(find.text('Inay Dina Ramos'), findsNothing);
 
       // Switch to Most Cooked — roster slides in.
-      await tester.tap(find.text('Most Cooked'));
+      await tester.tap(find.text('Most Cooked').at(0));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 

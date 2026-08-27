@@ -127,7 +127,7 @@ class MealPlanRepository {
           AppLogger.error(
             'Error streaming weekly plan',
             error: e,
-            stackTrace: stack,
+            stackTrace: stack is StackTrace ? stack : null,
             category: 'MEAL_PLANNER',
           );
         });

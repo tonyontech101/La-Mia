@@ -45,7 +45,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         actions: [
           if (!isGuestMode)
             StreamBuilder<int>(
-              stream: _notifRepo.watchUnreadCount(currentUserId!),
+              stream: _notifRepo.watchUnreadCount(currentUserId),
               builder: (context, snapshot) {
                 final hasUnread = (snapshot.data ?? 0) > 0;
                 if (!hasUnread) return const SizedBox.shrink();
@@ -53,7 +53,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 return IconButton(
                   icon: const Icon(Icons.done_all_rounded, color: AppColors.primary),
                   tooltip: 'Mark all as read',
-                  onPressed: () => _notifRepo.markAllAsRead(currentUserId!),
+                  onPressed: () => _notifRepo.markAllAsRead(currentUserId),
                 );
               },
             ),
@@ -81,7 +81,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 // List
                 Expanded(
                   child: StreamBuilder<List<NotificationModel>>(
-                    stream: _notifRepo.watchNotifications(currentUserId!, filter: _selectedFilter),
+                    stream: _notifRepo.watchNotifications(currentUserId, filter: _selectedFilter),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -99,8 +99,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           final notif = notifications[index];
                           return NotificationTile(
                             notification: notif,
-                            onMarkAsRead: () => _notifRepo.markAsRead(currentUserId!, notif.id),
-                            onDelete: () => _notifRepo.deleteNotification(currentUserId!, notif.id),
+                            onMarkAsRead: () => _notifRepo.markAsRead(currentUserId, notif.id),
+                            onDelete: () => _notifRepo.deleteNotification(currentUserId, notif.id),
                           );
                         },
                       );
