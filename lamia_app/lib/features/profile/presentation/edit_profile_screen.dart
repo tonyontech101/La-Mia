@@ -57,6 +57,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     super.initState();
     _nameController = TextEditingController();
     _bioController = TextEditingController();
+
+    // Rebuild on every keystroke so _hasChanges (and therefore the Save
+    // button's onPressed) is re-evaluated live.
+    _nameController.addListener(() => setState(() {}));
+    _bioController.addListener(() => setState(() {}));
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -70,21 +76,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     ).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-
-    // Listen for profile load completion to sync controllers & trigger animation
-    ref.listen<EditProfileState>(editProfileNotifierProvider, (prev, next) {
-      if (prev?.isLoading == true && next.isLoading == false && mounted) {
-        _animationController.forward();
-        if (next.userModel != null) {
-          final user = ref.read(authServiceProvider).currentUser;
-          _nameController.text =
-              next.userModel!.displayName.isNotEmpty
-                  ? next.userModel!.displayName
-                  : (user?.displayName ?? '');
-          _bioController.text = next.userModel!.bio ?? '';
-        }
-      }
-    });
 
     // Trigger initial load after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -302,6 +293,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Listen for profile load completion to sync controllers & trigger animation
+    ref.listen<EditProfileState>(editProfileNotifierProvider, (prev, next) {
+      if (prev?.isLoading == true && next.isLoading == false && mounted) {
+        _animationController.forward();
+        if (next.userModel != null) {
+          final user = ref.read(authServiceProvider).currentUser;
+          _nameController.text =
+              next.userModel!.displayName.isNotEmpty
+                  ? next.userModel!.displayName
+                  : (user?.displayName ?? '');
+          _bioController.text = next.userModel!.bio ?? '';
+        }
+      }
+    });
+
     return PopScope(
       canPop: !_hasChanges,
       onPopInvokedWithResult: (didPop, _) {
