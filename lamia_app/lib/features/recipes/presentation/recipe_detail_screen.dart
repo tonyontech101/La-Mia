@@ -10,6 +10,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -255,36 +256,63 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   void _confirmDeleteRecipe() {
     final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
     final recipe = detailState.recipe;
+    final recipeId = recipe.id;
+    if (recipeId == null) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Recipe'),
-        content: const Text('Are you sure you want to delete this recipe permanently? This action cannot be undone.'),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Delete Recipe',
+          style: AppTypography.headline(color: AppColors.textPrimary)
+              .copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to delete this recipe permanently? This action cannot be undone.',
+          style: AppTypography.body(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: AppTypography.body(color: AppColors.textSecondary)
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final recipeId = recipe.id;
-              if (recipeId != null) {
-                try {
-                  final recipeRepo = ref.read(recipeRepositoryProvider);
-                  await recipeRepo.deleteRecipe(recipeId);
-                  if (mounted) {
-                    AppSnackbar.show(context, message: 'Recipe deleted successfully.');
-                    Navigator.pop(context, true); // Pop details screen with refresh trigger
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    AppSnackbar.show(context, message: 'Failed to delete recipe: $e', isError: true);
-                  }
+              try {
+                final recipeRepo = ref.read(recipeRepositoryProvider);
+                await AppLoadingDialog.runWithLoading(
+                  context,
+                  () => recipeRepo.deleteRecipe(recipeId),
+                  message: 'Deleting recipe...',
+                );
+                if (mounted) {
+                  AppSnackbar.show(context, message: 'Recipe deleted successfully.');
+                  Navigator.pop(context, true); // Pop details screen with refresh trigger
+                }
+              } catch (e) {
+                if (mounted) {
+                  AppSnackbar.show(
+                    context,
+                    message: 'Failed to delete recipe: $e',
+                    isError: true,
+                  );
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text(
+              'Delete',
+              style: AppTypography.body(color: AppColors.error)
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

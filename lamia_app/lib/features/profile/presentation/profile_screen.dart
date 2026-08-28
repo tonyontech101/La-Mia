@@ -12,6 +12,7 @@ import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../auth/data/user_model.dart';
@@ -443,7 +444,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showDeleteConfirmationDialog(RecipeModel recipe) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
@@ -460,7 +461,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: Text(
                 'Cancel',
                 style: AppTypography.body(color: AppColors.textSecondary)
@@ -469,20 +470,36 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(dialogCtx); // Close dialog
+
+                final recipeId = recipe.id;
+                if (recipeId == null) return;
+
+                // Optimistically remove from state so the recipe grid updates immediately
+                final previousUserRecipes = List<RecipeModel>.from(_userRecipes);
+                setState(() {
+                  _userRecipes.removeWhere((r) => r.id == recipeId);
+                });
+
                 try {
-                  if (recipe.id != null) {
-                    await _recipeRepo.deleteRecipe(recipe.id!);
-                    if (mounted) {
-                      AppSnackbar.show(
-                        context,
-                        message: 'Post deleted successfully.',
-                      );
-                      _loadProfileData();
-                    }
+                  await AppLoadingDialog.runWithLoading(
+                    context,
+                    () => _recipeRepo.deleteRecipe(recipeId),
+                    message: 'Deleting recipe...',
+                  );
+                  if (mounted) {
+                    AppSnackbar.show(
+                      context,
+                      message: 'Post deleted successfully.',
+                    );
+                    _loadProfileData();
                   }
                 } catch (e) {
+                  // Revert on error
                   if (mounted) {
+                    setState(() {
+                      _userRecipes = previousUserRecipes;
+                    });
                     AppSnackbar.show(
                       context,
                       message: 'Failed to delete recipe: $e',
