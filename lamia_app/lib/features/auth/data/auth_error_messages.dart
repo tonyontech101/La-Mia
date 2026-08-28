@@ -31,6 +31,14 @@ abstract final class AuthErrorMessages {
         'Network error. Check your connection and try again.',
       'account-exists-with-different-credential' =>
         'An account already exists with a different sign-in method.',
+      'requires-recent-login' =>
+        'This action requires a recent login. Please sign out and sign back in.',
+      'user-mismatch' =>
+        'The credentials do not match the currently signed-in user.',
+      'user-not-found' =>
+        'No user found with these credentials.',
+      'invalid-password' =>
+        'The password is incorrect. Please try again.',
       _ => 'Something went wrong. Please try again. ($code)',
     };
   }

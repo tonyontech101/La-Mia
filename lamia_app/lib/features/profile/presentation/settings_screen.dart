@@ -11,6 +11,7 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
+import '../../auth/presentation/email_verification_screen.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import 'edit_profile_screen.dart';
@@ -44,16 +45,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // --- Change Password Fields ---
   final _passwordFormKey = GlobalKey<FormState>();
+  final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _isUpdatingPassword = false;
 
   // --- Change Email Fields ---
   final _emailFormKey = GlobalKey<FormState>();
+  final TextEditingController _currentEmailPasswordController = TextEditingController();
   final TextEditingController _newEmailController = TextEditingController();
   final TextEditingController _confirmEmailController = TextEditingController();
+  bool _obscureEmailPassword = true;
   bool _isUpdatingEmail = false;
 
   @override
@@ -64,8 +69,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     _nameController.addListener(() => setState(() {}));
     _bioController.addListener(() => setState(() {}));
+    _currentPasswordController.addListener(() => setState(() {}));
     _newPasswordController.addListener(() => setState(() {}));
     _confirmPasswordController.addListener(() => setState(() {}));
+    _currentEmailPasswordController.addListener(() => setState(() {}));
     _newEmailController.addListener(() => setState(() {}));
     _confirmEmailController.addListener(() => setState(() {}));
 
@@ -76,8 +83,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _bioController.dispose();
+    _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
+    _currentEmailPasswordController.dispose();
     _newEmailController.dispose();
     _confirmEmailController.dispose();
     super.dispose();
@@ -143,31 +152,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!_passwordFormKey.currentState!.validate()) return;
 
-    final user = ref.read(authServiceProvider).currentUser;
+    final authService = ref.read(authServiceProvider);
+    final user = authService.currentUser;
     if (user == null) return;
+
+    final currentPassword = _currentPasswordController.text;
+    final newPassword = _newPasswordController.text;
+    final email = user.email;
+    if (email == null) return;
 
     setState(() => _isUpdatingPassword = true);
 
     try {
-      await user.updatePassword(_newPasswordController.text);
+      // Step 1: Reauthenticate with current password
+      await authService.reauthenticateWithEmail(
+        email: email,
+        password: currentPassword,
+      );
+
+      // Step 2: Send verification email to current email
+      await authService.sendEmailVerification();
+
+      if (!mounted) return;
+
+      // Step 3: Navigate to verification screen
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(
+            verificationTitle: 'Verify to change password',
+            verificationSubtitle:
+                'We sent a verification link to your current email. '
+                'Click the link, then tap Done below to complete your password change.',
+            requireManualConfirm: true,
+            onVerified: (ctx) async {
+              // Step 4: After verification, update the password
+              await authService.changePassword(newPassword);
+            },
+          ),
+        ),
+      );
+
       if (mounted) {
-        AppSnackbar.show(context, message: 'Password updated successfully!');
         _clearPasswordFields();
+        AppSnackbar.show(
+          context,
+          message: 'Password updated successfully!',
+        );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        if (e.code == 'requires-recent-login') {
-          AppSnackbar.show(
-            context,
-            message: 'Security sensitive action. Please sign out and sign back in to reset password.',
-          );
-        } else {
-          AppSnackbar.show(context, message: e.message ?? 'Failed to update password');
-        }
+        AppSnackbar.show(
+          context,
+          message: e.message ?? 'Failed to update password. Please try again.',
+          isError: true,
+        );
       }
     } catch (e) {
       if (mounted) {
-        AppSnackbar.show(context, message: 'An error occurred: ${e.toString()}');
+        AppSnackbar.show(
+          context,
+          message: e.toString().replaceFirst('Exception: ', ''),
+          isError: true,
+        );
       }
     } finally {
       if (mounted) {
@@ -178,6 +224,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _clearPasswordFields() {
     setState(() {
+      _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
     });
@@ -192,34 +239,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!_emailFormKey.currentState!.validate()) return;
 
-    final user = ref.read(authServiceProvider).currentUser;
+    final authService = ref.read(authServiceProvider);
+    final user = authService.currentUser;
     if (user == null) return;
+
+    final currentPassword = _currentEmailPasswordController.text;
+    final newEmail = _newEmailController.text.trim();
 
     setState(() => _isUpdatingEmail = true);
 
     try {
-      await user.verifyBeforeUpdateEmail(_newEmailController.text.trim());
+      // Step 1: Reauthenticate and send verification to new email
+      await authService.changeEmail(
+        newEmail: newEmail,
+        currentPassword: currentPassword,
+      );
+
+      if (!mounted) return;
+
+      // Step 2: Navigate to verification screen
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(
+            verificationTitle: 'Verify your new email',
+            verificationSubtitle:
+                'We sent a verification link to $newEmail. '
+                'Click the link, then tap Done below to complete your email change.',
+            requireManualConfirm: true,
+            onVerified: (ctx) async {
+              // Verify the email was actually updated by Firebase after
+              // the user clicked the verification link.
+              final currentUser = authService.currentUser;
+              if (currentUser == null) {
+                throw Exception('User session lost. Please sign in again.');
+              }
+              await currentUser.reload();
+              if (currentUser.email != newEmail) {
+                throw Exception(
+                  'Email has not been updated yet. '
+                  'Please click the verification link first.',
+                );
+              }
+            },
+          ),
+        ),
+      );
+
       if (mounted) {
+        _clearEmailFields();
         AppSnackbar.show(
           context,
-          message: 'A verification link has been sent to your new email. Please verify it to complete the update.',
+          message: 'Email updated successfully!',
         );
-        _clearEmailFields();
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        if (e.code == 'requires-recent-login') {
-          AppSnackbar.show(
-            context,
-            message: 'Security sensitive action. Please sign out and sign back in to change email.',
-          );
-        } else {
-          AppSnackbar.show(context, message: e.message ?? 'Failed to change email');
-        }
+        AppSnackbar.show(
+          context,
+          message: e.message ?? 'Failed to change email. Please try again.',
+          isError: true,
+        );
       }
     } catch (e) {
       if (mounted) {
-        AppSnackbar.show(context, message: 'An error occurred: ${e.toString()}');
+        AppSnackbar.show(
+          context,
+          message: e.toString().replaceFirst('Exception: ', ''),
+          isError: true,
+        );
       }
     } finally {
       if (mounted) {
@@ -230,6 +317,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _clearEmailFields() {
     setState(() {
+      _currentEmailPasswordController.clear();
       _newEmailController.clear();
       _confirmEmailController.clear();
     });
@@ -875,6 +963,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSettingsTextField(
+            label: 'Current Password',
+            hint: 'Enter current password...',
+            controller: _currentPasswordController,
+            obscureText: _obscureCurrentPassword,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureCurrentPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
+              onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Current password is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsTextField(
             label: 'New Password',
             hint: 'Enter new password...',
             controller: _newPasswordController,
@@ -921,6 +1030,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return null;
             },
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.primary, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'A verification link will be sent to your current email for security.',
+                    style: AppTypography.caption(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 11, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -931,7 +1066,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(width: 12),
               _buildPrimaryActionButton(
-                label: 'Verify',
+                label: 'Update Password',
                 isLoading: _isUpdatingPassword,
                 onPressed: _updatePassword,
               ),
@@ -959,6 +1094,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildSettingsTextField(
+            label: 'Current Password',
+            hint: 'Enter current password...',
+            controller: _currentEmailPasswordController,
+            obscureText: _obscureEmailPassword,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureEmailPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
+              onPressed: () => setState(() => _obscureEmailPassword = !_obscureEmailPassword),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Current password is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
           _buildSettingsTextField(
             label: 'New email',
             hint: 'Enter new email...',
@@ -991,6 +1147,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return null;
             },
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.primary, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'A verification link will be sent to your new email. Your current email will remain active until the new one is verified.',
+                    style: AppTypography.caption(
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontSize: 11, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -1001,7 +1183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(width: 12),
               _buildPrimaryActionButton(
-                label: 'Verify',
+                label: 'Update Email',
                 isLoading: _isUpdatingEmail,
                 onPressed: _updateEmail,
               ),

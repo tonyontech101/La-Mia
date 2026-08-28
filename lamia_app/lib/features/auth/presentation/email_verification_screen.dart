@@ -21,20 +21,50 @@ import 'widgets/auth_scaffold.dart';
 /// the user to also check their spam/junk folder. Periodically polls Firebase
 /// to detect when the user has clicked the verification link, then
 /// auto-navigates to the home screen with a success animation.
+///
+/// Can also be used for sensitive action verification (password/email change)
+/// by passing [onVerified] and [verificationTitle].
 class EmailVerificationScreen extends ConsumerStatefulWidget {
-  const EmailVerificationScreen({super.key});
+  const EmailVerificationScreen({
+    super.key,
+    this.onVerified,
+    this.verificationTitle,
+    this.verificationSubtitle,
+    this.navigateToOnVerified,
+    this.requireManualConfirm = false,
+  });
+
+  /// Called when verification is complete. If null, navigates to HomePlaceholderScreen.
+  final Future<void> Function(BuildContext context)? onVerified;
+
+  /// Custom title for the verification screen.
+  final String? verificationTitle;
+
+  /// Custom subtitle shown below the title.
+  final String? verificationSubtitle;
+
+  /// Route to navigate to after verification if [onVerified] is null.
+  final Widget Function()? navigateToOnVerified;
+
+  /// When true, the screen will NOT auto-poll [isEmailVerified].
+  /// Instead it shows a "Done" button the user must tap after clicking
+  /// the email link. Used for sensitive operations (password/email change)
+  /// where the email is already verified from signup.
+  final bool requireManualConfirm;
 
   @override
   ConsumerState<EmailVerificationScreen> createState() =>
       _EmailVerificationScreenState();
 }
 
-class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen>
+class _EmailVerificationScreenState
+    extends ConsumerState<EmailVerificationScreen>
     with SingleTickerProviderStateMixin {
   AuthService get _authService => ref.read(authServiceProvider);
   Timer? _pollTimer;
   bool _resending = false;
   bool _navigated = false;
+  bool _isManuallyVerifying = false;
 
   // Resend cooldown.
   static const int _cooldownSeconds = 60;
@@ -46,21 +76,23 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   late final Animation<double> _successScaleAnim;
   late final Animation<double> _successFadeAnim;
 
-  String get _userEmail =>
-      _authService.currentUser?.email ?? 'your email';
+  String get _userEmail => _authService.currentUser?.email ?? 'your email';
 
   @override
   void initState() {
     super.initState();
     // Kick off an initial reload so fresh sign-ups get the latest state.
     _authService.reloadUser();
-    // Poll every 3 seconds to detect verification without requiring a
-    // page refresh (Firebase does not push this state change in real-time
-    // on all platforms).
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _checkVerification(),
-    );
+
+    // Only auto-poll when NOT in manual-confirm mode. For sensitive operations
+    // (password/email change) the email is already verified from signup, so
+    // polling isEmailVerified would immediately trigger a false positive.
+    if (!widget.requireManualConfirm) {
+      _pollTimer = Timer.periodic(
+        const Duration(seconds: 3),
+        (_) => _checkVerification(),
+      );
+    }
 
     // Success animation setup.
     _successAnimController = AnimationController(
@@ -99,10 +131,20 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
       if (!mounted) return;
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
-        (_) => false,
-      );
+
+      if (widget.onVerified != null) {
+        await widget.onVerified!(context);
+        if (mounted) Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) =>
+                widget.navigateToOnVerified?.call() ??
+                const HomePlaceholderScreen(),
+          ),
+          (_) => false,
+        );
+      }
     }
   }
 
@@ -161,6 +203,57 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     );
   }
 
+  /// Called when the user taps "Done" in manual-confirm mode.
+  /// Reloads the user, runs [onVerified], then navigates on success.
+  Future<void> _onManualConfirm() async {
+    if (_isManuallyVerifying || _navigated) return;
+    setState(() => _isManuallyVerifying = true);
+
+    try {
+      // Reload user to get fresh state from Firebase.
+      await _authService.reloadUser();
+
+      if (!mounted) return;
+
+      if (widget.onVerified != null) {
+        // Let the caller perform the actual operation (change password, etc.).
+        // If the operation fails (e.g. email not yet verified), the callback
+        // should throw so we can show an error.
+        await widget.onVerified!(context);
+      }
+
+      if (!mounted) return;
+
+      // Operation succeeded — play success animation and dismiss.
+      _navigated = true;
+      await _successAnimController.forward();
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+
+      if (widget.onVerified != null) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) =>
+                widget.navigateToOnVerified?.call() ??
+                const HomePlaceholderScreen(),
+          ),
+          (_) => false,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+      setState(() => _isManuallyVerifying = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
@@ -193,7 +286,9 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 child: Icon(
                   _navigated
                       ? Icons.check_circle_outline
-                      : Icons.mark_email_unread_outlined,
+                      : (widget.onVerified != null
+                            ? Icons.shield_outlined
+                            : Icons.mark_email_unread_outlined),
                   size: 40,
                   color: _navigated ? AppColors.success : AppColors.primary,
                 ),
@@ -204,7 +299,9 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
 
           // -- Title ----------------------------------------------
           Text(
-            _navigated ? 'Email verified!' : 'Verify your email',
+            _navigated
+                ? 'Verified!'
+                : (widget.verificationTitle ?? 'Verify your email'),
             style: AppTypography.headline(),
             textAlign: TextAlign.center,
           ),
@@ -213,16 +310,26 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           // -- Body -----------------------------------------------
           if (_navigated) ...[
             Text(
-              'Taking you to the app...',
+              widget.onVerified != null
+                  ? 'Verifying...'
+                  : 'Taking you to the app...',
               style: AppTypography.body(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ] else ...[
-            Text(
-              "We've sent a verification link to",
-              style: AppTypography.body(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
+            if (widget.verificationSubtitle != null) ...[
+              Text(
+                widget.verificationSubtitle!,
+                style: AppTypography.body(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ] else ...[
+              Text(
+                "We've sent a verification link to",
+                style: AppTypography.body(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: AppSpacing.xxs),
             Text(
               _userEmail,
@@ -231,8 +338,10 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             ),
             const SizedBox(height: AppSpacing.xxs),
             Text(
-              'Click the link in your inbox, then come back here. '
-              'This screen will update automatically.',
+              widget.requireManualConfirm
+                  ? 'Click the link in your inbox, then tap Done below to complete the process.'
+                  : 'Click the link in your inbox, then come back here. '
+                        'This screen will update automatically.',
               style: AppTypography.body(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -269,16 +378,40 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             ),
             const SizedBox(height: AppSpacing.xxl),
 
-            // -- Resend button with cooldown ----------------------
-            PrimaryButton(
-              label: _cooldownRemaining > 0
-                  ? 'Resend in $_cooldownText'
-                  : 'Resend verification email',
-              isLoading: _resending,
-              onPressed: (_resending || _cooldownRemaining > 0)
-                  ? null
-                  : _resendEmail,
-            ),
+            if (widget.requireManualConfirm) ...[
+              // -- "Done" button for manual confirm mode --------
+              PrimaryButton(
+                label: 'Done — I\'ve clicked the link',
+                isLoading: _isManuallyVerifying,
+                onPressed: _isManuallyVerifying ? null : _onManualConfirm,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              // -- Resend (secondary) ----------------------------
+              Center(
+                child: TextButton(
+                  onPressed: (_resending || _cooldownRemaining > 0)
+                      ? null
+                      : _resendEmail,
+                  child: Text(
+                    _cooldownRemaining > 0
+                        ? 'Resend in $_cooldownText'
+                        : 'Resend verification email',
+                    style: AppTypography.body(color: AppColors.secondary),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // -- Resend button with cooldown (auto mode) ------
+              PrimaryButton(
+                label: _cooldownRemaining > 0
+                    ? 'Resend in $_cooldownText'
+                    : 'Resend verification email',
+                isLoading: _resending,
+                onPressed: (_resending || _cooldownRemaining > 0)
+                    ? null
+                    : _resendEmail,
+              ),
+            ],
           ],
 
           const SizedBox(height: AppSpacing.md),

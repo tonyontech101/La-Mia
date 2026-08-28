@@ -203,6 +203,72 @@ class AuthService {
   /// Whether the current user has verified their email address.
   bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
 
+  // ── Sensitive Operations (Reauthentication) ─────────────────────────────
+
+  /// Reauthenticates the current user with [email] and [password].
+  ///
+  /// Firebase requires a recent login for sensitive operations like
+  /// changing a password or email. This method reauthenticates the user
+  /// so the subsequent sensitive operation can proceed.
+  Future<void> reauthenticateWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user is currently signed in.');
+      final credential = EmailAuthProvider.credential(
+        email: email.trim(),
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(AuthErrorMessages.fromCode(e.code));
+    }
+  }
+
+  /// Changes the current user's password to [newPassword].
+  ///
+  /// The user must have been recently authenticated (via [reauthenticateWithEmail])
+  /// before calling this method, otherwise Firebase will throw
+  /// `requires-recent-login`.
+  Future<void> changePassword(String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user is currently signed in.');
+      await user.updatePassword(newPassword);
+      await user.reload();
+    } on FirebaseAuthException catch (e) {
+      throw Exception(AuthErrorMessages.fromCode(e.code));
+    }
+  }
+
+  /// Sends a verification email to the current user, then updates their
+  /// email to [newEmail] once verified.
+  ///
+  /// Uses Firebase's `verifyBeforeUpdateEmail` which sends a verification
+  /// link to [newEmail]. The email is only changed after the user clicks
+  /// the link. The user must be recently authenticated.
+  Future<void> changeEmail({
+    required String newEmail,
+    required String currentPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user is currently signed in.');
+      // Reauthenticate first
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      // Send verification to new email
+      await user.verifyBeforeUpdateEmail(newEmail.trim());
+    } on FirebaseAuthException catch (e) {
+      throw Exception(AuthErrorMessages.fromCode(e.code));
+    }
+  }
+
   // ── Password Reset ─────────────────────────────────────────────────────
 
   /// Sends a password-reset email to [email].
