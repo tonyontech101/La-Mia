@@ -87,11 +87,8 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
       _hasError = false;
     });
     try {
-      final recipes = await _recipeRepository.allRecipes(limit: 20);
+      final recipes = await _recipeRepository.forYouFeed(limit: 30);
       if (mounted && generation == _feedLoadGeneration) {
-        // Shuffle for a randomized feed on every refresh
-        final rng = Random();
-        recipes.shuffle(rng);
         setState(() {
           _recipes = recipes;
           _isLoading = false;
