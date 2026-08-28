@@ -9,6 +9,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/banig_divider.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../recipes/data/recipe_model.dart';
+import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
 import '../data/grocery_list_repository.dart';
 import '../data/meal_plan_model.dart';
@@ -41,7 +42,8 @@ class WeeklyMealPlannerScreen extends ConsumerStatefulWidget {
       _WeeklyMealPlannerScreenState();
 }
 
-class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScreen> {
+class _WeeklyMealPlannerScreenState
+    extends ConsumerState<WeeklyMealPlannerScreen> {
   // ── Convenience getters (delegate to notifier state) ───────────────────
   WeeklyPlanState get _planState => ref.watch(weeklyPlanNotifierProvider);
   WeeklyMealPlanModel? get _currentPlan => _planState.currentPlan;
@@ -51,33 +53,63 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
   DateTime get _currentMonday => _planState.currentMonday;
 
   static String _fullMonth(int month) {
-    const m = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const m = [
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
     return (month >= 1 && month <= 12) ? m[month] : '';
   }
 
   static String _dayOfWeek(int weekday) {
     switch (weekday) {
-      case DateTime.monday: return 'Monday';
-      case DateTime.tuesday: return 'Tuesday';
-      case DateTime.wednesday: return 'Wednesday';
-      case DateTime.thursday: return 'Thursday';
-      case DateTime.friday: return 'Friday';
-      case DateTime.saturday: return 'Saturday';
-      case DateTime.sunday: return 'Sunday';
-      default: return 'Day';
+      case DateTime.monday:
+        return 'Monday';
+      case DateTime.tuesday:
+        return 'Tuesday';
+      case DateTime.wednesday:
+        return 'Wednesday';
+      case DateTime.thursday:
+        return 'Thursday';
+      case DateTime.friday:
+        return 'Friday';
+      case DateTime.saturday:
+        return 'Saturday';
+      case DateTime.sunday:
+        return 'Sunday';
+      default:
+        return 'Day';
     }
   }
 
   static String _shortDayOfWeek(int weekday) {
     switch (weekday) {
-      case DateTime.monday: return 'Mon';
-      case DateTime.tuesday: return 'Tue';
-      case DateTime.wednesday: return 'Wed';
-      case DateTime.thursday: return 'Thu';
-      case DateTime.friday: return 'Fri';
-      case DateTime.saturday: return 'Sat';
-      case DateTime.sunday: return 'Sun';
-      default: return 'Day';
+      case DateTime.monday:
+        return 'Mon';
+      case DateTime.tuesday:
+        return 'Tue';
+      case DateTime.wednesday:
+        return 'Wed';
+      case DateTime.thursday:
+        return 'Thu';
+      case DateTime.friday:
+        return 'Fri';
+      case DateTime.saturday:
+        return 'Sat';
+      case DateTime.sunday:
+        return 'Sun';
+      default:
+        return 'Day';
     }
   }
 
@@ -106,7 +138,9 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
   }
 
   String _formatWeekRangeHeader() {
-    return ref.read(weeklyPlanNotifierProvider.notifier).formatWeekRangeHeader();
+    return ref
+        .read(weeklyPlanNotifierProvider.notifier)
+        .formatWeekRangeHeader();
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -123,11 +157,13 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
           Navigator.pop(ctx);
           final planState = ref.read(weeklyPlanNotifierProvider);
           if (planState.currentPlan == null) return;
-          await ref.read(weeklyPlanNotifierProvider.notifier).updateSlot(
-            dateKey: planState.selectedDateKey,
-            slotKey: slotKey,
-            recipe: recipe,
-          );
+          await ref
+              .read(weeklyPlanNotifierProvider.notifier)
+              .updateSlot(
+                dateKey: planState.selectedDateKey,
+                slotKey: slotKey,
+                recipe: recipe,
+              );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -203,14 +239,18 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
   void _openGroceryList() {
     final planState = ref.read(weeklyPlanNotifierProvider);
     if (planState.currentPlan == null) return;
-    final items = ref.read(weeklyPlanNotifierProvider.notifier).generateGroceryList();
+    final items = ref
+        .read(weeklyPlanNotifierProvider.notifier)
+        .generateGroceryList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _GroceryListModal(
         items: items,
-        weekDateRange: ref.read(weeklyPlanNotifierProvider.notifier).formatWeekRangeHeader(),
+        weekDateRange: ref
+            .read(weeklyPlanNotifierProvider.notifier)
+            .formatWeekRangeHeader(),
         userId: FirebaseAuth.instance.currentUser?.uid,
       ),
     );
@@ -228,7 +268,10 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
         scrolledUnderElevation: 0.5,
         leading: widget.onNavigateHome != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: widget.onNavigateHome,
               )
             : null,
@@ -245,7 +288,10 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.xs),
             child: IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textPrimary),
+              icon: const Icon(
+                Icons.shopping_cart_outlined,
+                color: AppColors.textPrimary,
+              ),
               tooltip: 'Grocery List',
               onPressed: _openGroceryList,
             ),
@@ -257,7 +303,12 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            )
           : RefreshIndicator(
               onRefresh: _refreshWeekPlan,
               color: AppColors.primary,
@@ -272,12 +323,16 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                     _buildDayStrip(),
                     const SizedBox(height: AppSpacing.md),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenH,
+                      ),
                       child: _buildDaySubHeader(),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenH,
+                      ),
                       child: Column(
                         children: [
                           _buildMealSlotCard(
@@ -330,12 +385,19 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
     return Container(
       width: double.infinity,
       color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 28, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.chevron_left_rounded,
+              size: 28,
+              color: AppColors.textPrimary,
+            ),
             onPressed: () => _changeWeek(-1),
             tooltip: 'Previous Week',
           ),
@@ -353,15 +415,22 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isThisWeek ? AppColors.accentSoft : AppColors.surfaceAlt,
+                    color: isThisWeek
+                        ? AppColors.accentSoft
+                        : AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(AppRadii.pill),
                   ),
                   child: Text(
                     isThisWeek ? 'This week' : 'Back to this week',
                     style: AppTypography.caption(
-                      color: isThisWeek ? AppColors.primary : AppColors.textSecondary,
+                      color: isThisWeek
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -369,7 +438,11 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right_rounded, size: 28, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.chevron_right_rounded,
+              size: 28,
+              color: AppColors.textPrimary,
+            ),
             onPressed: () => _changeWeek(1),
             tooltip: 'Next Week',
           ),
@@ -391,13 +464,15 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
           children: List.generate(7, (i) {
             final dayDate = _currentMonday.add(Duration(days: i));
             final dateKey = MealPlanRepository.formatDateKey(dayDate);
-            final isSelected = dayDate.year == _selectedDayDate.year &&
+            final isSelected =
+                dayDate.year == _selectedDayDate.year &&
                 dayDate.month == _selectedDayDate.month &&
                 dayDate.day == _selectedDayDate.day;
 
             final dayData = _currentPlan?.days[dateKey];
             final mealsCount = dayData?.totalMealsCount ?? 0;
-            final isToday = DateTime.now().year == dayDate.year &&
+            final isToday =
+                DateTime.now().year == dayDate.year &&
                 DateTime.now().month == dayDate.month &&
                 DateTime.now().day == dayDate.day;
 
@@ -405,7 +480,9 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: PressableScale(
                 onTap: () {
-                  ref.read(weeklyPlanNotifierProvider.notifier).selectDay(dayDate);
+                  ref
+                      .read(weeklyPlanNotifierProvider.notifier)
+                      .selectDay(dayDate);
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
@@ -419,8 +496,8 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                       color: isSelected
                           ? AppColors.primary
                           : isToday
-                              ? AppColors.primary.withValues(alpha: 0.4)
-                              : AppColors.border,
+                          ? AppColors.primary.withValues(alpha: 0.4)
+                          : AppColors.border,
                       width: isSelected ? 1.5 : 1.0,
                     ),
                     boxShadow: isSelected
@@ -441,7 +518,9 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.5,
-                          color: isSelected ? Colors.white70 : AppColors.textSecondary,
+                          color: isSelected
+                              ? Colors.white70
+                              : AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xxs),
@@ -450,7 +529,9 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                         style: GoogleFonts.fraunces(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -465,10 +546,12 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: d < mealsCount
-                                    ? (isSelected ? Colors.white : AppColors.primary)
+                                    ? (isSelected
+                                          ? Colors.white
+                                          : AppColors.primary)
                                     : (isSelected
-                                        ? Colors.white.withValues(alpha: 0.25)
-                                        : AppColors.border),
+                                          ? Colors.white.withValues(alpha: 0.25)
+                                          : AppColors.border),
                               ),
                             ),
                         ],
@@ -487,7 +570,8 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
   // ── Active Day Subheader & Auto-Fill ────────────────────────────────────────
 
   Widget _buildDaySubHeader() {
-    final dayName = '${_dayOfWeek(_selectedDayDate.weekday)}, ${_fullMonth(_selectedDayDate.month)} ${_selectedDayDate.day}';
+    final dayName =
+        '${_dayOfWeek(_selectedDayDate.weekday)}, ${_fullMonth(_selectedDayDate.month)} ${_selectedDayDate.day}';
     final count = _currentSelectedDay.totalMealsCount;
 
     return Row(
@@ -516,7 +600,10 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
         GestureDetector(
           onTap: _handleAutoFillWeek,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xxs + 1),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xxs + 1,
+            ),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -567,7 +654,12 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
             child: Row(
               children: [
                 Icon(icon, color: AppColors.textSecondary, size: 16),
@@ -588,7 +680,10 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                 const Spacer(),
                 if (hasMeal)
                   GestureDetector(
-                    onTap: () => _openRecipeSelector('$slotTitle ($slotSubtitle)', slotKey),
+                    onTap: () => _openRecipeSelector(
+                      '$slotTitle ($slotSubtitle)',
+                      slotKey,
+                    ),
                     child: Text(
                       'Change',
                       style: AppTypography.caption(color: AppColors.primary),
@@ -623,14 +718,20 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                     width: 64,
                     height: 64,
                     color: AppColors.surfaceAlt,
-                    child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
+                    child: const Icon(
+                      Icons.restaurant,
+                      color: AppColors.textDisabled,
+                    ),
                   ),
                 )
               : Container(
                   width: 64,
                   height: 64,
                   color: AppColors.surfaceAlt,
-                  child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
+                  child: const Icon(
+                    Icons.restaurant,
+                    color: AppColors.textDisabled,
+                  ),
                 ),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -649,12 +750,16 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
                 children: [
                   Text(
                     item.category,
-                    style: AppTypography.caption(color: AppColors.textSecondary),
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   if (item.cookTime.isNotEmpty)
                     Text(
                       ' \u00B7 ${item.cookTime}',
-                      style: AppTypography.caption(color: AppColors.textSecondary),
+                      style: AppTypography.caption(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -719,7 +824,11 @@ class _WeeklyMealPlannerScreenState extends ConsumerState<WeeklyMealPlannerScree
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add_rounded, color: AppColors.textSecondary, size: 18),
+            const Icon(
+              Icons.add_rounded,
+              color: AppColors.textSecondary,
+              size: 18,
+            ),
             const SizedBox(width: AppSpacing.xs),
             Text(
               'Add dish',
@@ -762,12 +871,15 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
   List<RecipeModel> get _filteredRecipes {
     final query = _searchController.text.toLowerCase().trim();
     return widget.allRecipes.where((recipe) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           recipe.name.toLowerCase().contains(query) ||
           recipe.category.toLowerCase().contains(query);
 
-      final matchesCategory = _selectedCategory == 'All' ||
-          recipe.category.toLowerCase() == _selectedCategory.toLowerCase();
+      final matchesCategory =
+          _selectedCategory == 'All' ||
+          RecipeRepository.canonicalCategory(recipe.category) ==
+              RecipeRepository.canonicalCategory(_selectedCategory);
 
       return matchesQuery && matchesCategory;
     }).toList();
@@ -775,13 +887,26 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ['All', 'Almusal', 'Ulam', 'Meryenda', 'Inihaw', 'Gulay'];
+    final categories = [
+      'All',
+      'Almusal',
+      'Ulam',
+      'Sabaw',
+      'Merienda',
+      'Panghimagas',
+      'Gulay',
+      'Inihaw',
+      'Lamang Dagat',
+      'Pulutan',
+    ];
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.82,
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.card),
+        ),
       ),
       child: Column(
         children: [
@@ -815,13 +940,18 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         'Pick from classic and community Filipino dishes',
-                        style: AppTypography.caption(color: AppColors.textSecondary),
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textPrimary,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -839,10 +969,16 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
               decoration: InputDecoration(
                 hintText: 'Search recipe or category...',
                 hintStyle: AppTypography.body(color: AppColors.textDisabled),
-                prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
                 filled: true,
                 fillColor: AppColors.surfaceAlt,
-                contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.xs,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadii.field),
                   borderSide: BorderSide.none,
@@ -869,7 +1005,9 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                     },
                     selectedColor: AppColors.primary,
                     labelStyle: AppTypography.caption(
-                      color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
+                      color: isSelected
+                          ? AppColors.onPrimary
+                          : AppColors.textPrimary,
                     ),
                     backgroundColor: AppColors.surface,
                     side: BorderSide(
@@ -893,29 +1031,43 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off_rounded, size: 48, color: AppColors.textDisabled),
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: AppColors.textDisabled,
+                        ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           'No recipes match',
-                          style: AppTypography.label(color: AppColors.textSecondary),
+                          style: AppTypography.label(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
                     itemCount: _filteredRecipes.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.border),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final recipe = _filteredRecipes[index];
                       return InkWell(
                         onTap: () => widget.onRecipeSelected(recipe),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xs,
+                          ),
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(AppRadii.field),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.field,
+                                ),
                                 child: recipe.coverPhotoUrl.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: recipe.coverPhotoUrl,
@@ -926,14 +1078,20 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                                           width: 52,
                                           height: 52,
                                           color: AppColors.surfaceAlt,
-                                          child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
+                                          child: const Icon(
+                                            Icons.restaurant,
+                                            color: AppColors.textDisabled,
+                                          ),
                                         ),
                                       )
                                     : Container(
                                         width: 52,
                                         height: 52,
                                         color: AppColors.surfaceAlt,
-                                        child: const Icon(Icons.restaurant, color: AppColors.textDisabled),
+                                        child: const Icon(
+                                          Icons.restaurant,
+                                          color: AppColors.textDisabled,
+                                        ),
                                       ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
@@ -943,12 +1101,16 @@ class _RecipePickerSheetState extends State<_RecipePickerSheet> {
                                   children: [
                                     Text(
                                       recipe.name,
-                                      style: AppTypography.bodyStrong(color: AppColors.textPrimary),
+                                      style: AppTypography.bodyStrong(
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                     const SizedBox(height: AppSpacing.xxs),
                                     Text(
                                       '${recipe.category} \u00B7 ${recipe.approximateCookTime}',
-                                      style: AppTypography.caption(color: AppColors.textSecondary),
+                                      style: AppTypography.caption(
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1047,7 +1209,9 @@ class _GroceryListModalState extends State<_GroceryListModal> {
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.card),
+        ),
       ),
       child: Column(
         children: [
@@ -1081,18 +1245,26 @@ class _GroceryListModalState extends State<_GroceryListModal> {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         'Everything you need for ${widget.weekDateRange}',
-                        style: AppTypography.caption(color: AppColors.textSecondary),
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy_rounded, color: AppColors.primary),
+                  icon: const Icon(
+                    Icons.copy_rounded,
+                    color: AppColors.primary,
+                  ),
                   tooltip: 'Copy all',
                   onPressed: _copyToClipboard,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textPrimary,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -1102,7 +1274,10 @@ class _GroceryListModalState extends State<_GroceryListModal> {
           const Divider(height: 16, color: AppColors.border),
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xxs),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xxs,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1124,24 +1299,36 @@ class _GroceryListModalState extends State<_GroceryListModal> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.kitchen_outlined, size: 48, color: AppColors.textDisabled),
+                        Icon(
+                          Icons.kitchen_outlined,
+                          size: 48,
+                          color: AppColors.textDisabled,
+                        ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           'No meals this week yet.',
-                          style: AppTypography.label(color: AppColors.textPrimary),
+                          style: AppTypography.label(
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
                           'Add dishes to see the ingredients here.',
-                          style: AppTypography.caption(color: AppColors.textSecondary),
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
                     itemCount: widget.items.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: AppColors.border),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final item = widget.items[index];
                       final isChecked = _checkedItems.contains(item);
@@ -1151,11 +1338,16 @@ class _GroceryListModalState extends State<_GroceryListModal> {
                         controlAffinity: ListTileControlAffinity.leading,
                         title: Text(
                           item,
-                          style: AppTypography.body(
-                            color: isChecked ? AppColors.textDisabled : AppColors.textPrimary,
-                          ).copyWith(
-                            decoration: isChecked ? TextDecoration.lineThrough : null,
-                          ),
+                          style:
+                              AppTypography.body(
+                                color: isChecked
+                                    ? AppColors.textDisabled
+                                    : AppColors.textPrimary,
+                              ).copyWith(
+                                decoration: isChecked
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
                         ),
                         onChanged: (val) {
                           setState(() {
@@ -1172,14 +1364,21 @@ class _GroceryListModalState extends State<_GroceryListModal> {
           ),
           if (widget.userId != null && widget.items.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadii.button),
                     ),

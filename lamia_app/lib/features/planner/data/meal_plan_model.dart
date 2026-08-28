@@ -210,7 +210,10 @@ class WeeklyMealPlanModel {
   }
 
   static String _formatWeekId(DateTime monday) {
-    return 'week_${_formatDateKey(monday)}';
+    final y = monday.year;
+    final m = monday.month.toString().padLeft(2, '0');
+    final d = monday.day.toString().padLeft(2, '0');
+    return 'week_${y}_${m}_$d';
   }
 
   static String _getDayName(int weekday) {

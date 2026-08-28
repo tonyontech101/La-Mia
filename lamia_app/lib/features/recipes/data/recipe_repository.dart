@@ -17,7 +17,9 @@ class RecipeRepository {
   /// Watches a recipe document so counters such as [RecipeModel.likeCount]
   /// remain current anywhere a recipe is already open on screen.
   Stream<RecipeModel?> watchRecipe(String recipeId) {
-    return _firestore.collection('recipes').doc(recipeId).snapshots().map((doc) {
+    return _firestore.collection('recipes').doc(recipeId).snapshots().map((
+      doc,
+    ) {
       if (!doc.exists || doc.data() == null) return null;
       return RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
     });
@@ -93,7 +95,7 @@ class RecipeRepository {
     String category, {
     int limit = 20,
   }) async {
-    final target = _canonicalCategory(category);
+    final target = canonicalCategory(category);
 
     // Fetch a larger set (no server-side category filter to support both the
     // current Filipino labels and legacy labels without an index migration).
@@ -119,12 +121,12 @@ class RecipeRepository {
   static bool isVisibleInCategory(RecipeModel recipe, String category) {
     final isVisible = recipe.status == 'approved' || recipe.isSystemRecipe;
     return isVisible &&
-        _canonicalCategory(recipe.category) == _canonicalCategory(category);
+        canonicalCategory(recipe.category) == canonicalCategory(category);
   }
 
   /// Maps current IDs, Filipino display labels, and legacy English labels to
   /// the category users see in the dashboard.
-  static String _canonicalCategory(String value) {
+  static String canonicalCategory(String value) {
     final normalized = value
         .trim()
         .toLowerCase()
@@ -204,24 +206,27 @@ class RecipeRepository {
 
     try {
       final all = await allRecipes(limit: 100);
-      return all.where((r) {
-        final nameMatch = r.name.toLowerCase().contains(q);
-        final catMatch = r.category.toLowerCase().contains(q);
-        final tagMatch = r.tags.any((t) => t.toLowerCase().contains(q));
-        final regionMatch = r.region.toLowerCase().contains(q);
-        final ingMatch = r.ingredients.any(
-          (i) => i.toLowerCase().contains(q),
-        );
-        final descMatch = r.description.toLowerCase().contains(q);
-        final authorMatch = r.authorName.toLowerCase().contains(q);
-        return nameMatch ||
-            catMatch ||
-            tagMatch ||
-            regionMatch ||
-            ingMatch ||
-            descMatch ||
-            authorMatch;
-      }).take(limit).toList();
+      return all
+          .where((r) {
+            final nameMatch = r.name.toLowerCase().contains(q);
+            final catMatch = r.category.toLowerCase().contains(q);
+            final tagMatch = r.tags.any((t) => t.toLowerCase().contains(q));
+            final regionMatch = r.region.toLowerCase().contains(q);
+            final ingMatch = r.ingredients.any(
+              (i) => i.toLowerCase().contains(q),
+            );
+            final descMatch = r.description.toLowerCase().contains(q);
+            final authorMatch = r.authorName.toLowerCase().contains(q);
+            return nameMatch ||
+                catMatch ||
+                tagMatch ||
+                regionMatch ||
+                ingMatch ||
+                descMatch ||
+                authorMatch;
+          })
+          .take(limit)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -246,10 +251,7 @@ class RecipeRepository {
     final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
         .where(
-          (r) =>
-              includePending ||
-              r.status == 'approved' ||
-              r.isSystemRecipe,
+          (r) => includePending || r.status == 'approved' || r.isSystemRecipe,
         )
         .toList();
     recipes.sort((a, b) {
@@ -381,6 +383,31 @@ class RecipeRepository {
       );
     });
     return monthRecipes.take(limit).toList();
+  }
+
+  /// Fetches all dataset/seeded recipes (system recipes) ordered by name.
+  ///
+  /// Returns every recipe where `isSystemRecipe == true`, sorted in-memory
+  /// by name ascending. Used by the "View All" button on the Featured Recipes
+  /// section to display the complete catalog of curated Filipino recipes.
+  ///
+  /// Uses the same fetch-then-filter pattern as [allRecipes] for reliability.
+  Future<List<RecipeModel>> systemRecipes({int limit = 500}) async {
+    final snap = await _firestore
+        .collection('recipes')
+        .orderBy('trendingScore', descending: true)
+        .limit(limit)
+        .get();
+    final recipes = snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.isSystemRecipe)
+        .toList();
+    recipes.sort((a, b) {
+      final aName = a.name.toLowerCase();
+      final bName = b.name.toLowerCase();
+      return aName.compareTo(bName);
+    });
+    return recipes;
   }
 
   /// Fetches a single recipe by its document ID.

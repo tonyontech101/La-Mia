@@ -13,6 +13,7 @@ import '../../recipes/data/recipe_category_model.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/ano_pong_ulam_screen.dart';
+import '../../recipes/presentation/all_recipes_screen.dart';
 import '../../recipes/presentation/category_recipes_screen.dart';
 import '../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -240,7 +241,14 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       offset: const Offset(0, 14),
       child: FeaturedRecipesSection(
         recipes: _featuredRecipes,
-        onViewAllTap: () => widget.onNavigateToTab?.call(1),
+        onViewAllTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AllRecipesScreen(),
+            ),
+          );
+        },
         onRecipeTap: _showRecipeDetailsDialog,
       ),
     );
