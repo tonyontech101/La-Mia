@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'recipe_model.dart';
@@ -83,6 +85,89 @@ class RecipeRepository {
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
         .where((r) => r.status == 'approved' || r.isSystemRecipe)
         .toList();
+  }
+
+  /// Fetches a personalized feed using a tiered algorithm:
+  /// Tier 1: Fresh user-submitted recipes (last 7 days) sorted by recency
+  /// Tier 2: Trending user-submitted recipes sorted by trendingScore
+  /// Tier 3: Curated/System recipes sorted by trendingScore
+  Future<List<RecipeModel>> forYouFeed({int limit = 30}) async {
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+    // Fetch the 60 newest recipes and top 100 trending recipes concurrently
+    final results = await Future.wait([
+      _firestore
+          .collection('recipes')
+          .orderBy('createdAt', descending: true)
+          .limit(60)
+          .get(),
+      _firestore
+          .collection('recipes')
+          .orderBy('trendingScore', descending: true)
+          .limit(100)
+          .get(),
+    ]);
+
+    final newSnap = results[0];
+    final trendingSnap = results[1];
+
+    final newRecipes = newSnap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
+
+    final trendingRecipes = trendingSnap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .toList();
+
+    // Tier 1: Fresh user recipes (last 7 days, approved, non-system)
+    final tier1 = newRecipes.where((r) {
+      final isUserRecipe = !r.isSystemRecipe;
+      final isApproved = r.status == 'approved';
+      final isFresh = r.createdAt != null && r.createdAt!.isAfter(sevenDaysAgo);
+      return isUserRecipe && isApproved && isFresh;
+    }).toList();
+
+    // Deduplicate Tier 1 IDs
+    final tier1Ids = tier1.map((r) => r.id).toSet();
+
+    // Tier 2: Trending user recipes (approved, non-system, not in Tier 1)
+    final tier2 = trendingRecipes.where((r) {
+      final isUserRecipe = !r.isSystemRecipe;
+      final isApproved = r.status == 'approved';
+      final notInTier1 = !tier1Ids.contains(r.id);
+      return isUserRecipe && isApproved && notInTier1;
+    }).toList();
+
+    // Tier 3: Curated/System recipes (not in Tier 1/2)
+    final tier3 = trendingRecipes.where((r) {
+      final isSystem = r.isSystemRecipe;
+      final isVisible = r.status == 'approved' || r.isSystemRecipe;
+      final notInTier1 = !tier1Ids.contains(r.id);
+      return isSystem && isVisible && notInTier1;
+    }).toList();
+
+    // Apply a light shuffle to system recipes within the tier for variety
+    final rng = Random();
+    tier3.shuffle(rng);
+
+    // Combine tiers
+    final combined = <RecipeModel>[];
+    combined.addAll(tier1);
+    combined.addAll(tier2);
+    combined.addAll(tier3);
+
+    // Deduplicate combined list by ID to be absolutely safe
+    final seenIds = <String>{};
+    final uniqueCombined = <RecipeModel>[];
+    for (final recipe in combined) {
+      if (recipe.id != null && !seenIds.contains(recipe.id)) {
+        seenIds.add(recipe.id!);
+        uniqueCombined.add(recipe);
+      }
+    }
+
+    return uniqueCombined.take(limit).toList();
   }
 
   /// Returns visible recipes assigned to [category].

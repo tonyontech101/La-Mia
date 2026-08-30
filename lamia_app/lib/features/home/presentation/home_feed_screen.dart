@@ -19,6 +19,7 @@ import '../../recipes/presentation/recipe_creating_screen.dart';
 import '../../search/presentation/universal_search_screen.dart';
 import '../../social/data/follow_repository.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/app_loading_dialog.dart';
 import 'widgets/feed_app_bar.dart';
 import 'widgets/feed_recipe_card.dart';
 import 'widgets/search_bar_widget.dart';
@@ -87,11 +88,8 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
       _hasError = false;
     });
     try {
-      final recipes = await _recipeRepository.allRecipes(limit: 20);
+      final recipes = await _recipeRepository.forYouFeed(limit: 30);
       if (mounted && generation == _feedLoadGeneration) {
-        // Shuffle for a randomized feed on every refresh
-        final rng = Random();
-        recipes.shuffle(rng);
         setState(() {
           _recipes = recipes;
           _isLoading = false;
@@ -225,7 +223,7 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   void _showDeleteConfirmationDialog(RecipeModel recipe) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
@@ -242,7 +240,7 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: Text(
                 'Cancel',
                 style: AppTypography.body(color: AppColors.textSecondary)
@@ -251,20 +249,39 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(dialogCtx); // Close confirm dialog
+
+                final recipeId = recipe.id;
+                if (recipeId == null) return;
+
+                // Optimistically remove from state immediately so it vanishes instantly
+                final previousRecipes = List<RecipeModel>.from(_recipes);
+                final previousFollowing = List<RecipeModel>.from(_followingRecipes);
+                setState(() {
+                  _recipes.removeWhere((r) => r.id == recipeId);
+                  _followingRecipes.removeWhere((r) => r.id == recipeId);
+                });
+
                 try {
-                  if (recipe.id != null) {
-                    await _recipeRepository.deleteRecipe(recipe.id!);
-                    if (mounted) {
-                      AppSnackbar.show(
-                        context,
-                        message: 'Post deleted successfully.',
-                      );
-                      refresh();
-                    }
+                  await AppLoadingDialog.runWithLoading(
+                    context,
+                    () => _recipeRepository.deleteRecipe(recipeId),
+                    message: 'Deleting recipe...',
+                  );
+                  if (mounted) {
+                    AppSnackbar.show(
+                      context,
+                      message: 'Post deleted successfully.',
+                    );
+                    refresh();
                   }
                 } catch (e) {
+                  // Revert on error
                   if (mounted) {
+                    setState(() {
+                      _recipes = previousRecipes;
+                      _followingRecipes = previousFollowing;
+                    });
                     AppSnackbar.show(
                       context,
                       message: 'Failed to delete recipe: $e',
