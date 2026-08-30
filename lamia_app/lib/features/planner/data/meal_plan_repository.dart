@@ -30,6 +30,12 @@ class MealPlanRepository {
   // In-memory cache per session
   static final Map<String, WeeklyMealPlanModel> _memoryCache = {};
 
+  /// Clears the in-memory cache. Should be called on sign-out to prevent
+  /// stale data from leaking to a different user session.
+  static void clearCache() {
+    _memoryCache.clear();
+  }
+
   /// Helper to calculate the Monday of the current week.
   static DateTime getMondayOf(DateTime date) {
     final clean = DateTime(date.year, date.month, date.day);
@@ -176,7 +182,7 @@ class MealPlanRepository {
     _schedulePlanReminders(plan);
   }
 
-  void _schedulePlanReminders(WeeklyMealPlanModel plan) async {
+  Future<void> _schedulePlanReminders(WeeklyMealPlanModel plan) async {
     final notifService = LocalNotificationService.instance;
     final now = DateTime.now();
 
@@ -257,7 +263,14 @@ class MealPlanRepository {
         } else {
           await notifService.cancelNotification(dId);
         }
-      } catch (_) {}
+      } catch (e, stack) {
+        AppLogger.error(
+          'Failed to schedule meal reminder for $dateKey',
+          error: e,
+          stackTrace: stack,
+          category: 'MEAL_PLANNER',
+        );
+      }
     }
   }
 
