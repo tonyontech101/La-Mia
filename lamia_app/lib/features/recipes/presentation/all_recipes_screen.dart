@@ -247,10 +247,12 @@ class _RecipeCard extends StatelessWidget {
                       ),
                       errorWidget: (_, _, _) => Container(
                         height: 110,
-                        color: AppColors.surfaceAlt,
-                        child: const Icon(
-                          Icons.restaurant,
-                          color: AppColors.textSecondary,
+                        color: const Color(0xFFE5DDD0),
+                        child: const Center(
+                          child: Icon(
+                            Icons.restaurant_rounded,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                     ),
@@ -264,7 +266,7 @@ class _RecipeCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.textPrimary.withValues(alpha: 0.75),
+                        color: const Color(0xFF63564D),
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                       child: Text(
@@ -275,6 +277,48 @@ class _RecipeCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.4,
                         ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.cardShadow,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 13,
+                            color: AppColors.accent,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            recipe.ratingAvg > 0
+                                ? recipe.ratingAvg.toStringAsFixed(1)
+                                : '4.9',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

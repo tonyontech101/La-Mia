@@ -14,7 +14,7 @@ import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/primary_button.dart';
-import '../../../core/widgets/sliding_tab_bar.dart';
+import '../../../core/widgets/pressable_scale.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/login_screen.dart';
@@ -198,7 +198,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       // Calculate total likes received across all of the author's recipe posts
       final totalPostLikes = recipes.fold<int>(
         0,
-        (sum, recipe) => sum + recipe.likeCount,
+        (acc, recipe) => acc + recipe.likeCount,
       );
 
       // Discard if a newer profile load has started.
@@ -909,11 +909,24 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // 2. Profile Header (Avatar, Badge, Bio, Stats)
+                        // 2. Profile Header (Avatar, Nickname, @handle, Bio, #ranking badge, Achievements callout, Stats)
                         ProfileHeaderWidget(
                           displayName: displayName,
+                          username: _userModel?.displayName != null
+                              ? _userModel!.displayName.toLowerCase().replaceAll(RegExp(r'\s+'), '_')
+                              : (user?.displayName?.toLowerCase().replaceAll(RegExp(r'\s+'), '_') ??
+                                  user?.email?.split('@').first),
                           photoUrl: photoUrl,
                           bio: bio,
+                          rankingLabel: _topContributorRank != null
+                              ? '#$_topContributorRank ranking'
+                              : (_mostCookedRank != null
+                                  ? '#$_mostCookedRank ranking'
+                                  : (achievementLevel != null
+                                      ? '#Level ${achievementLevel.number} ranking'
+                                      : (_userRecipes.isNotEmpty
+                                          ? '#${_userRecipes.length} ranking'
+                                          : '#24 ranking'))),
                           achievementLevelLabel: achievementLevel == null
                               ? null
                               : 'Level ${achievementLevel.number} ${achievementLevel.title}',
@@ -958,20 +971,23 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 color: AppColors.accent,
                               ),
                           ],
-                          followingCount: widget.isGuest
+                          recipeCount: widget.isGuest
                               ? '0'
-                              : (_followingCount?.toString() ??
-                                  _userModel?.followingCount.toString() ??
+                              : _userRecipes.length.toString(),
+                          likesCount: widget.isGuest
+                              ? '0'
+                              : (_totalPostLikes?.toString() ??
+                                  _userModel?.totalLikesReceived.toString() ??
                                   '0'),
                           followersCount: widget.isGuest
                               ? '0'
                               : (_followerCount?.toString() ??
                                   _userModel?.followerCount.toString() ??
                                   '0'),
-                          likesCount: widget.isGuest
+                          followingCount: widget.isGuest
                               ? '0'
-                              : (_totalPostLikes?.toString() ??
-                                  _userModel?.totalLikesReceived.toString() ??
+                              : (_followingCount?.toString() ??
+                                  _userModel?.followingCount.toString() ??
                                   '0'),
                           isGuest: widget.isGuest,
                           isOwnProfile: _isOwnProfile,
@@ -980,102 +996,20 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ? _navigateToEditProfile
                               : null,
                           onFollowTap: !_isOwnProfile ? _toggleFollow : null,
-                          onFollowingTap: () =>
-                              _navigateToFollowersScreen(initialTab: 1),
+                          onRecipesTap: () => _onTabSelected(0),
+                          onLikesTap: () => _onTabSelected(1),
                           onFollowersTap: () =>
                               _navigateToFollowersScreen(initialTab: 0),
-                          onLikesTap: () => _onTabSelected(1),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // 3. Tab Bar (Posts | Likes | Saved Recipes) matching wireframe
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt,
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          padding: const EdgeInsets.all(4),
-                          // The white active pill glides smoothly between
-                          // Posts / Likes / Saved Recipes.
-                          child: SlidingTabBar(
-                            index: _selectedTabIndex,
-                            itemCount: _isOwnProfile ? 3 : 2,
-                            highlight: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppRadii.pill),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: AppColors.cardShadow,
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            onChanged: _onTabSelected,
-                            builder: (context, i, isSelected) {
-                              final tabs = [
-                                (
-                                  label: 'Posts',
-                                  icon: Icons.mark_email_unread_outlined,
-                                ),
-                                (label: 'Likes', icon: Icons.favorite_border_rounded),
-                                if (_isOwnProfile)
-                                  (
-                                    label: 'Saved Recipes',
-                                    icon: Icons.bookmark_border_rounded,
-                                  ),
-                              ];
-                              final tab = tabs[i];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 4,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    AnimatedIconColor(
-                                      icon: tab.icon,
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: AnimatedDefaultTextStyle(
-                                        duration: const Duration(milliseconds: 240),
-                                        curve: Curves.easeOutCubic,
-                                        style:
-                                            AppTypography.caption(
-                                              color: isSelected
-                                                  ? AppColors.primary
-                                                  : AppColors.textSecondary,
-                                            ).copyWith(
-                                              fontWeight: isSelected
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w500,
-                                              fontSize: 11,
-                                            ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        child: Text(tab.label),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
                         ),
 
                         const SizedBox(height: 18),
 
-                        // 4. 2-Column Dish Cards Grid
+                        // 3. Tab Bar with 3 Icons matching wireframe (Posts | Likes | Saved)
+                        _buildWireframeTabBar(),
+
+                        const SizedBox(height: 16),
+
+                        // 4. 3-Column Dish Cards Grid
                         DishCardGrid(
                           recipes: tabRecipes,
                           isLoading: _isLoading ||
@@ -1104,30 +1038,92 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
-}
 
-/// An [Icon] whose color fades smoothly to [color] whenever it changes.
-class AnimatedIconColor extends StatelessWidget {
-  const AnimatedIconColor({
-    super.key,
-    required this.icon,
-    required this.color,
-    this.size = 16,
-  });
+  Widget _buildWireframeTabBar() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildTabIconButton(
+            index: 0,
+            icon: _selectedTabIndex == 0
+                ? Icons.drafts_rounded
+                : Icons.drafts_outlined,
+            tooltip: 'Posts',
+          ),
+          _buildTabIconButton(
+            index: 1,
+            icon: _selectedTabIndex == 1
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            tooltip: 'Likes',
+          ),
+          if (_isOwnProfile)
+            _buildTabIconButton(
+              index: 2,
+              icon: _selectedTabIndex == 2
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+              tooltip: 'Saved Recipes',
+            ),
+        ],
+      ),
+    );
+  }
 
-  final IconData icon;
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<Color?>(
-      tween: ColorTween(end: color),
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedColor, _) {
-        return Icon(icon, size: size, color: animatedColor);
-      },
+  Widget _buildTabIconButton({
+    required int index,
+    required IconData icon,
+    required String tooltip,
+  }) {
+    final isSelected = _selectedTabIndex == index;
+    return Expanded(
+      child: Tooltip(
+        message: tooltip,
+        child: PressableScale(
+          pressedScale: 0.93,
+          onTap: () => _onTabSelected(index),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                size: 22,
+                color: isSelected
+                    ? AppColors.onPrimary
+                    : AppColors.textSecondary.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

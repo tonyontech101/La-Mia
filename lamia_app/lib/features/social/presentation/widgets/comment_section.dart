@@ -22,14 +22,14 @@ import 'comment_thread.dart';
 /// When this widget is extracted into threading (Phase 3–4), only this
 /// file needs to grow — child widgets remain untouched.
 class CommentSection extends StatefulWidget {
-  CommentSection({
+  const CommentSection({
     super.key,
     required this.recipe,
     CommentRepository? commentRepository,
-  })  : _commentRepo = commentRepository ?? CommentRepository();
+  })  : _commentRepo = commentRepository;
 
   final RecipeModel recipe;
-  final CommentRepository _commentRepo;
+  final CommentRepository? _commentRepo;
 
   @override
   State<CommentSection> createState() => _CommentSectionState();
@@ -38,6 +38,21 @@ class CommentSection extends StatefulWidget {
 class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmittingComment = false;
+  CommentRepository? _resolvedRepo;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget._commentRepo != null) {
+      _resolvedRepo = widget._commentRepo;
+    } else {
+      try {
+        _resolvedRepo = CommentRepository();
+      } catch (_) {
+        _resolvedRepo = null;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -45,7 +60,7 @@ class _CommentSectionState extends State<CommentSection> {
     super.dispose();
   }
 
-  CommentRepository get _commentRepo => widget._commentRepo;
+  CommentRepository? get _commentRepo => _resolvedRepo;
   RecipeModel get _recipe => widget.recipe;
 
   // ── Handlers (moved from recipe_detail_screen.dart lines 563–663) ─────
@@ -70,9 +85,17 @@ class _CommentSectionState extends State<CommentSection> {
       return;
     }
 
+    final repo = _commentRepo;
+    if (repo == null) {
+      if (mounted) {
+        AppSnackbar.show(context, message: 'Comment service unavailable');
+      }
+      return;
+    }
+
     setState(() => _isSubmittingComment = true);
     try {
-      await _commentRepo.addComment(
+      await repo.addComment(
         recipeId: recipeId,
         userId: user.uid,
         userName: (user.displayName?.trim().isNotEmpty == true)
@@ -103,10 +126,15 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      user = null;
+    }
     final recipeId = _recipe.id;
 
-    if (recipeId == null) return const SizedBox.shrink();
+    if (recipeId == null || _commentRepo == null) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
@@ -177,7 +205,7 @@ class _CommentSectionState extends State<CommentSection> {
 
           // ── Comment list ──
           StreamBuilder<List<CommentModel>>(
-            stream: _commentRepo.getCommentsStream(recipeId),
+            stream: _commentRepo!.getCommentsStream(recipeId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
                   !snapshot.hasData) {
@@ -228,7 +256,7 @@ class _CommentSectionState extends State<CommentSection> {
                   return CommentThread(
                     key: ValueKey(comment.id),
                     parent: comment,
-                    commentRepository: _commentRepo,
+                    commentRepository: _commentRepo!,
                   );
                 },
               );

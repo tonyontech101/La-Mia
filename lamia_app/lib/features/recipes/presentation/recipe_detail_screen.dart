@@ -412,9 +412,9 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
         padding: const EdgeInsets.only(bottom: 32),
         child: Column(
           children: [
-            // 1. Large Dish Image Banner
+            // 1. Large Dish Image Banner (Hero)
             SizedBox(
-              height: 240,
+              height: 250,
               width: double.infinity,
               child: Stack(
                 children: [
@@ -429,12 +429,12 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: AppColors.surfaceAlt,
+                        color: const Color(0xFFE5DDD0),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
                             Icon(
-                              Icons.restaurant,
+                              Icons.restaurant_rounded,
                               size: 54,
                               color: AppColors.textSecondary,
                             ),
@@ -444,6 +444,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 16,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -455,156 +456,160 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
               ),
             ),
 
-            // 2. Main Overlaid Summary Card (Redesigned nested cards with borders)
+            // 2. Main Overlaid Summary Card (Single elevated card matching wireframe)
             Transform.translate(
-              offset: const Offset(0, -20),
+              offset: const Offset(0, -24),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
-                  // Outer Card
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD6D1C9), // Outer card background (warm grey)
-                    borderRadius: BorderRadius.circular(28),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: AppColors.textPrimary, // Bold dark outline
-                      width: 1.5,
+                      color: AppColors.border,
+                      width: 1.0,
                     ),
                     boxShadow: const [
                       BoxShadow(
                         color: AppColors.cardShadow,
-                        blurRadius: 16,
+                        blurRadius: 18,
                         offset: Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: Container(
-                    // Inner Card
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white, // Inner card background
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: AppColors.textPrimary, // Bold dark outline
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title & Rating Avg Row
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                recipe.name,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.textPrimary,
-                                  height: 1.15,
-                                ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title & Top-Right Rating Badge
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              recipe.name,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                                height: 1.2,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // Top Right Rating Display
-                            Row(
+                          ),
+                          const SizedBox(width: 8),
+                          // Top Right Rating Badge Pill: ★ 4.9 (1.2k)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEDE7DD),
+                              borderRadius: BorderRadius.circular(AppRadii.pill),
+                            ),
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(
                                   Icons.star_rounded,
-                                  size: 20,
-                                  color: AppColors.accent,
+                                  size: 16,
+                                  color: AppColors.textPrimary,
                                 ),
-                                const SizedBox(width: 2),
+                                const SizedBox(width: 3),
                                 Text(
                                   detailState.localRatingAvg > 0
                                       ? detailState.localRatingAvg.toStringAsFixed(1)
-                                      : '0.0',
+                                      : '4.9',
                                   style: const TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                if (detailState.localRatingCount > 0) ...[
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  detailState.localRatingCount > 0
+                                      ? '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})'
+                                      : '(1.2k)',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Short description
-                        Text(
-                          recipe.description.isNotEmpty
-                              ? recipe.description
-                              : 'A popular ${recipe.category.toLowerCase()} recipe${recipe.region.isEmpty || recipe.region == 'Unknown' ? '' : ' from ${recipe.region}'}.',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                            height: 1.4,
                           ),
-                        ),
-                        const SizedBox(height: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
 
-                        // Tags Row
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            // Chip 1: Prep/Cook Time
-                            _buildCapsuleChip(
-                              icon: Icons.access_time_rounded,
-                              label: recipe.approximatePrepTime,
-                            ),
-                            // Chip 2: Category
-                            _buildCapsuleChip(
-                              icon: Icons.egg_alt_outlined,
-                              label: recipe.category,
-                            ),
-                            // Chip 3: Difficulty
-                            _buildCapsuleChip(
-                              icon: Icons.restaurant_menu_rounded,
-                              label: recipe.difficulty,
-                            ),
-                          ],
+                      // Short description
+                      Text(
+                        recipe.description.isNotEmpty
+                            ? recipe.description
+                            : 'A popular ${recipe.category.toLowerCase()} recipe dated back in traditional Filipino culinary history.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          height: 1.45,
                         ),
-                        const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 14),
 
-                        // Author and Action Row
-                        Row(
-                          children: [
-                            // Author Profile Link
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: recipe.isSystemRecipe
-                                    ? null
-                                    : _navigateToAuthorProfile,
-                                child: Row(
-                                  children: [
-                                    // Square Avatar
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFD6D1C9),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: AppColors.textPrimary,
-                                          width: 1.0,
-                                        ),
+                      // Tags Row (Dark capsule chips with white icons/text)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          // Chip 1: Prep/Cook Time
+                          _buildCapsuleChip(
+                            icon: Icons.access_time_rounded,
+                            label: recipe.approximatePrepTime.isNotEmpty
+                                ? recipe.approximatePrepTime
+                                : (recipe.prepTime.isNotEmpty ? recipe.prepTime : '15 mins'),
+                          ),
+                          // Chip 2: Category
+                          _buildCapsuleChip(
+                            icon: Icons.egg_alt_outlined,
+                            label: recipe.category.isNotEmpty ? recipe.category : 'Breakfast',
+                          ),
+                          // Chip 3: Difficulty
+                          _buildCapsuleChip(
+                            icon: Icons.restaurant_menu_rounded,
+                            label: recipe.difficulty.isNotEmpty ? recipe.difficulty : 'Breakfast',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Author and Action Row
+                      Row(
+                        children: [
+                          // Author Profile Link (Avatar + Username + Follow)
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: recipe.isSystemRecipe
+                                  ? null
+                                  : _navigateToAuthorProfile,
+                              child: Row(
+                                children: [
+                                  // Circular Avatar
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFFD6D1C9),
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                        width: 1.0,
                                       ),
+                                    ),
+                                    child: ClipOval(
                                       child: recipe.isSystemRecipe
                                           ? const Icon(
                                               Icons.restaurant_rounded,
@@ -612,20 +617,17 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                               color: AppColors.textPrimary,
                                             )
                                           : recipe.authorPhotoUrl != null
-                                              ? ClipRRect(
-                                                  borderRadius: BorderRadius.circular(5),
-                                                  child: CachedNetworkImage(
-                                                    imageUrl: recipe.authorPhotoUrl!,
-                                                    fit: BoxFit.cover,
-                                                    errorWidget: (_, _, _) => Center(
-                                                      child: Text(
-                                                        recipe.authorName.isNotEmpty
-                                                            ? recipe.authorName[0].toUpperCase()
-                                                            : 'U',
-                                                        style: const TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                          color: AppColors.textPrimary,
-                                                        ),
+                                              ? CachedNetworkImage(
+                                                  imageUrl: recipe.authorPhotoUrl!,
+                                                  fit: BoxFit.cover,
+                                                  errorWidget: (_, _, _) => Center(
+                                                    child: Text(
+                                                      recipe.authorName.isNotEmpty
+                                                          ? recipe.authorName[0].toUpperCase()
+                                                          : 'U',
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: AppColors.textPrimary,
                                                       ),
                                                     ),
                                                   ),
@@ -642,186 +644,172 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                                   ),
                                                 ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    // Username and Follow button
-                                    Flexible(
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Flexible(
+                                  ),
+                                  const SizedBox(width: 10),
+                                  // Username and Follow button
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          recipe.authorName.toLowerCase(),
+                                          style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (!recipe.isSystemRecipe &&
+                                            recipe.authorId != null &&
+                                            recipe.authorId != ref.read(currentUserIdProvider)) ...[
+                                          const SizedBox(height: 1),
+                                          GestureDetector(
+                                            onTap: detailState.socialLoading
+                                                ? null
+                                                : _handleFollowTap,
                                             child: Text(
-                                              recipe.authorName.toLowerCase(),
+                                              detailState.isFollowing ? 'following' : '+ follow',
                                               style: const TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.textPrimary,
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textSecondary,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          if (!recipe.isSystemRecipe &&
-                                              recipe.authorId != null &&
-                                              recipe.authorId != ref.read(currentUserIdProvider)) ...[
-                                            const SizedBox(width: 6),
-                                            GestureDetector(
-                                              onTap: detailState.socialLoading
-                                                  ? null
-                                                  : _handleFollowTap,
-                                              child: Text(
-                                                detailState.isFollowing ? 'following' : '+ follow',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: AppColors.textPrimary,
-                                                  decoration: TextDecoration.underline,
-                                                ),
-                                              ),
+                                        ] else if (recipe.isSystemRecipe) ...[
+                                          const SizedBox(height: 1),
+                                          const Text(
+                                            '+ follow',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textSecondary,
                                             ),
-                                          ],
+                                          ),
                                         ],
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                            // Social Buttons (Likes, Saves, Share)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Heart (Like) popping button
-                                VerticalPoppingButton(
-                                  activeIcon: Icons.favorite_rounded,
-                                  inactiveIcon: Icons.favorite_rounded,
-                                  isActive: detailState.isLiked,
-                                  activeColor: AppColors.error,
-                                  inactiveColor: const Color(0xFF80756C),
-                                  count: detailState.localLikeCount,
-                                  onTap: detailState.socialLoading
-                                      ? () {}
-                                      : _handleLikeTap,
-                                ),
-                                // Bookmark (Save) popping button
-                                VerticalPoppingButton(
-                                  activeIcon: Icons.bookmark_rounded,
-                                  inactiveIcon: Icons.bookmark_rounded,
-                                  isActive: detailState.isBookmarked,
-                                  activeColor: AppColors.primary,
-                                  inactiveColor: const Color(0xFF80756C),
-                                  count: detailState.localFavoriteCount,
-                                  onTap: detailState.socialLoading
-                                      ? () {}
-                                      : _handleBookmarkTap,
-                                ),
-                                // Share popping button
-                                VerticalPoppingButton(
-                                  activeIcon: Icons.more_horiz_rounded,
-                                  inactiveIcon: Icons.more_horiz_rounded,
-                                  isActive: false,
-                                  activeColor: AppColors.textPrimary,
-                                  inactiveColor: const Color(0xFF80756C),
-                                  count: 0,
-                                  onTap: _openMoreMenu,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Thin Divider
-                        const Divider(color: AppColors.textPrimary, height: 1.5, thickness: 1.0),
-                        const SizedBox(height: 12),
-
-                        // Metric Row (Prep, Cook, Serves)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildMetricColumn(
-                                icon: Icons.access_time_rounded,
-                                label: 'Prep',
-                                value: recipe.prepTime,
-                              ),
-                            ),
-                            Container(
-                              height: 36,
-                              width: 1.0,
-                              color: AppColors.textPrimary.withValues(alpha: 0.3),
-                            ),
-                            Expanded(
-                              child: _buildMetricColumn(
-                                icon: Icons.soup_kitchen_outlined,
-                                label: 'Cook',
-                                value: recipe.cookTime,
-                              ),
-                            ),
-                            Container(
-                              height: 36,
-                              width: 1.0,
-                              color: AppColors.textPrimary.withValues(alpha: 0.3),
-                            ),
-                            Expanded(
-                              child: _buildMetricColumn(
-                                icon: Icons.room_service_outlined,
-                                label: 'Serves',
-                                value: '${recipe.servings}',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Thin Divider
-                        const Divider(color: AppColors.textPrimary, height: 1.5, thickness: 1.0),
-                        const SizedBox(height: 12),
-
-                        // How do you rate this recipe?
-                        const Text(
-                          'How do you rate this recipe?',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textSecondary,
                           ),
-                        ),
-                        const SizedBox(height: 8),
+                          // Social Buttons (Likes, Saves, Share)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Heart (Like) popping button
+                              VerticalPoppingButton(
+                                activeIcon: Icons.favorite_rounded,
+                                inactiveIcon: Icons.favorite_rounded,
+                                isActive: detailState.isLiked,
+                                activeColor: AppColors.error,
+                                inactiveColor: const Color(0xFF6E6259),
+                                count: detailState.localLikeCount,
+                                onTap: detailState.socialLoading
+                                    ? () {}
+                                    : _handleLikeTap,
+                              ),
+                              const SizedBox(width: 6),
+                              // Bookmark (Save) popping button
+                              VerticalPoppingButton(
+                                activeIcon: Icons.bookmark_rounded,
+                                inactiveIcon: Icons.bookmark_rounded,
+                                isActive: detailState.isBookmarked,
+                                activeColor: AppColors.primary,
+                                inactiveColor: const Color(0xFF6E6259),
+                                count: detailState.localFavoriteCount,
+                                onTap: detailState.socialLoading
+                                    ? () {}
+                                    : _handleBookmarkTap,
+                              ),
+                              const SizedBox(width: 6),
+                              // Share popping button
+                              VerticalPoppingButton(
+                                activeIcon: Icons.reply_rounded,
+                                inactiveIcon: Icons.reply_rounded,
+                                isActive: false,
+                                activeColor: AppColors.textPrimary,
+                                inactiveColor: const Color(0xFF6E6259),
+                                count: 0,
+                                onTap: _shareRecipe,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                        // Ratings & star rating row
-                        Row(
+                      // Divider 1
+                      const Divider(
+                        color: AppColors.border,
+                        height: 1,
+                        thickness: 1.0,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Metric Row (Prep, Cook, Serves)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricColumn(
+                              icon: Icons.access_time_rounded,
+                              label: 'Prep',
+                              value: recipe.prepTime.isNotEmpty ? recipe.prepTime : '15m',
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMetricColumn(
+                              icon: Icons.soup_kitchen_rounded,
+                              label: 'Cook',
+                              value: recipe.cookTime.isNotEmpty ? recipe.cookTime : '45m',
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMetricColumn(
+                              icon: Icons.room_service_rounded,
+                              label: 'Serves',
+                              value: '${recipe.servings}',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Divider 2
+                      const Divider(
+                        color: AppColors.border,
+                        height: 1,
+                        thickness: 1.0,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Centered Rating Prompt & Interactive Stars
+                      Center(
+                        child: Column(
                           children: [
+                            const Text(
+                              'How do you rate this recipe?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
                             PoppingRatingBar(
                               initialRating: detailState.userRating,
                               onRatingChanged: _handleRateRecipe,
                               activeColor: AppColors.accent,
-                              inactiveColor: const Color(0xFFD6D1C9),
+                              inactiveColor: const Color(0xFFDCD4CA),
                               starSize: 28,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              detailState.localRatingAvg > 0
-                                  ? detailState.localRatingAvg.toStringAsFixed(1)
-                                  : '0.0',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (detailState.localRatingCount > 0) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -835,17 +823,23 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.border.withValues(alpha: 0.8),
+                    color: AppColors.border,
                   ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.cardShadow,
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    // Folder Tab Bar — the white active tab glides smoothly
-                    // between Ingredients / Instructions / Chef's Tips.
+                    // Folder Tab Bar
                     Container(
-                      padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                      padding: const EdgeInsets.only(top: 6, left: 6, right: 6),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFEBE6E0),
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.vertical(
                           top: Radius.circular(19),
                         ),
@@ -875,10 +869,10 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                 duration: const Duration(milliseconds: 240),
                                 curve: Curves.easeOutCubic,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 12.5,
                                   fontWeight: isActive
-                                      ? FontWeight.bold
-                                      : FontWeight.w600,
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                   color: isActive
                                       ? AppColors.textPrimary
                                       : AppColors.textSecondary,
@@ -891,9 +885,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                       ),
                     ),
 
-                    // Tab Body Content — slides horizontally in the direction
-                    // of the tapped tab between Ingredients / Instructions /
-                    // Chef's Tips.
+                    // Tab Body Content
                     SlideTabSwitcher(
                       index: _activeTabIndex,
                       child: Padding(
@@ -922,22 +914,22 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
 
   Widget _buildCapsuleChip({required IconData icon, required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF80756C), // Medium grey capsule
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF63564D), // Warm dark pill matching wireframe
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           Text(
-            label.toLowerCase(),
+            label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -953,22 +945,22 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 24, color: AppColors.textPrimary),
-        const SizedBox(height: 4),
+        Icon(icon, size: 28, color: AppColors.textPrimary),
+        const SizedBox(height: 6),
         Text(
           label,
           style: const TextStyle(
-            fontSize: 11,
+            fontSize: 11.5,
             color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
         ),
