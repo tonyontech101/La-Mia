@@ -334,20 +334,20 @@ class ProfileHeaderWidget extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
         // 7. Stats Row (24 Recipes | 1.2k Likes | 850 followers)
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.card),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
             boxShadow: const [
               BoxShadow(
                 color: AppColors.cardShadow,
-                blurRadius: 10,
-                offset: Offset(0, 3),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
             ],
           ),
@@ -424,7 +424,7 @@ class ProfileHeaderWidget extends StatelessWidget {
 
   Widget _buildDivider() {
     return Container(
-      height: 28,
+      height: 22,
       width: 1,
       color: AppColors.border.withValues(alpha: 0.8),
     );
@@ -495,7 +495,7 @@ class _StatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -505,16 +505,16 @@ class _StatItem extends StatelessWidget {
               color: AppColors.textPrimary,
             ).copyWith(
               fontWeight: FontWeight.w800,
-              fontSize: 18,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1.5),
           Text(
             label,
             style: AppTypography.caption(
               color: AppColors.textSecondary,
             ).copyWith(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
           ),
