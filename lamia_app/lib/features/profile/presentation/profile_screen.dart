@@ -1002,12 +1002,12 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                               _navigateToFollowersScreen(initialTab: 0),
                         ),
 
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
 
                         // 3. Tab Bar with 3 Icons matching wireframe (Posts | Likes | Saved)
                         _buildWireframeTabBar(),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
                         // 4. 3-Column Dish Cards Grid
                         DishCardGrid(
@@ -1098,7 +1098,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 9),
+            padding: const EdgeInsets.symmetric(vertical: 7.5),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -1115,7 +1115,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Center(
               child: Icon(
                 icon,
-                size: 22,
+                size: 18,
                 color: isSelected
                     ? AppColors.onPrimary
                     : AppColors.textSecondary.withValues(alpha: 0.85),
