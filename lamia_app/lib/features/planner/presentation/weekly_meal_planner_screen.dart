@@ -17,6 +17,7 @@ import '../data/meal_plan_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/current_user_provider.dart';
 import '../../auth/presentation/login_screen.dart';
 import 'notifiers/weekly_plan_notifier.dart';
 
@@ -52,6 +53,13 @@ class _WeeklyMealPlannerScreenState
   List<RecipeModel> get _cachedRecipes => _planState.cachedRecipes;
   DateTime get _selectedDayDate => _planState.selectedDayDate;
   DateTime get _currentMonday => _planState.currentMonday;
+
+  bool get _isGuest {
+    final authState = ref.watch(authStateChangesProvider);
+    final user = authState.valueOrNull ?? FirebaseAuth.instance.currentUser;
+    if (user != null) return false;
+    return widget.isGuest || _planState.isGuest;
+  }
 
   static String _fullMonth(int month) {
     const m = [
@@ -417,7 +425,7 @@ class _WeeklyMealPlannerScreenState
   // ── Guest Sync Banner ───────────────────────────────────────────────────────
 
   Widget _buildGuestSyncBanner() {
-    if (!_planState.isGuest) return const SizedBox.shrink();
+    if (!_isGuest) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
