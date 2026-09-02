@@ -948,7 +948,16 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 label: featuredAchievement.title,
                                 icon: featuredAchievement.icon,
                                 color: featuredAchievement.badgeColor,
-                                detail: '⭐ Featured',
+                                detail: '⭐ Equipped',
+                                onTap: _isOwnProfile ? _navigateToEditProfile : null,
+                              )
+                            else if (_isOwnProfile && !widget.isGuest)
+                              ProfileRecognition(
+                                label: 'Showcase Badge',
+                                icon: Icons.military_tech_outlined,
+                                color: AppColors.secondary,
+                                detail: '+ Equip',
+                                onTap: _navigateToEditProfile,
                               ),
                             if (_topContributorRank != null)
                               ProfileRecognition(

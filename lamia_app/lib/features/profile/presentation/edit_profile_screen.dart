@@ -930,10 +930,10 @@ class _ImageSourceButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Showcase Badge Section (compact chip picker)
+// Showcase Badge Section (interactive achievement list & equip manager)
 // ---------------------------------------------------------------------------
 
-class _ShowcaseBadgeSection extends StatelessWidget {
+class _ShowcaseBadgeSection extends StatefulWidget {
   const _ShowcaseBadgeSection({
     required this.achievements,
     required this.selectedId,
@@ -947,27 +947,60 @@ class _ShowcaseBadgeSection extends StatelessWidget {
   final UserModel? currentUserModel;
 
   @override
+  State<_ShowcaseBadgeSection> createState() => _ShowcaseBadgeSectionState();
+}
+
+class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
+  int _filterIndex = 0; // 0: All, 1: Unlocked, 2: Locked
+
+  @override
   Widget build(BuildContext context) {
-    final unlocked =
-        achievements.where((a) => a.isUnlocked).toList();
+    final unlocked = widget.achievements.where((a) => a.isUnlocked).toList();
+    final locked = widget.achievements.where((a) => !a.isUnlocked).toList();
+
+    AchievementItem? currentlyEquipped;
+    if (widget.selectedId != null) {
+      for (final a in widget.achievements) {
+        if (a.id == widget.selectedId) {
+          currentlyEquipped = a;
+          break;
+        }
+      }
+    }
+
+    final filteredList = switch (_filterIndex) {
+      1 => unlocked,
+      2 => locked,
+      _ => widget.achievements,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 1. Header & Title
         Row(
           children: [
             const Icon(
-              Icons.emoji_events_rounded,
-              size: 18,
+              Icons.military_tech_rounded,
+              size: 22,
               color: AppColors.secondary,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                'Showcase badge',
-                style: AppTypography.bodyStrong(
-                  color: AppColors.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Showcase Badge',
+                    style: AppTypography.bodyStrong(color: AppColors.textPrimary)
+                        .copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pin one badge to shine on your profile header.',
+                    style: AppTypography.caption(color: AppColors.textSecondary),
+                  ),
+                ],
               ),
             ),
             TextButton(
@@ -976,7 +1009,7 @@ class _ShowcaseBadgeSection extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => AchievementsScreen(
-                      user: currentUserModel,
+                      user: widget.currentUserModel,
                       isChefOfMonth: false,
                     ),
                   ),
@@ -984,14 +1017,15 @@ class _ShowcaseBadgeSection extends StatelessWidget {
               },
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.secondary,
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'See all',
+                    'All stats',
                     style: AppTypography.caption(
                       color: AppColors.secondary,
                     ).copyWith(fontWeight: FontWeight.w700),
@@ -1006,147 +1040,620 @@ class _ShowcaseBadgeSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          'Pin one badge to shine on your profile header.',
-          style: AppTypography.caption(color: AppColors.textSecondary),
-        ),
+
         const SizedBox(height: AppSpacing.sm),
-        SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: unlocked.length + 1, // +1 for the default option
-            separatorBuilder: (_, _) =>
-                const SizedBox(width: AppSpacing.sm),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _BadgeChip(
-                  icon: Icons.auto_awesome_rounded,
-                  label: 'Kitchen Level',
-                  color: AppColors.primary,
-                  isSelected: selectedId == null,
-                  onTap: () => onSelected(null),
-                );
-              }
-              final item = unlocked[index - 1];
-              return _BadgeChip(
-                icon: item.icon,
-                label: item.title,
-                color: item.badgeColor,
-                isSelected: selectedId == item.id,
-                onTap: () => onSelected(item.id),
-              );
-            },
-          ),
-        ),
-        if (unlocked.isEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Row(
+
+        // 2. Currently Equipped Preview Card
+        _buildEquippedPreview(currentlyEquipped),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // 3. Filter Segmented Pills
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: AppColors.textSecondary,
-                  size: 16,
-                ),
+              _buildFilterChip(
+                index: 0,
+                label: 'All (${widget.achievements.length})',
+                icon: Icons.grid_view_rounded,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'No showcase badges yet \u2014 cook and share recipes to unlock them.',
-                  style: AppTypography.caption(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+              const SizedBox(width: AppSpacing.xs),
+              _buildFilterChip(
+                index: 1,
+                label: 'Unlocked (${unlocked.length})',
+                icon: Icons.lock_open_rounded,
+                activeColor: AppColors.primary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _buildFilterChip(
+                index: 2,
+                label: 'Locked (${locked.length})',
+                icon: Icons.lock_outline_rounded,
               ),
             ],
           ),
+        ),
+
+        const SizedBox(height: AppSpacing.sm),
+
+        // 4. Default "Kitchen Level" Option (Visible in All or Unlocked view)
+        if (_filterIndex != 2) ...[
+          _buildDefaultOptionCard(),
+          const SizedBox(height: AppSpacing.xs),
         ],
+
+        // 5. Achievement Cards List
+        if (filteredList.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            alignment: Alignment.center,
+            child: Text(
+              _filterIndex == 1
+                  ? 'No achievements unlocked yet.\nCook and share recipes to unlock badges!'
+                  : 'All achievements are unlocked!',
+              style: AppTypography.caption(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: filteredList.length,
+            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xs),
+            itemBuilder: (context, index) {
+              final item = filteredList[index];
+              final isEquipped = item.id == widget.selectedId;
+              return _buildAchievementCard(item, isEquipped: isEquipped);
+            },
+          ),
       ],
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Badge Chip
-// ---------------------------------------------------------------------------
+  Widget _buildEquippedPreview(AchievementItem? equipped) {
+    if (equipped == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Kitchen Level',
+                        style: AppTypography.bodyStrong(
+                          color: AppColors.textPrimary,
+                        ).copyWith(fontSize: 13),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                        ),
+                        child: Text(
+                          'Equipped',
+                          style: AppTypography.caption(
+                            color: AppColors.onPrimary,
+                          ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Default showcase: displays your dynamic culinary rank.',
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary,
+                    ).copyWith(fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
-class _BadgeChip extends StatelessWidget {
-  const _BadgeChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: equipped.badgeColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(
+          color: equipped.badgeColor.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: equipped.badgeColor.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              equipped.icon,
+              color: equipped.badgeColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      equipped.title,
+                      style: AppTypography.bodyStrong(
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 13.5),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: equipped.badgeColor,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Text(
+                        '⭐ Equipped',
+                        style: AppTypography.caption(
+                          color: equipped.badgeColor.computeLuminance() > 0.5
+                              ? AppColors.textPrimary
+                              : AppColors.onPrimary,
+                        ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  equipped.description,
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => widget.onSelected(null),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Unequip',
+              style: AppTypography.caption(color: AppColors.error)
+                  .copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // Luminance guard: light badge colors use textPrimary instead of white
-    final isLightBadge = color.computeLuminance() > 0.5;
-    final textColor =
-        isSelected ? (isLightBadge ? AppColors.textPrimary : AppColors.onPrimary) : AppColors.textPrimary;
-    final iconColor =
-        isSelected ? (isLightBadge ? AppColors.textPrimary : AppColors.onPrimary) : color;
-    final bgColor =
-        isSelected
-            ? color
-            : AppColors.surface;
+  Widget _buildFilterChip({
+    required int index,
+    required String label,
+    required IconData icon,
+    Color? activeColor,
+  }) {
+    final isSelected = _filterIndex == index;
+    final color = activeColor ?? AppColors.secondary;
 
     return PressableScale(
       pressedScale: 0.96,
-      onTap: onTap,
+      onTap: () => setState(() => _filterIndex = index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: isSelected ? color : AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
             color: isSelected ? color : AppColors.border,
-            width: isSelected ? 2 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: iconColor),
-            const SizedBox(width: 4),
+            Icon(
+              icon,
+              size: 13,
+              color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4.5),
             Text(
               label,
-              style: AppTypography.caption(color: textColor)
-                  .copyWith(fontWeight: FontWeight.w700, fontSize: 12),
+              style: AppTypography.caption(
+                color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
+              ).copyWith(
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 11.5,
+              ),
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.check_rounded, size: 14, color: iconColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultOptionCard() {
+    final isEquipped = widget.selectedId == null;
+
+    return PressableScale(
+      pressedScale: 0.98,
+      onTap: () => widget.onSelected(null),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isEquipped
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(
+            color: isEquipped ? AppColors.primary : AppColors.border,
+            width: isEquipped ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.primary,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Kitchen Level (Default)',
+                    style: AppTypography.bodyStrong(color: AppColors.textPrimary)
+                        .copyWith(fontSize: 13),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    'Show cooking tier rank without a custom badge',
+                    style: AppTypography.caption(color: AppColors.textSecondary)
+                        .copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            if (isEquipped)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_rounded, size: 12, color: AppColors.onPrimary),
+                    const SizedBox(width: 3),
+                    Text(
+                      'Equipped',
+                      style: AppTypography.caption(color: AppColors.onPrimary)
+                          .copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              )
+            else
+              OutlinedButton(
+                onPressed: () => widget.onSelected(null),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                ),
+                child: Text(
+                  'Equip',
+                  style: AppTypography.caption(color: AppColors.primary)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard(
+    AchievementItem item, {
+    required bool isEquipped,
+  }) {
+    if (item.isUnlocked) {
+      return PressableScale(
+        pressedScale: 0.98,
+        onTap: () => widget.onSelected(item.id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isEquipped
+                ? item.badgeColor.withValues(alpha: 0.07)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(
+              color: isEquipped ? item.badgeColor : AppColors.border,
+              width: isEquipped ? 1.8 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: item.badgeColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(item.icon, color: item.badgeColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.title,
+                            style: AppTypography.bodyStrong(
+                              color: AppColors.textPrimary,
+                            ).copyWith(fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.badgeColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Text(
+                            '+${item.xpReward} XP',
+                            style: AppTypography.caption(color: item.badgeColor)
+                                .copyWith(fontSize: 9.5, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.description,
+                      style: AppTypography.caption(color: AppColors.textSecondary)
+                          .copyWith(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isEquipped)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: item.badgeColor,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_rounded,
+                        size: 12,
+                        color: item.badgeColor.computeLuminance() > 0.5
+                            ? AppColors.textPrimary
+                            : AppColors.onPrimary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Equipped',
+                        style: AppTypography.caption(
+                          color: item.badgeColor.computeLuminance() > 0.5
+                              ? AppColors.textPrimary
+                              : AppColors.onPrimary,
+                        ).copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                OutlinedButton(
+                  onPressed: () => widget.onSelected(item.id),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: item.badgeColor,
+                    side: BorderSide(color: item.badgeColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                  ),
+                  child: Text(
+                    'Equip',
+                    style: AppTypography.caption(color: item.badgeColor)
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
             ],
+          ),
+        ),
+      );
+    }
+
+    // Locked Achievement
+    return PressableScale(
+      pressedScale: 0.98,
+      onTap: () {
+        AppSnackbar.show(
+          context,
+          message: '${item.title} (Locked): ${item.description} (${item.currentProgress}/${item.maxProgress})',
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.border.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          item.title,
+                          style: AppTypography.bodyStrong(
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.border.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                        ),
+                        child: Text(
+                          'Locked',
+                          style: AppTypography.caption(
+                            color: AppColors.textSecondary,
+                          ).copyWith(fontSize: 9.5, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.description,
+                    style: AppTypography.caption(
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                    ).copyWith(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: item.progressPercentage,
+                            minHeight: 4,
+                            backgroundColor: AppColors.border,
+                            valueColor: AlwaysStoppedAnimation(
+                              item.badgeColor.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${item.currentProgress}/${item.maxProgress}',
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ).copyWith(fontSize: 10, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

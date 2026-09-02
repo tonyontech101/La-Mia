@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/providers/firebase_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../recipes/data/recipe_model.dart';
 import '../../data/meal_plan_model.dart';
@@ -21,6 +22,8 @@ class WeeklyPlanState {
     this.currentPlan,
     this.cachedRecipes = const [],
     this.isLoading = true,
+    this.isGuest = false,
+    this.errorMessage,
   });
 
   final WeeklyMealPlanModel? currentPlan;
@@ -28,14 +31,17 @@ class WeeklyPlanState {
   final bool isLoading;
   final DateTime currentMonday;
   final DateTime selectedDayDate;
+  final bool isGuest;
+  final String? errorMessage;
 
   /// Returns a fresh state seeded to the current calendar week.
-  factory WeeklyPlanState.initial() {
+  factory WeeklyPlanState.initial({bool isGuest = false}) {
     final now = DateTime.now();
     return WeeklyPlanState(
       currentMonday: MealPlanRepository.getMondayOf(now),
       selectedDayDate: DateTime(now.year, now.month, now.day),
       isLoading: true,
+      isGuest: isGuest,
     );
   }
 
@@ -46,6 +52,8 @@ class WeeklyPlanState {
     bool? isLoading,
     DateTime? currentMonday,
     DateTime? selectedDayDate,
+    bool? isGuest,
+    String? Function()? errorMessage,
   }) {
     return WeeklyPlanState(
       currentPlan: currentPlan != null ? currentPlan() : this.currentPlan,
@@ -53,6 +61,8 @@ class WeeklyPlanState {
       isLoading: isLoading ?? this.isLoading,
       currentMonday: currentMonday ?? this.currentMonday,
       selectedDayDate: selectedDayDate ?? this.selectedDayDate,
+      isGuest: isGuest ?? this.isGuest,
+      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
 
@@ -101,7 +111,8 @@ class WeeklyPlanNotifier extends _$WeeklyPlanNotifier {
     ref.onDispose(() {
       _planSubscription?.cancel();
     });
-    return WeeklyPlanState.initial();
+    final auth = ref.watch(firebaseAuthProvider);
+    return WeeklyPlanState.initial(isGuest: auth.currentUser == null);
   }
 
   // ── Data loading ─────────────────────────────────────────────────────────
@@ -196,13 +207,18 @@ class WeeklyPlanNotifier extends _$WeeklyPlanNotifier {
     if (currentPlan == null) return;
 
     final mealPlanRepo = ref.read(mealPlanRepositoryProvider);
-    final updated = await mealPlanRepo.assignMealSlot(
-      currentPlan: currentPlan,
-      dateKey: dateKey,
-      slot: slotKey,
-      recipe: recipe,
-    );
-    state = state.copyWith(currentPlan: () => updated);
+    try {
+      final updated = await mealPlanRepo.assignMealSlot(
+        currentPlan: currentPlan,
+        dateKey: dateKey,
+        slot: slotKey,
+        recipe: recipe,
+      );
+      state = state.copyWith(currentPlan: () => updated, errorMessage: () => null);
+    } catch (e) {
+      state = state.copyWith(errorMessage: () => e.toString());
+      rethrow;
+    }
   }
 
   /// Removes the recipe from [slotKey] on the currently selected day.
@@ -211,23 +227,37 @@ class WeeklyPlanNotifier extends _$WeeklyPlanNotifier {
     if (currentPlan == null) return;
 
     final mealPlanRepo = ref.read(mealPlanRepositoryProvider);
-    final updated = await mealPlanRepo.removeMealSlot(
-      currentPlan: currentPlan,
-      dateKey: state.selectedDateKey,
-      slot: slotKey,
-    );
-    state = state.copyWith(currentPlan: () => updated);
+    try {
+      final updated = await mealPlanRepo.removeMealSlot(
+        currentPlan: currentPlan,
+        dateKey: state.selectedDateKey,
+        slot: slotKey,
+      );
+      state = state.copyWith(currentPlan: () => updated, errorMessage: () => null);
+    } catch (e) {
+      state = state.copyWith(errorMessage: () => e.toString());
+      rethrow;
+    }
   }
 
   /// Auto-fills the entire week with suggested Filipino dishes.
   Future<void> autoFill() async {
     state = state.copyWith(isLoading: true);
     final mealPlanRepo = ref.read(mealPlanRepositoryProvider);
-    final generated = await mealPlanRepo.autoFillWeek(state.currentMonday);
-    state = state.copyWith(
-      currentPlan: () => generated,
-      isLoading: false,
-    );
+    try {
+      final generated = await mealPlanRepo.autoFillWeek(state.currentMonday);
+      state = state.copyWith(
+        currentPlan: () => generated,
+        isLoading: false,
+        errorMessage: () => null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: () => e.toString(),
+      );
+      rethrow;
+    }
   }
 
   // ── Grocery list ─────────────────────────────────────────────────────────

@@ -93,8 +93,8 @@ class GroceryListRepository {
         final docRef = col.doc();
         batch.set(docRef, {
           'name': ingredient.trim(),
-          if (recipeId != null) 'recipeId': recipeId,
-          if (recipeName != null) 'recipeName': recipeName,
+          'recipeId': ?recipeId,
+          'recipeName': ?recipeName,
           'checked': false,
           'addedAt': FieldValue.serverTimestamp(),
         });

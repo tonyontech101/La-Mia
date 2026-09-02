@@ -1,3 +1,5 @@
+// ignore_for_file: subtype_of_sealed_class, must_be_immutable
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,10 +26,69 @@ class MockFirebaseAuth implements FirebaseAuth {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockFirebaseFirestore implements FirebaseFirestore {
+class FakeDocRef implements DocumentReference<Map<String, dynamic>> {
+  FakeDocRef(this.id, {this.onSet});
+  @override
+  final String id;
+  final Future<void> Function(Map<String, dynamic> data)? onSet;
+  Map<String, dynamic>? lastSetData;
+  FakeColRef Function(String path)? collectionHandler;
+
+  @override
+  Future<void> set(Map<String, dynamic> data, [SetOptions? options]) async {
+    lastSetData = data;
+    if (onSet != null) {
+      await onSet!(data);
+    }
+  }
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) {
+    if (collectionHandler != null) {
+      return collectionHandler!(collectionPath);
+    }
+    return FakeColRef(collectionPath);
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+class FakeColRef implements CollectionReference<Map<String, dynamic>> {
+  FakeColRef(this.path, {this.docHandler});
+  @override
+  final String path;
+  final FakeDocRef Function(String id)? docHandler;
+
+  @override
+  DocumentReference<Map<String, dynamic>> doc([String? path]) {
+    if (docHandler != null) {
+      return docHandler!(path ?? 'autoid');
+    }
+    return FakeDocRef(path ?? 'autoid');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeFirestore implements FirebaseFirestore {
+  FakeFirestore({this.colHandler});
+  final FakeColRef Function(String path)? colHandler;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) {
+    if (colHandler != null) {
+      return colHandler!(collectionPath);
+    }
+    return FakeColRef(collectionPath);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockFirebaseFirestore extends FakeFirestore {}
 
 void main() {
   group('MealPlanRepository Unit & Logic Tests', () {
@@ -44,7 +105,7 @@ void main() {
       final date = DateTime(2026, 8, 24);
 
       final plan = await repo.getWeeklyPlan(date);
-      expect(plan.weekId, 'week_2026-08-24');
+      expect(plan.weekId, 'week_2026_08_24');
       expect(plan.days.length, 7);
 
       // Verify subsequent calls return cached plan
@@ -212,6 +273,62 @@ void main() {
       expect(list.length, 5); // Garlic, Onion, Pork, Tomato, Fish (duplicates merged)
       expect(list.contains('Onion'), isTrue);
       expect(list.where((item) => item == 'Onion').length, 1);
+    });
+
+    test('saveWeeklyPlan writes to Firestore when user is authenticated', () async {
+      final mockUser = MockUser();
+      final mockAuth = MockFirebaseAuth(mockUser: mockUser);
+
+      FakeDocRef? savedDocRef;
+      final fakeFirestore = FakeFirestore(
+        colHandler: (usersPath) => FakeColRef(
+          usersPath,
+          docHandler: (userId) => FakeDocRef(
+            userId,
+          )..collectionHandler = (mealPlansPath) => FakeColRef(
+            mealPlansPath,
+            docHandler: (weekId) {
+              final doc = FakeDocRef(weekId);
+              savedDocRef = doc;
+              return doc;
+            },
+          ),
+        ),
+      );
+
+      final repo = MealPlanRepository(firestore: fakeFirestore, auth: mockAuth);
+      final monday = DateTime(2026, 10, 5);
+      final plan = WeeklyMealPlanModel.empty(mondayDate: monday);
+
+      await repo.saveWeeklyPlan(plan);
+
+      expect(savedDocRef, isNotNull);
+      expect(savedDocRef!.lastSetData, isNotNull);
+      expect(savedDocRef!.lastSetData!['weekId'], 'week_2026_10_05');
+    });
+
+    test('saveWeeklyPlan propagates error when Firestore set fails', () async {
+      final mockUser = MockUser();
+      final mockAuth = MockFirebaseAuth(mockUser: mockUser);
+
+      final fakeFirestore = FakeFirestore(
+        colHandler: (usersPath) => FakeColRef(
+          usersPath,
+          docHandler: (userId) => FakeDocRef(userId)..collectionHandler = (mealPlansPath) => FakeColRef(
+            mealPlansPath,
+            docHandler: (weekId) => FakeDocRef(
+              weekId,
+              onSet: (_) async => throw FirebaseException(plugin: 'firestore', code: 'permission-denied', message: 'Permission Denied'),
+            ),
+          ),
+        ),
+      );
+
+      final repo = MealPlanRepository(firestore: fakeFirestore, auth: mockAuth);
+      final monday = DateTime(2026, 10, 12);
+      final plan = WeeklyMealPlanModel.empty(mondayDate: monday);
+
+      expect(() => repo.saveWeeklyPlan(plan), throwsA(isA<FirebaseException>()));
     });
   });
 }

@@ -1,0 +1,113 @@
+// Database Markup Language (DBML) Schema for La Mia
+// Directly importable / pasteable into https://dbdiagram.io
+
+Table users {
+  id varchar [pk, note: 'Firebase Auth UID']
+  email varchar
+  display_name varchar
+  photo_url varchar
+  bio varchar
+  role varchar [note: 'user | trusted | admin']
+  recipe_count int
+  follower_count int
+  following_count int
+  total_likes_received int
+  saved_count int
+  created_at timestamp
+}
+
+Table recipes {
+  id varchar [pk]
+  author_id varchar [ref: > users.id]
+  author_name varchar
+  name varchar
+  category varchar
+  cuisine varchar
+  difficulty varchar
+  prep_time varchar
+  cook_time varchar
+  servings int
+  status varchar [note: 'pending | approved | rejected | hidden']
+  like_count int
+  favorite_count int
+  comment_count int
+  rating_avg float
+  rating_count int
+  trending_score float
+  created_at timestamp
+}
+
+Table meal_plans {
+  id varchar [pk, note: 'week_YYYY_MM_DD']
+  user_id varchar [ref: > users.id]
+  start_date timestamp
+  breakfast_recipe_id varchar [ref: > recipes.id]
+  lunch_recipe_id varchar [ref: > recipes.id]
+  dinner_recipe_id varchar [ref: > recipes.id]
+  snack_recipe_id varchar [ref: > recipes.id]
+  updated_at timestamp
+  Note: 'Subcollection: users/{user_id}/mealPlans/{id}'
+}
+
+Table grocery_items {
+  id varchar [pk]
+  user_id varchar [ref: > users.id]
+  recipe_id varchar [ref: > recipes.id]
+  name varchar
+  checked boolean
+  added_at timestamp
+  Note: 'Subcollection: users/{user_id}/grocery_items/{id}'
+}
+
+Table comments {
+  id varchar [pk]
+  recipe_id varchar [ref: > recipes.id]
+  user_id varchar [ref: > users.id]
+  text varchar
+  is_reply boolean
+  parent_comment_id varchar [ref: > comments.id]
+  created_at timestamp
+  Note: 'Subcollection: recipes/{recipe_id}/comments/{id}'
+}
+
+Table ratings {
+  recipe_id varchar [pk, ref: > recipes.id]
+  user_id varchar [pk, ref: > users.id]
+  value int [note: '1 to 5 stars']
+  created_at timestamp
+  Note: 'Subcollection: recipes/{recipe_id}/ratings/{user_id}'
+}
+
+Table likes {
+  recipe_id varchar [pk, ref: > recipes.id]
+  user_id varchar [pk, ref: > users.id]
+  liked_at timestamp
+  Note: 'Collection: likes/{recipe_id}/users/{user_id}'
+}
+
+Table favorites {
+  user_id varchar [pk, ref: > users.id]
+  recipe_id varchar [pk, ref: > recipes.id]
+  saved_at timestamp
+  Note: 'Collection: favorites/{user_id}/items/{recipe_id}'
+}
+
+Table followers {
+  user_id varchar [pk, ref: > users.id, note: 'Target chef']
+  follower_id varchar [pk, ref: > users.id, note: 'Follower user']
+  followed_at timestamp
+  Note: 'Collection: followers/{user_id}/users/{follower_id}'
+}
+
+Table notifications {
+  id varchar [pk]
+  user_id varchar [ref: > users.id]
+  actor_id varchar [ref: > users.id]
+  title varchar
+  body varchar
+  type varchar [note: 'comment | like | rating | follow | status']
+  target_id varchar
+  is_read boolean
+  created_at timestamp
+  Note: 'Subcollection: users/{user_id}/notifications/{id}'
+}

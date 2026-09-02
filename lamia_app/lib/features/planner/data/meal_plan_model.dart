@@ -94,21 +94,22 @@ class MealPlanDay {
     };
   }
 
-  factory MealPlanDay.fromMap(Map<String, dynamic> map, {required String dateKey, required String dayOfWeek}) {
+  factory MealPlanDay.fromMap(Map<dynamic, dynamic> rawMap, {required String dateKey, required String dayOfWeek}) {
+    final map = Map<String, dynamic>.from(rawMap);
     return MealPlanDay(
       dateKey: map['dateKey'] as String? ?? dateKey,
       dayOfWeek: map['dayOfWeek'] as String? ?? dayOfWeek,
-      breakfast: map['breakfast'] != null
-          ? MealPlanItem.fromMap(map['breakfast'] as Map<String, dynamic>)
+      breakfast: map['breakfast'] is Map
+          ? MealPlanItem.fromMap(Map<String, dynamic>.from(map['breakfast'] as Map))
           : null,
-      lunch: map['lunch'] != null
-          ? MealPlanItem.fromMap(map['lunch'] as Map<String, dynamic>)
+      lunch: map['lunch'] is Map
+          ? MealPlanItem.fromMap(Map<String, dynamic>.from(map['lunch'] as Map))
           : null,
-      dinner: map['dinner'] != null
-          ? MealPlanItem.fromMap(map['dinner'] as Map<String, dynamic>)
+      dinner: map['dinner'] is Map
+          ? MealPlanItem.fromMap(Map<String, dynamic>.from(map['dinner'] as Map))
           : null,
-      snack: map['snack'] != null
-          ? MealPlanItem.fromMap(map['snack'] as Map<String, dynamic>)
+      snack: map['snack'] is Map
+          ? MealPlanItem.fromMap(Map<String, dynamic>.from(map['snack'] as Map))
           : null,
     );
   }
@@ -117,7 +118,7 @@ class MealPlanDay {
 /// Represents a full 7-day weekly meal plan document in Firestore.
 class WeeklyMealPlanModel {
   WeeklyMealPlanModel({
-    required this.weekId, // e.g. '2026-W34' (year and week number or monday date '2026-08-24')
+    required this.weekId, // e.g. 'week_2026_08_24'
     required this.startDate,
     required this.days,
     this.updatedAt,
@@ -147,7 +148,8 @@ class WeeklyMealPlanModel {
     required String weekId,
     required DateTime startDate,
   }) {
-    final rawDays = data['days'] as Map<String, dynamic>? ?? {};
+    final rawDaysVal = data['days'];
+    final rawDays = rawDaysVal is Map ? Map<dynamic, dynamic>.from(rawDaysVal) : const <dynamic, dynamic>{};
     final daysMap = <String, MealPlanDay>{};
 
     // Populate all 7 days of the week starting from startDate
@@ -156,9 +158,9 @@ class WeeklyMealPlanModel {
       final dateKey = _formatDateKey(dayDate);
       final dayName = _getDayName(dayDate.weekday);
 
-      if (rawDays.containsKey(dateKey)) {
+      if (rawDays.containsKey(dateKey) && rawDays[dateKey] is Map) {
         daysMap[dateKey] = MealPlanDay.fromMap(
-          rawDays[dateKey] as Map<String, dynamic>,
+          Map<dynamic, dynamic>.from(rawDays[dateKey] as Map),
           dateKey: dateKey,
           dayOfWeek: dayName,
         );
@@ -172,11 +174,11 @@ class WeeklyMealPlanModel {
 
     return WeeklyMealPlanModel(
       weekId: weekId,
-      startDate: data['startDate'] != null
+      startDate: data['startDate'] is Timestamp
           ? (data['startDate'] as Timestamp).toDate()
           : startDate,
       days: daysMap,
-      updatedAt: data['updatedAt'] != null
+      updatedAt: data['updatedAt'] is Timestamp
           ? (data['updatedAt'] as Timestamp).toDate()
           : null,
     );
