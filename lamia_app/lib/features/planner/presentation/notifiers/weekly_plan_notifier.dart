@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/providers/current_user_provider.dart';
 import '../../../../core/providers/firebase_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../recipes/data/recipe_model.dart';
@@ -111,8 +112,22 @@ class WeeklyPlanNotifier extends _$WeeklyPlanNotifier {
     ref.onDispose(() {
       _planSubscription?.cancel();
     });
-    final auth = ref.watch(firebaseAuthProvider);
-    return WeeklyPlanState.initial(isGuest: auth.currentUser == null);
+
+    // Reactively watch auth state changes so that signing in / out
+    // immediately updates guest status and switches between Firestore stream and local memory.
+    final authState = ref.watch(authStateChangesProvider);
+    final user = authState.valueOrNull ?? ref.watch(firebaseAuthProvider).currentUser;
+    final isGuest = user == null;
+
+    final initialState = WeeklyPlanState.initial(isGuest: isGuest);
+
+    // Auto-load plan whenever user logs in, out, or changes
+    Future.microtask(() {
+      loadPlan();
+      loadRecipes();
+    });
+
+    return initialState;
   }
 
   // ── Data loading ─────────────────────────────────────────────────────────

@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/providers/current_user_provider.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../planner/presentation/weekly_meal_planner_screen.dart';
@@ -19,7 +22,7 @@ import '../../recipes/presentation/recipe_creating_screen.dart';
 /// 3. Prominent Floating Center Action Button (`+`)
 /// 4. Weekly Meal Planner
 /// 5. Me (Profile Screen)
-class MainNavigationShell extends StatefulWidget {
+class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({
     super.key,
     this.isGuest = false,
@@ -30,10 +33,10 @@ class MainNavigationShell extends StatefulWidget {
   final int initialIndex;
 
   @override
-  State<MainNavigationShell> createState() => _MainNavigationShellState();
+  ConsumerState<MainNavigationShell> createState() => _MainNavigationShellState();
 }
 
-class _MainNavigationShellState extends State<MainNavigationShell> {
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   late int _currentIndex;
   final GlobalKey<HomeFeedScreenState> _homeFeedKey =
       GlobalKey<HomeFeedScreenState>();
@@ -76,30 +79,34 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(authStateChangesProvider).valueOrNull ??
+        FirebaseAuth.instance.currentUser;
+    final effectiveIsGuest = widget.isGuest && currentUser == null;
+
     final screens = [
       // 0: Home Feed (social-style recipe feed)
       HomeFeedScreen(
         key: _homeFeedKey,
-        isGuest: widget.isGuest,
+        isGuest: effectiveIsGuest,
         onNavigateToTab: _onTabTapped,
       ),
 
       // 1: Cook (former Home Dashboard content)
       HomeDashboardScreen(
-        isGuest: widget.isGuest,
+        isGuest: effectiveIsGuest,
         onNavigateToTab: _onTabTapped,
       ),
 
       // 2: Weekly Meal Planner
       WeeklyMealPlannerScreen(
-        isGuest: widget.isGuest,
+        isGuest: effectiveIsGuest,
         onNavigateHome: () => _onTabTapped(0),
       ),
 
       // 3: Me (Profile Screen matching wireframe)
       ProfileScreen(
         key: _profileKey,
-        isGuest: widget.isGuest,
+        isGuest: effectiveIsGuest,
         onNavigateHome: () => _onTabTapped(0),
       ),
     ];
