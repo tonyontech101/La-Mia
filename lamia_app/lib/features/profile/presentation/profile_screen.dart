@@ -956,11 +956,23 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 detail: '#$_topContributorRank',
                                 icon: Icons.people_alt_rounded,
                                 color: AppColors.secondary,
+                              )
+                            else
+                              const ProfileRecognition(
+                                label: 'Top Contributor',
+                                icon: Icons.people_alt_rounded,
+                                color: AppColors.secondary,
                               ),
                             if (_mostCookedRank != null)
                               ProfileRecognition(
                                 label: 'Most Cooked',
                                 detail: '#$_mostCookedRank',
+                                icon: Icons.restaurant_menu_rounded,
+                                color: AppColors.primary,
+                              )
+                            else
+                              const ProfileRecognition(
+                                label: 'Most Cooked',
                                 icon: Icons.restaurant_menu_rounded,
                                 color: AppColors.primary,
                               ),
@@ -1000,6 +1012,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onLikesTap: () => _onTabSelected(1),
                           onFollowersTap: () =>
                               _navigateToFollowersScreen(initialTab: 0),
+                          onFollowingTap: () =>
+                              _navigateToFollowersScreen(initialTab: 1),
                         ),
 
                         const SizedBox(height: 14),

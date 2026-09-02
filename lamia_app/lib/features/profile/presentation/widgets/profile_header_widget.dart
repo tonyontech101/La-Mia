@@ -40,6 +40,7 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.onRecipesTap,
     this.onLikesTap,
     this.onFollowersTap,
+    this.onFollowingTap,
     this.onAchievementsTap,
   });
 
@@ -62,16 +63,8 @@ class ProfileHeaderWidget extends StatelessWidget {
   final VoidCallback? onRecipesTap;
   final VoidCallback? onLikesTap;
   final VoidCallback? onFollowersTap;
+  final VoidCallback? onFollowingTap;
   final VoidCallback? onAchievementsTap;
-
-  String _formatHandle(String name) {
-    if (username != null && username!.trim().isNotEmpty) {
-      final clean = username!.trim().replaceAll('@', '');
-      return '@$clean';
-    }
-    final clean = name.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
-    return '@${clean.isEmpty ? "foodie" : clean}';
-  }
 
   String _formatCount(String raw) {
     final val = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), ''));
@@ -88,149 +81,148 @@ class ProfileHeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final handle = _formatHandle(displayName);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
 
-        // 1. Centered Circular Avatar with Lively Gradient Border Ring
-        Center(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              GestureDetector(
-                onTap: isOwnProfile ? onEditProfileTap : null,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  padding: const EdgeInsets.all(3.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [
-                        AppColors.primary,
-                        AppColors.accent,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.22),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
+        // 1. Identity Header: Avatar on Left + (Nickname, #ranking) on Right
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Avatar
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GestureDetector(
+                  onTap: isOwnProfile ? onEditProfileTap : null,
                   child: Container(
-                    decoration: const BoxDecoration(
+                    width: 76,
+                    height: 76,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.surface,
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.accent,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.22),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.all(2.5),
-                    child: ClipOval(
-                      child: photoUrl != null && photoUrl!.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: photoUrl!,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                color: AppColors.surfaceAlt,
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surface,
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: ClipOval(
+                        child: photoUrl != null && photoUrl!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: photoUrl!,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: AppColors.surfaceAlt,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  _buildAvatarFallback(),
-                            )
-                          : _buildAvatarFallback(),
+                                errorWidget: (context, url, error) =>
+                                    _buildAvatarFallback(),
+                              )
+                            : _buildAvatarFallback(),
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // Edit Badge (if own profile)
-              if (isOwnProfile && onEditProfileTap != null)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: GestureDetector(
-                    onTap: onEditProfileTap,
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primaryDark,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.surface,
-                          width: 2.2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.cardShadow,
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
+                // Edit Badge (if own profile)
+                if (isOwnProfile && onEditProfileTap != null)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: GestureDetector(
+                      onTap: onEditProfileTap,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primaryDark,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.edit_rounded,
-                        color: AppColors.onPrimary,
-                        size: 14,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 2,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.cardShadow,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          color: AppColors.onPrimary,
+                          size: 13,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
+
+            const SizedBox(width: 16),
+
+            // Nickname / Username + #ranking badge
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      displayName,
+                      style: AppTypography.headline(
+                        color: AppColors.textPrimary,
+                      ).copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildRankingBadge(),
+                ],
+              ),
+            ),
+          ],
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // 2. Nickname / Display Name (Bold & Large)
-        Text(
-          displayName,
-          style: AppTypography.headline(
-            color: AppColors.textPrimary,
-          ).copyWith(
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-            letterSpacing: -0.3,
-          ),
-          textAlign: TextAlign.center,
-        ),
-
-        const SizedBox(height: 2),
-
-        // 3. @username Handle
-        Text(
-          handle,
-          style: AppTypography.body(
-            color: AppColors.textSecondary.withValues(alpha: 0.85),
-          ).copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-
-        const SizedBox(height: 8),
-
-        // 4. Bio of user contains here
+        // 2. Bio Text
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Text(
             (bio?.trim().isNotEmpty ?? false)
                 ? bio!.trim()
@@ -243,71 +235,111 @@ class ProfileHeaderWidget extends StatelessWidget {
               fontSize: 13,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // 5. Ranking Pill Badge (e.g. #24 ranking)
-        _buildRankingBadge(),
+        // 3. See your overall achievements! Interactive Link
+        if (onAchievementsTap != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: PressableScale(
+              onTap: onAchievementsTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5.5),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🏆', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    Text(
+                      isOwnProfile
+                          ? 'See your overall achievements!'
+                          : 'See overall achievements!',
+                      style: AppTypography.caption(
+                        color: AppColors.secondary,
+                      ).copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-        // Extra recognition badges (if any)
+        // 4. Horizontal Status Badges (e.g. Top Contributor, Most Cooked)
         if (recognitions.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 6,
-            runSpacing: 6,
+            alignment: WrapAlignment.start,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: recognitions
                 .map((recognition) => _RecognitionBadge(recognition))
                 .toList(),
           ),
         ],
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
-        // 6. See your overall achievements! Interactive Link
-        if (onAchievementsTap != null)
-          PressableScale(
-            onTap: onAchievementsTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.25),
-                  width: 1,
-                ),
+        // 5. Stats Row (Following, Followers, Likes)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.cardShadow,
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🏆', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(
-                    isOwnProfile
-                        ? 'See your overall achievements!'
-                        : 'See overall achievements!',
-                    style: AppTypography.caption(
-                      color: const Color(0xFF0284C7),
-                    ).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.5,
-                      letterSpacing: -0.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatItem(
+                count: _formatCount(followingCount),
+                label: 'Following',
+                onTap: onFollowingTap,
+              ),
+              _buildDivider(),
+              _StatItem(
+                count: _formatCount(followersCount),
+                label: 'Followers',
+                onTap: onFollowersTap,
+              ),
+              _buildDivider(),
+              _StatItem(
+                count: _formatCount(likesCount),
+                label: 'Likes',
+                onTap: onLikesTap,
+              ),
+            ],
+          ),
+        ),
 
         // Follow Button for Other User Profiles
         if (!isOwnProfile && onFollowTap != null) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ElevatedButton(
             onPressed: onFollowTap,
             style: ElevatedButton.styleFrom(
@@ -333,47 +365,6 @@ class ProfileHeaderWidget extends StatelessWidget {
             ),
           ),
         ],
-
-        const SizedBox(height: 14),
-
-        // 7. Stats Row (24 Recipes | 1.2k Likes | 850 followers)
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatItem(
-                count: _formatCount(recipeCount),
-                label: 'Recipes',
-                onTap: onRecipesTap,
-              ),
-              _buildDivider(),
-              _StatItem(
-                count: _formatCount(likesCount),
-                label: 'Likes',
-                onTap: onLikesTap,
-              ),
-              _buildDivider(),
-              _StatItem(
-                count: _formatCount(followersCount),
-                label: 'followers',
-                onTap: onFollowersTap,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -385,13 +376,13 @@ class ProfileHeaderWidget extends StatelessWidget {
             : '#24 ranking');
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt.withValues(alpha: 0.8),
+        color: AppColors.surfaceAlt.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(AppRadii.pill),
         border: Border.all(
           color: AppColors.border,
-          width: 1.2,
+          width: 1.1,
         ),
       ),
       child: Text(
@@ -400,7 +391,7 @@ class ProfileHeaderWidget extends StatelessWidget {
           color: AppColors.textPrimary,
         ).copyWith(
           fontWeight: FontWeight.w700,
-          fontSize: 12,
+          fontSize: 11,
         ),
       ),
     );
@@ -414,7 +405,7 @@ class ProfileHeaderWidget extends StatelessWidget {
       child: Text(
         initial,
         style: const TextStyle(
-          fontSize: 36,
+          fontSize: 30,
           fontWeight: FontWeight.w800,
           color: AppColors.primary,
         ),

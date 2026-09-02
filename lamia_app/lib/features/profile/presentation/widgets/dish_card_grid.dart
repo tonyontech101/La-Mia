@@ -82,7 +82,7 @@ class DishCardGrid extends StatelessWidget {
       itemCount: recipes.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: 0.68,
+        childAspectRatio: 0.70,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
@@ -149,7 +149,7 @@ class _DishCard extends StatelessWidget {
             boxShadow: const [
               BoxShadow(
                 color: AppColors.cardShadow,
-                blurRadius: 5,
+                blurRadius: 6,
                 offset: Offset(0, 2),
               ),
             ],
@@ -178,10 +178,10 @@ class _DishCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.15),
-                        Colors.black.withValues(alpha: 0.85),
+                        Colors.black.withValues(alpha: 0.20),
+                        Colors.black.withValues(alpha: 0.88),
                       ],
-                      stops: const [0.35, 0.65, 1.0],
+                      stops: const [0.30, 0.60, 1.0],
                     ),
                   ),
                 ),
@@ -189,9 +189,9 @@ class _DishCard extends StatelessWidget {
 
               // 3. Overlay Content (Dish Name & Like / Bookmark counters)
               Positioned(
-                left: 7,
-                right: 7,
-                bottom: 7,
+                left: 8,
+                right: 8,
+                bottom: 8,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,13 +201,13 @@ class _DishCard extends StatelessWidget {
                       recipe.name,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12.0,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         height: 1.2,
                         shadows: [
                           Shadow(
                             color: Colors.black87,
-                            blurRadius: 3,
+                            blurRadius: 4,
                             offset: Offset(0, 1),
                           ),
                         ],
@@ -216,7 +216,7 @@ class _DishCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
 
                     // Stats Row: [🤍 Likes]  [🔖 Saves]
                     Row(
@@ -227,16 +227,23 @@ class _DishCard extends StatelessWidget {
                           children: [
                             const Icon(
                               Icons.favorite_rounded,
-                              size: 13.5,
+                              size: 15.5,
                               color: Colors.white,
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 3.5),
                             Text(
                               likeCountStr,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 11.0,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black87,
+                                    blurRadius: 3,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -250,16 +257,23 @@ class _DishCard extends StatelessWidget {
                           children: [
                             const Icon(
                               Icons.bookmark_rounded,
-                              size: 13.5,
+                              size: 15.5,
                               color: Colors.white,
                             ),
-                            const SizedBox(width: 2.5),
+                            const SizedBox(width: 3),
                             Text(
                               saveCountStr,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 11.0,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black87,
+                                    blurRadius: 3,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -285,7 +299,7 @@ class _DishCard extends StatelessWidget {
         children: [
           Icon(
             Icons.restaurant_rounded,
-            size: 28,
+            size: 32,
             color: AppColors.textSecondary.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 4),
@@ -293,7 +307,7 @@ class _DishCard extends StatelessWidget {
             'Dish Image',
             style: AppTypography.caption(
               color: AppColors.textSecondary.withValues(alpha: 0.7),
-            ).copyWith(fontSize: 10.0, fontWeight: FontWeight.w500),
+            ).copyWith(fontSize: 10.5, fontWeight: FontWeight.w500),
           ),
         ],
       ),
