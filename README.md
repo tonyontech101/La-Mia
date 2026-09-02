@@ -175,7 +175,7 @@ flutter run
 
 - 🛑 **Never commit secrets**: `serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart` are ignored in `.gitignore`.
 - 🔍 **Code Quality**: Always run `flutter analyze` inside `lamia_app/` before creating pull requests.
-- 🔐 **Security Rules**: Deploy updated Firestore rules using `firebase deploy --only firestore:rules`.
+- 🔐 **Security Rules**: Deploy updated Firestore rules using `cd lamia_app && firebase deploy --only firestore:rules`.
 
 ---
 

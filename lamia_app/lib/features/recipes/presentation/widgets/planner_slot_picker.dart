@@ -136,21 +136,33 @@ class _PlannerSlotPickerState extends State<PlannerSlotPicker> {
 
   Future<void> _assignToSlot(String slot) async {
     if (_plan == null) return;
-    final updated = await widget.plannerRepo.assignMealSlot(
-      currentPlan: _plan!,
-      dateKey: _dateKey,
-      slot: slot,
-      recipe: widget.recipe,
-    );
-    if (mounted) {
-      setState(() => _plan = updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.recipe.name} added to ${_dayLabel(slot)}.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+    try {
+      final updated = await widget.plannerRepo.assignMealSlot(
+        currentPlan: _plan!,
+        dateKey: _dateKey,
+        slot: slot,
+        recipe: widget.recipe,
       );
-      Navigator.pop(context);
+      if (mounted) {
+        setState(() => _plan = updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.recipe.name} added to ${_dayLabel(slot)}.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save to cloud: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

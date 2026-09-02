@@ -175,102 +175,102 @@ class MealPlanRepository {
           stackTrace: stack,
           category: 'MEAL_PLANNER',
         );
+        rethrow;
       }
     }
 
-    // Schedule local notification reminders
-    _schedulePlanReminders(plan);
+    // Schedule local notification reminders (fails gracefully if uninitialized)
+    try {
+      await _schedulePlanReminders(plan);
+    } catch (_) {}
   }
 
   Future<void> _schedulePlanReminders(WeeklyMealPlanModel plan) async {
-    final notifService = LocalNotificationService.instance;
-    final now = DateTime.now();
+    try {
+      final notifService = LocalNotificationService.instance;
+      final now = DateTime.now();
 
-    for (final dayEntry in plan.days.entries) {
-      final dateKey = dayEntry.key;
-      final day = dayEntry.value;
+      for (final dayEntry in plan.days.entries) {
+        final dateKey = dayEntry.key;
+        final day = dayEntry.value;
 
-      try {
-        final date = DateTime.parse(dateKey);
+        try {
+          final date = DateTime.parse(dateKey);
 
-        final breakfastTime = DateTime(date.year, date.month, date.day, 7, 30);
-        final lunchTime = DateTime(date.year, date.month, date.day, 11, 30);
-        final snackTime = DateTime(date.year, date.month, date.day, 15, 0);
-        final dinnerTime = DateTime(date.year, date.month, date.day, 18, 30);
+          final breakfastTime = DateTime(date.year, date.month, date.day, 7, 30);
+          final lunchTime = DateTime(date.year, date.month, date.day, 11, 30);
+          final snackTime = DateTime(date.year, date.month, date.day, 15, 0);
+          final dinnerTime = DateTime(date.year, date.month, date.day, 18, 30);
 
-        final baseId = date.year * 10000 + date.month * 100 + date.day;
+          final baseId = date.year * 10000 + date.month * 100 + date.day;
 
-        // 1. Breakfast
-        final bId = baseId * 10 + 1;
-        if (day.breakfast != null && breakfastTime.isAfter(now)) {
-          await notifService.scheduleNotification(
-            id: bId,
-            title: 'Almusal Prep 🍳',
-            body: 'Time to prepare: ${day.breakfast!.recipeName}!',
-            scheduledDateTime: breakfastTime,
-            channelId: 'meal_reminders',
-            channelName: 'Meal Planner Reminders',
-            payload: '{"route":"planner"}',
-          );
-        } else {
-          await notifService.cancelNotification(bId);
-        }
+          // 1. Breakfast
+          final bId = baseId * 10 + 1;
+          if (day.breakfast != null && breakfastTime.isAfter(now)) {
+            await notifService.scheduleNotification(
+              id: bId,
+              title: 'Almusal Prep 🍳',
+              body: 'Time to prepare: ${day.breakfast!.recipeName}!',
+              scheduledDateTime: breakfastTime,
+              channelId: 'meal_reminders',
+              channelName: 'Meal Planner Reminders',
+              payload: '{"route":"planner"}',
+            );
+          } else {
+            await notifService.cancelNotification(bId);
+          }
 
-        // 2. Lunch
-        final lId = baseId * 10 + 2;
-        if (day.lunch != null && lunchTime.isAfter(now)) {
-          await notifService.scheduleNotification(
-            id: lId,
-            title: 'Tanghalian Prep 🍲',
-            body: 'Time to prepare: ${day.lunch!.recipeName}!',
-            scheduledDateTime: lunchTime,
-            channelId: 'meal_reminders',
-            channelName: 'Meal Planner Reminders',
-            payload: '{"route":"planner"}',
-          );
-        } else {
-          await notifService.cancelNotification(lId);
-        }
+          // 2. Lunch
+          final lId = baseId * 10 + 2;
+          if (day.lunch != null && lunchTime.isAfter(now)) {
+            await notifService.scheduleNotification(
+              id: lId,
+              title: 'Tanghalian Prep 🍲',
+              body: 'Time to prepare: ${day.lunch!.recipeName}!',
+              scheduledDateTime: lunchTime,
+              channelId: 'meal_reminders',
+              channelName: 'Meal Planner Reminders',
+              payload: '{"route":"planner"}',
+            );
+          } else {
+            await notifService.cancelNotification(lId);
+          }
 
-        // 3. Snack
-        final sId = baseId * 10 + 3;
-        if (day.snack != null && snackTime.isAfter(now)) {
-          await notifService.scheduleNotification(
-            id: sId,
-            title: 'Meryenda Prep ☕',
-            body: 'Time to prepare: ${day.snack!.recipeName}!',
-            scheduledDateTime: snackTime,
-            channelId: 'meal_reminders',
-            channelName: 'Meal Planner Reminders',
-            payload: '{"route":"planner"}',
-          );
-        } else {
-          await notifService.cancelNotification(sId);
-        }
+          // 3. Snack
+          final sId = baseId * 10 + 3;
+          if (day.snack != null && snackTime.isAfter(now)) {
+            await notifService.scheduleNotification(
+              id: sId,
+              title: 'Meryenda Prep ☕',
+              body: 'Time to prepare: ${day.snack!.recipeName}!',
+              scheduledDateTime: snackTime,
+              channelId: 'meal_reminders',
+              channelName: 'Meal Planner Reminders',
+              payload: '{"route":"planner"}',
+            );
+          } else {
+            await notifService.cancelNotification(sId);
+          }
 
-        // 4. Dinner
-        final dId = baseId * 10 + 4;
-        if (day.dinner != null && dinnerTime.isAfter(now)) {
-          await notifService.scheduleNotification(
-            id: dId,
-            title: 'Hapunan Prep 🍽️',
-            body: 'Time to prepare: ${day.dinner!.recipeName}!',
-            scheduledDateTime: dinnerTime,
-            channelId: 'meal_reminders',
-            channelName: 'Meal Planner Reminders',
-            payload: '{"route":"planner"}',
-          );
-        } else {
-          await notifService.cancelNotification(dId);
-        }
-      } catch (e, stack) {
-        AppLogger.error(
-          'Failed to schedule meal reminder for $dateKey',
-          error: e,
-          stackTrace: stack,
-          category: 'MEAL_PLANNER',
-        );
+          // 4. Dinner
+          final dId = baseId * 10 + 4;
+          if (day.dinner != null && dinnerTime.isAfter(now)) {
+            await notifService.scheduleNotification(
+              id: dId,
+              title: 'Hapunan Prep 🍽️',
+              body: 'Time to prepare: ${day.dinner!.recipeName}!',
+              scheduledDateTime: dinnerTime,
+              channelId: 'meal_reminders',
+              channelName: 'Meal Planner Reminders',
+              payload: '{"route":"planner"}',
+            );
+          } else {
+            await notifService.cancelNotification(dId);
+          }
+        } catch (_) {}
       }
+    } catch (_) {
+      // LocalNotificationService not initialized (e.g. in tests)
     }
   }
 

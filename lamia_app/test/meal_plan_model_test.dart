@@ -101,5 +101,42 @@ void main() {
       // 'Garlic' should only appear once despite being in both dishes
       expect(groceryList.where((i) => i == 'Garlic').length, 1);
     });
+
+    test('WeeklyMealPlanModel.fromFirestore handles dynamic and untyped nested maps from Firestore', () {
+      final monday = DateTime(2026, 8, 24);
+      final rawFirestoreData = <dynamic, dynamic>{
+        'weekId': 'week_2026_08_24',
+        'days': <dynamic, dynamic>{
+          '2026-08-24': <dynamic, dynamic>{
+            'dateKey': '2026-08-24',
+            'dayOfWeek': 'Monday',
+            'breakfast': <dynamic, dynamic>{
+              'recipeId': 'rec_1',
+              'recipeName': 'Sinangag with Egg',
+              'coverPhotoUrl': 'https://example.com/egg.jpg',
+              'category': 'Almusal',
+              'prepTime': '10m',
+              'cookTime': '10m',
+              'servings': 2,
+              'ingredients': <dynamic>['Rice', 'Egg'],
+              'notes': 'Yum',
+            },
+            'lunch': null,
+            'dinner': null,
+            'snack': null,
+          }
+        }
+      };
+
+      final plan = WeeklyMealPlanModel.fromFirestore(
+        Map<String, dynamic>.from(rawFirestoreData),
+        weekId: 'week_2026_08_24',
+        startDate: monday,
+      );
+
+      expect(plan.days['2026-08-24']?.breakfast, isNotNull);
+      expect(plan.days['2026-08-24']?.breakfast?.recipeName, 'Sinangag with Egg');
+      expect(plan.days['2026-08-24']?.breakfast?.ingredients, ['Rice', 'Egg']);
+    });
   });
 }

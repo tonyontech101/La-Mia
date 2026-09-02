@@ -438,12 +438,14 @@ class ProfileRecognition {
     required this.icon,
     required this.color,
     this.detail,
+    this.onTap,
   });
 
   final String label;
   final String? detail;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 }
 
 class _RecognitionBadge extends StatelessWidget {
@@ -456,7 +458,7 @@ class _RecognitionBadge extends StatelessWidget {
     final badgeText = recognition.detail == null
         ? recognition.label
         : '${recognition.label} ${recognition.detail}';
-    return Container(
+    final badgeWidget = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
       decoration: BoxDecoration(
         color: recognition.color.withValues(alpha: 0.10),
@@ -475,9 +477,26 @@ class _RecognitionBadge extends StatelessWidget {
               fontSize: 11,
             ),
           ),
+          if (recognition.onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(
+              Icons.edit_rounded,
+              size: 11,
+              color: recognition.color.withValues(alpha: 0.8),
+            ),
+          ],
         ],
       ),
     );
+
+    if (recognition.onTap != null) {
+      return PressableScale(
+        pressedScale: 0.95,
+        onTap: recognition.onTap,
+        child: badgeWidget,
+      );
+    }
+    return badgeWidget;
   }
 }
 

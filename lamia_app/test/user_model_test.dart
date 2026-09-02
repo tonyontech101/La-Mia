@@ -48,5 +48,19 @@ void main() {
       expect(map['role'], 'user');
       expect(map['createdAt'], isA<Timestamp>());
     });
+
+    test('serializes and deserializes featuredAchievementId correctly', () {
+      final model = UserModel(
+        uid: 'user789',
+        displayName: 'Chef Liza',
+        featuredAchievementId: 'first_recipe',
+      );
+      expect(model.featuredAchievementId, 'first_recipe');
+      final map = model.toFirestore();
+      expect(map['featuredAchievementId'], 'first_recipe');
+
+      final updated = model.copyWith(featuredAchievementId: 'home_cook');
+      expect(updated.featuredAchievementId, 'home_cook');
+    });
   });
 }

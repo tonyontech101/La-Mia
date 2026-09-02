@@ -17,6 +17,7 @@ import '../data/meal_plan_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/presentation/login_screen.dart';
 import 'notifiers/weekly_plan_notifier.dart';
 
 /// Full-featured Weekly Meal Planner Screen for home cooks and meal preppers.
@@ -157,21 +158,33 @@ class _WeeklyMealPlannerScreenState
           Navigator.pop(ctx);
           final planState = ref.read(weeklyPlanNotifierProvider);
           if (planState.currentPlan == null) return;
-          await ref
-              .read(weeklyPlanNotifierProvider.notifier)
-              .updateSlot(
-                dateKey: planState.selectedDateKey,
-                slotKey: slotKey,
-                recipe: recipe,
+          try {
+            await ref
+                .read(weeklyPlanNotifierProvider.notifier)
+                .updateSlot(
+                  dateKey: planState.selectedDateKey,
+                  slotKey: slotKey,
+                  recipe: recipe,
+                );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('"${recipe.name}" added to $slotTitle.'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
               );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('"${recipe.name}" added to $slotTitle.'),
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to save to cloud: $e'),
+                  backgroundColor: Colors.red.shade700,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           }
         },
       ),
@@ -179,7 +192,19 @@ class _WeeklyMealPlannerScreenState
   }
 
   Future<void> _removeMeal(String slotKey) async {
-    await ref.read(weeklyPlanNotifierProvider.notifier).removeFromSlot(slotKey);
+    try {
+      await ref.read(weeklyPlanNotifierProvider.notifier).removeFromSlot(slotKey);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update cloud: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleAutoFillWeek() async {
@@ -224,14 +249,26 @@ class _WeeklyMealPlannerScreenState
     );
 
     if (confirm == true) {
-      await ref.read(weeklyPlanNotifierProvider.notifier).autoFill();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Week filled in.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      try {
+        await ref.read(weeklyPlanNotifierProvider.notifier).autoFill();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Week filled in.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save auto-filled week: $e'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }
@@ -318,6 +355,7 @@ class _WeeklyMealPlannerScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildGuestSyncBanner(),
                     _buildWeekNavigator(),
                     const BanigDivider(),
                     _buildDayStrip(),
@@ -373,6 +411,55 @@ class _WeeklyMealPlannerScreenState
                 ),
               ),
             ),
+    );
+  }
+
+  // ── Guest Sync Banner ───────────────────────────────────────────────────────
+
+  Widget _buildGuestSyncBanner() {
+    if (!_planState.isGuest) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: AppColors.accentSoft,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenH,
+        vertical: AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: AppColors.primary,
+            size: 18,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              'Guest mode: Meal plan is saved locally. Sign in to sync across devices.',
+              style: AppTypography.caption(color: AppColors.textSecondary),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xxs),
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+            child: Text(
+              'Sign In',
+              style: AppTypography.button(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
