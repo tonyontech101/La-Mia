@@ -100,18 +100,17 @@ class NotificationRepository {
       createdAt: DateTime.now(),
     );
 
-    final batch = _firestore.batch();
-    batch.set(docRef, notif.toFirestore());
+    await docRef.set(notif.toFirestore());
 
-    // Update denormalized counter on user profile if preferred
-    final userRef = _firestore.collection('users').doc(recipientId);
-    batch.set(
-      userRef,
-      {'unreadNotificationCount': FieldValue.increment(1)},
-      SetOptions(merge: true),
-    );
-
-    await batch.commit();
+    try {
+      final userRef = _firestore.collection('users').doc(recipientId);
+      await userRef.set(
+        {'unreadNotificationCount': FieldValue.increment(1)},
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      // Counter update non-fatal; notification document is already persisted
+    }
   }
 
   /// Marks a specific notification as read.

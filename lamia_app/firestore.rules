@@ -64,7 +64,7 @@ service cloud.firestore {
     function notSettingServerFieldsOnUpdate() {
       return !request.resource.data.diff(resource.data)
           .affectedKeys().hasAny([
-            'status', 'approvedAt', 'commentCount',
+            'status', 'approvedAt',
             'ratingAvg', 'ratingCount', 'trendingScore'
           ]);
     }
@@ -144,6 +144,8 @@ service cloud.firestore {
             || counterDecremented('likeCount')
             || counterIncremented('favoriteCount')
             || counterDecremented('favoriteCount')
+            || counterIncremented('commentCount')
+            || counterDecremented('commentCount')
           )
         )
         || isAdmin()
@@ -214,6 +216,8 @@ service cloud.firestore {
             || counterDecremented('totalLikesReceived')
             || counterIncremented('savedCount')
             || counterDecremented('savedCount')
+            || counterIncremented('unreadNotificationCount')
+            || counterDecremented('unreadNotificationCount')
           )
         )
         || isAdmin()
