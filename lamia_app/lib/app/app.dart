@@ -22,6 +22,10 @@ import '../features/home/presentation/home_placeholder_screen.dart';
 /// `false` even after the user clicked the verification link in the browser).
 /// We call [User.reload] before the first render to fetch the latest value
 /// from Firebase so the user lands on the correct screen immediately.
+/// Global navigation key used for programmatic navigation outside of the widget tree
+/// (e.g., from local notification and FCM tap callbacks).
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 class LaMiaApp extends ConsumerStatefulWidget {
   const LaMiaApp({super.key});
 
@@ -54,6 +58,7 @@ class _LaMiaAppState extends ConsumerState<LaMiaApp> {
         statusBarBrightness: Brightness.dark,
       ),
       child: MaterialApp(
+        navigatorKey: rootNavigatorKey,
         title: 'La Mia',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,

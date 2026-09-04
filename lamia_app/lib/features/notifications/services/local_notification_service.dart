@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'notification_router.dart';
 
 class LocalNotificationService {
   LocalNotificationService._internal();
@@ -51,17 +52,15 @@ class LocalNotificationService {
   }
 
   static void _onDidReceiveNotificationResponse(NotificationResponse response) {
-    // Handle foreground selection
-    if (response.payload != null) {
-      // Decode payload and navigate
-      debugPrint("Foreground notification clicked: ${response.payload}");
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      NotificationRouter.navigateWithPayload(response.payload!);
     }
   }
 
   static void _onDidReceiveBackgroundNotificationResponse(NotificationResponse response) {
     // Handle background / killed action selection
     if (response.payload != null) {
-      debugPrint("Background notification clicked: ${response.payload}");
+      debugPrint('Background notification clicked: ${response.payload}');
     }
   }
 
