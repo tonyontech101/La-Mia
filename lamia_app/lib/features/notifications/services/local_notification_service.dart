@@ -46,6 +46,8 @@ class LocalNotificationService {
       // Create default channels for Android
       await _createNotificationChannels();
 
+      await checkAppLaunchNotification();
+
       _initialized = true;
     } catch (e) {
       debugPrint('LocalNotificationService initialize error: $e');
@@ -58,6 +60,7 @@ class LocalNotificationService {
     }
   }
 
+  @pragma('vm:entry-point')
   static void _onDidReceiveBackgroundNotificationResponse(NotificationResponse response) {
     // Handle background / killed action selection
     if (response.payload != null) {
@@ -95,6 +98,15 @@ class LocalNotificationService {
       enableVibration: true,
     );
 
+    const AndroidNotificationChannel systemChannel = AndroidNotificationChannel(
+      'system_updates',
+      'System Updates',
+      description: 'Alerts for recipe likes, comments, and community interactions.',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _localNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -103,6 +115,24 @@ class LocalNotificationService {
       await androidImplementation.createNotificationChannel(mealChannel);
       await androidImplementation.createNotificationChannel(timerChannel);
       await androidImplementation.createNotificationChannel(suggestionsChannel);
+      await androidImplementation.createNotificationChannel(systemChannel);
+    }
+  }
+
+  /// Checks if the app was launched by tapping a local notification.
+  Future<void> checkAppLaunchNotification() async {
+    try {
+      final launchDetails = await _localNotificationsPlugin.getNotificationAppLaunchDetails();
+      if (launchDetails != null &&
+          launchDetails.didNotificationLaunchApp &&
+          launchDetails.notificationResponse?.payload != null &&
+          launchDetails.notificationResponse!.payload!.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          NotificationRouter.navigateWithPayload(launchDetails.notificationResponse!.payload!);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking local notification app launch details: $e');
     }
   }
 
