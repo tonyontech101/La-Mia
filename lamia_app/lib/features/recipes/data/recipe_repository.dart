@@ -45,8 +45,9 @@ class RecipeRepository {
       return bScore.compareTo(aScore);
     });
     return docs
-        .take(limit)
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .take(limit)
         .toList();
   }
 
@@ -335,9 +336,16 @@ class RecipeRepository {
         .get();
     final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where(
-          (r) => includePending || r.status == 'approved' || r.isSystemRecipe,
-        )
+        .where((r) {
+          // A rejected recipe must NEVER be shown or posted anywhere.
+          if (r.status == 'rejected') return false;
+          if (includePending) {
+            return r.status == 'approved' ||
+                r.status == 'pending' ||
+                r.isSystemRecipe;
+          }
+          return r.status == 'approved' || r.isSystemRecipe;
+        })
         .toList();
     recipes.sort((a, b) {
       final aTime = a.createdAt ?? DateTime(2000);
@@ -447,7 +455,9 @@ class RecipeRepository {
         .where((r) {
           // Only user-submitted recipes (not system/seeded) count for
           // Chef of the Month.
-          if (r.authorId == null || r.isSystemRecipe) return false;
+          if (r.authorId == null || r.isSystemRecipe || r.status != 'approved') {
+            return false;
+          }
           return r.createdAt != null;
         })
         .toList();

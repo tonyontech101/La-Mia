@@ -140,6 +140,58 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
 
     // Start listening to Firestore
     _startListening();
+
+    // Immediate fast heuristic check for obvious non-food items (e.g. "isa ka laptop")
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFastHeuristics();
+    });
+  }
+
+  static final _nonFoodKeywords = [
+    'laptop', 'computer', 'pc', 'cellphone', 'phone', 'iphone', 'android',
+    'samsung', 'gadget', 'tablet', 'ipad', 'keyboard', 'mouse', 'monitor',
+    'screen', 'charger', 'battery', 'cable', 'wire', 'television', 'tv',
+    'relo', 'watch', 'clock', 'sasakyan', 'kotse', 'car', 'motorcycle',
+    'motor', 'bike', 'bicycle', 'tires', 'gulong', 'shoes', 'sapatos',
+    'tsinelas', 'damit', 'clothes', 'shirt', 'pants', 'plastic', 'metal',
+    'bakal', 'bato', 'stone', 'kahoy', 'wood', 'papel', 'paper', 'pera',
+    'money', 'cash', 'shampoo', 'detergent', 'bleach',
+  ];
+
+  Future<void> _checkFastHeuristics() async {
+    try {
+      final snap = await ref
+          .read(firebaseFirestoreProvider)
+          .collection('recipes')
+          .doc(widget.recipeDocId)
+          .get();
+      if (!mounted) return;
+      if (!snap.exists) {
+        _onRejected('This submission was rejected by content moderation.');
+        return;
+      }
+      final data = snap.data();
+      if (data == null) return;
+
+      final name = (data['name'] as String? ?? widget.recipeName).toLowerCase();
+      final description = (data['description'] as String? ?? '').toLowerCase();
+      final ingredients = (data['ingredients'] as List<dynamic>? ?? [])
+          .map((e) => e.toString().toLowerCase())
+          .toList();
+
+      for (final keyword in _nonFoodKeywords) {
+        final regex =
+            RegExp(r'\b' + RegExp.escape(keyword) + r'\b', caseSensitive: false);
+        if (regex.hasMatch(name) ||
+            regex.hasMatch(description) ||
+            ingredients.any((i) => regex.hasMatch(i))) {
+          final reason =
+              'The recipe title or content refers to non-food items ("$keyword"). Please submit genuine Filipino food dishes.';
+          _onRejected(reason);
+          return;
+        }
+      }
+    } catch (_) {}
   }
 
   void _startListening() {
@@ -148,7 +200,14 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
         .doc(widget.recipeDocId);
 
     _firestoreSub = docRef.snapshots().listen((snap) {
-      if (!snap.exists || !mounted) return;
+      if (!mounted) return;
+      if (!snap.exists) {
+        // If document was removed from Firestore, it did not pass moderation
+        if (_phase == 'processing' || _phase == 'timeout') {
+          _onRejected('This submission did not pass recipe content moderation.');
+        }
+        return;
+      }
 
       final status = snap.data()?['status'] as String?;
       if (status == 'approved') {
@@ -160,8 +219,8 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
       }
     });
 
-    // Timeout after 25 seconds
-    _timeoutTimer = Timer(const Duration(seconds: 25), () {
+    // Timeout after 45 seconds (allows serverless AI moderation cold-starts to complete)
+    _timeoutTimer = Timer(const Duration(seconds: 45), () {
       if (_phase == 'processing' && mounted) {
         _onTimeout();
       }
@@ -169,7 +228,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
   }
 
   void _onApproved() {
-    if (_phase != 'processing') return;
+    if (_phase == 'approved' || _phase == 'rejected') return;
     _firestoreSub?.cancel();
     _timeoutTimer?.cancel();
     _messageTimer?.cancel();
@@ -177,7 +236,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
     setState(() => _phase = 'approved');
     _pulseController.stop();
     _rotateController.stop();
-    _resultController.forward();
+    _resultController.forward(from: 0.0);
 
     // Generate confetti
     _generateConfetti();
@@ -192,12 +251,12 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
   }
 
   void _onRejected(String reason) {
-    if (_phase != 'processing') return;
+    if (_phase == 'rejected' || _phase == 'approved') return;
     _firestoreSub?.cancel();
     _timeoutTimer?.cancel();
     _messageTimer?.cancel();
 
-    // Delete the rejected document
+    // Delete the rejected document from Firestore so it is NEVER posted
     ref.read(firebaseFirestoreProvider)
         .collection('recipes')
         .doc(widget.recipeDocId)
@@ -210,18 +269,44 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
     });
     _pulseController.stop();
     _rotateController.stop();
-    _resultController.forward();
+    _resultController.forward(from: 0.0);
   }
 
-  void _onTimeout() {
+  Future<void> _onTimeout() async {
     if (_phase != 'processing') return;
-    _firestoreSub?.cancel();
     _messageTimer?.cancel();
 
-    setState(() => _phase = 'timeout');
-    _pulseController.stop();
-    _rotateController.stop();
-    _resultController.forward();
+    // Double-check Firestore state before switching to timeout
+    try {
+      final snap = await ref
+          .read(firebaseFirestoreProvider)
+          .collection('recipes')
+          .doc(widget.recipeDocId)
+          .get();
+      if (!mounted) return;
+      if (!snap.exists) {
+        _onRejected('This submission did not pass content moderation.');
+        return;
+      }
+      final status = snap.data()?['status'] as String?;
+      if (status == 'approved') {
+        _onApproved();
+        return;
+      } else if (status == 'rejected') {
+        final reason = snap.data()?['rejectionReason'] as String? ??
+            'This submission does not appear to be a genuine food recipe or contains non-food items.';
+        _onRejected(reason);
+        return;
+      }
+    } catch (_) {}
+
+    // Note: Do NOT cancel _firestoreSub so late updates can still trigger _onApproved/_onRejected!
+    if (mounted && _phase == 'processing') {
+      setState(() => _phase = 'timeout');
+      _pulseController.stop();
+      _rotateController.stop();
+      _resultController.forward(from: 0.0);
+    }
   }
 
   void _generateConfetti() {
@@ -838,9 +923,9 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
           const SizedBox(height: 28),
 
           Text(
-            'Still Processing',
+            'Review in Progress',
             style: GoogleFonts.fraunces(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
@@ -848,7 +933,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
           ),
           const SizedBox(height: 10),
           Text(
-            'Your recipe has been submitted and is being reviewed by our AI. It will appear in the feed once approved.',
+            'Our AI recipe moderator is still reviewing your recipe. Because review has not completed yet, it has not been posted.',
             style: AppTypography.body(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
@@ -871,7 +956,8 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
                 Flexible(
                   child: Text(
                     widget.recipeName,
-                    style: AppTypography.bodyStrong(color: AppColors.textPrimary),
+                    style:
+                        AppTypography.bodyStrong(color: AppColors.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -880,17 +966,78 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
             ),
           ),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: 32),
 
           _buildPrimaryActionButton(
-            label: 'Back to Feed',
-            icon: Icons.home_rounded,
-            onTap: () =>
-                Navigator.pop(context, VerificationExitAction.backToFeed),
+            label: 'Check Status Again',
+            icon: Icons.refresh_rounded,
+            onTap: _checkLatestStatus,
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildOutlinedActionButton(
+            label: 'Cancel & Delete Recipe',
+            icon: Icons.close_rounded,
+            onTap: _cancelAndDelete,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _checkLatestStatus() async {
+    try {
+      final snap = await ref
+          .read(firebaseFirestoreProvider)
+          .collection('recipes')
+          .doc(widget.recipeDocId)
+          .get();
+      if (!mounted) return;
+      if (!snap.exists) {
+        _onRejected('This submission was rejected by content moderation.');
+        return;
+      }
+      final status = snap.data()?['status'] as String?;
+      if (status == 'approved') {
+        _onApproved();
+      } else if (status == 'rejected') {
+        final reason = snap.data()?['rejectionReason'] as String? ??
+            'This submission does not appear to be a genuine food recipe or contains non-food items.';
+        _onRejected(reason);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('AI is still reviewing. Please wait a moment...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not check status: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _cancelAndDelete() async {
+    _firestoreSub?.cancel();
+    _timeoutTimer?.cancel();
+    _messageTimer?.cancel();
+
+    // Delete unapproved document from Firestore so it is not posted
+    await ref
+        .read(firebaseFirestoreProvider)
+        .collection('recipes')
+        .doc(widget.recipeDocId)
+        .delete()
+        .catchError((_) {});
+
+    if (mounted) {
+      Navigator.pop(context, VerificationExitAction.backToFeed);
+    }
   }
 
   // ── Shared Buttons ───────────────────────────────────────────────────────────

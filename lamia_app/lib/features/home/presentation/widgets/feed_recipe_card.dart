@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -24,12 +26,14 @@ class FeedRecipeCard extends StatelessWidget {
   const FeedRecipeCard({
     super.key,
     required this.recipe,
+    this.localImageFile,
     this.onTap,
     this.onFollowTap,
     this.onLongPress,
   });
 
   final RecipeModel recipe;
+  final File? localImageFile;
   final VoidCallback? onTap;
   final VoidCallback? onFollowTap;
   final VoidCallback? onLongPress;
@@ -121,25 +125,30 @@ class FeedRecipeCard extends StatelessWidget {
           // Photo
           AspectRatio(
             aspectRatio: 16 / 10,
-            child: recipe.coverPhotoUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: recipe.coverPhotoUrl,
+            child: localImageFile != null
+                ? Image.file(
+                    localImageFile!,
                     fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(
-                      color: AppColors.surfaceAlt,
-                      child: const Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                  )
+                : (recipe.coverPhotoUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: recipe.coverPhotoUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          color: AppColors.surfaceAlt,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    errorWidget: (_, _, _) => _buildPhotoPlaceholder(),
-                  )
-                : _buildPhotoPlaceholder(),
+                        errorWidget: (_, _, _) => _buildPhotoPlaceholder(),
+                      )
+                    : _buildPhotoPlaceholder()),
           ),
 
           // Bottom gradient scrim so tag pills stay legible

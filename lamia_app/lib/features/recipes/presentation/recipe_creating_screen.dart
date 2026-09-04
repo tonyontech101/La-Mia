@@ -416,18 +416,21 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
       if (!mounted) return;
 
       switch (exitAction) {
+        case VerificationExitAction.approved:
+          _showToast('Recipe approved and published! 🎉');
+          Navigator.pop(context, true);
+          break;
         case VerificationExitAction.editRecipe:
           // Stay on the recipe editor — fields are still filled in
           break;
         case VerificationExitAction.startFresh:
-          Navigator.pop(context, true);
+          _formNotifier.resetForm();
+          Navigator.pop(context, false);
           break;
-        case VerificationExitAction.approved:
         case VerificationExitAction.backToFeed:
-          Navigator.pop(context, true);
-          break;
         case null:
-          // User pressed system back on a non-processing phase
+          // User exited before approval (timed out or canceled) — do NOT report published
+          Navigator.pop(context, false);
           break;
       }
     } catch (e) {
@@ -1509,6 +1512,7 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
         const SizedBox(height: 10),
         FeedRecipeCard(
           recipe: tempRecipe,
+          localImageFile: formState.selectedImageFile,
           onTap: null, // Static preview
         ),
         const SizedBox(height: 24),
