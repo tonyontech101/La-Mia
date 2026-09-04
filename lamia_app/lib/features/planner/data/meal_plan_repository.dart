@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/utils/app_logger.dart';
+import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/services/local_notification_service.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
@@ -56,20 +57,20 @@ class MealPlanRepository {
 
   /// Fetches the weekly meal plan for a specific Monday date.
   /// Checks memory cache, then Firestore if signed in, or returns a fresh 7-day model.
-  Future<WeeklyMealPlanModel> getWeeklyPlan(DateTime mondayDate) async {
+  Future<WeeklyMealPlanModel> getWeeklyPlan(DateTime mondayDate, {String? userId}) async {
     final weekId = formatWeekId(mondayDate);
-    final user = _auth.currentUser;
-    final cacheKey = '${user?.uid ?? "guest"}_$weekId';
+    final uid = userId ?? _auth.currentUser?.uid;
+    final cacheKey = '${uid ?? "guest"}_$weekId';
 
     if (_memoryCache.containsKey(cacheKey)) {
       return _memoryCache[cacheKey]!;
     }
 
-    if (user != null) {
+    if (uid != null) {
       try {
         final docRef = _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(uid)
             .collection('mealPlans')
             .doc(weekId);
 
@@ -96,6 +97,13 @@ class MealPlanRepository {
     final newPlan = WeeklyMealPlanModel.empty(mondayDate: mondayDate);
     _memoryCache[cacheKey] = newPlan;
     return newPlan;
+  }
+
+  /// Returns the weekly meal plan for the current week.
+  Future<WeeklyMealPlanModel?> getCurrentWeekPlan([String? userId]) async {
+    final now = DateTime.now();
+    final monday = getMondayOf(now);
+    return getWeeklyPlan(monday, userId: userId);
   }
 
   /// Returns a stream of the weekly meal plan for a specific Monday date.
@@ -181,13 +189,31 @@ class MealPlanRepository {
 
     // Schedule local notification reminders (fails gracefully if uninitialized)
     try {
-      await _schedulePlanReminders(plan);
+      await scheduleMealPlanReminders(plan);
     } catch (_) {}
   }
 
-  Future<void> _schedulePlanReminders(WeeklyMealPlanModel plan) async {
+  Future<void> scheduleMealPlanReminders(WeeklyMealPlanModel plan) async {
+    final notifService = LocalNotificationService.instance;
+    final userId = _auth.currentUser?.uid;
+    if (userId != null) {
+      try {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final enableNotifications = userDoc.data()?['enableNotifications'] as bool? ?? true;
+        final prefData = userDoc.data()?['notificationPreferences'] as Map<String, dynamic>?;
+        final prefs = NotificationPreferenceModel.fromMap(prefData);
+
+        if (!enableNotifications || !prefs.mealReminders) {
+          // User turned off notifications or meal reminders; cancel alarms for this plan
+          await notifService.cancelMealRemindersForWeek(plan.days.keys.toList());
+          return;
+        }
+      } catch (_) {
+        // Continue gracefully if Firestore read fails
+      }
+    }
+
     try {
-      final notifService = LocalNotificationService.instance;
       final now = DateTime.now();
 
       for (final dayEntry in plan.days.entries) {

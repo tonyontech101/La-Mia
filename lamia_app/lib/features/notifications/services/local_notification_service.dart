@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -251,5 +252,35 @@ class LocalNotificationService {
   /// Cancels all scheduled notifications
   Future<void> cancelAllNotifications() async {
     await _localNotificationsPlugin.cancelAll();
+  }
+
+  static const int dailySuggestionNotificationId = 99901;
+
+  Future<void> scheduleDailySuggestion() async {
+    await scheduleDailyRepeatingNotification(
+      id: dailySuggestionNotificationId,
+      title: 'Ano Pong Ulam? 🍲',
+      body: "Time to plan or discover today's delicious Filipino dishes!",
+      time: const TimeOfDay(hour: 11, minute: 0),
+      channelId: 'daily_suggestions',
+      channelName: 'Daily Meal Suggestions',
+      payload: jsonEncode({'targetType': 'planner', 'route': '/planner'}),
+    );
+  }
+
+  Future<void> cancelDailySuggestion() async {
+    await cancelNotification(dailySuggestionNotificationId);
+  }
+
+  Future<void> cancelMealRemindersForWeek(List<String> dateKeys) async {
+    for (final dateKey in dateKeys) {
+      try {
+        final date = DateTime.parse(dateKey);
+        final baseId = date.year * 10000 + date.month * 100 + date.day;
+        for (int slot = 1; slot <= 4; slot++) {
+          await cancelNotification(baseId * 10 + slot);
+        }
+      } catch (_) {}
+    }
   }
 }
