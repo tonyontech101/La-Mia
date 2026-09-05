@@ -407,6 +407,12 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
           ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textPrimary),
+            onPressed: _openMoreMenu,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 32),

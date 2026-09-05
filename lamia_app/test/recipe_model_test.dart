@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lamia_app/features/recipes/data/recipe_model.dart';
+import 'package:lamia_app/features/recipes/presentation/notifiers/recipe_form_notifier.dart';
 
 void main() {
   group('RecipeModel Budget Serialization Tests', () {
@@ -180,6 +184,182 @@ void main() {
 
       final model = RecipeModel.fromLocalJson(json, coverPhotoUrl: 'http://pancit.jpg');
       expect(model.chefsTips, ['Use calamansi juice to brighten the flavor.']);
+    });
+  });
+
+  group('RecipeFormState copyWith image preservation', () {
+    test('preserves selectedImageFile when updating currentStep or other fields', () {
+      final dummyFile = File('dummy_dish.jpg');
+      final state = RecipeFormState(
+        name: 'Adobo',
+        selectedImageFile: dummyFile,
+        currentStep: 1,
+      );
+
+      // Advance step as done in nextStep()
+      final nextState = state.copyWith(currentStep: 2);
+
+      expect(nextState.selectedImageFile, equals(dummyFile),
+          reason: 'selectedImageFile must not be wiped out when advancing steps');
+      expect(nextState.currentStep, 2);
+    });
+
+    test('preserves coverPhotoUrl when updating fields', () {
+      const url = 'https://example.com/cover.jpg';
+      final state = RecipeFormState(
+        name: 'Sinigang',
+        coverPhotoUrl: url,
+        currentStep: 1,
+      );
+
+      final nextState = state.copyWith(currentStep: 2);
+
+      expect(nextState.coverPhotoUrl, equals(url),
+          reason: 'coverPhotoUrl must not be wiped out when advancing steps');
+    });
+  });
+
+  group('Recipe Moderation and Rejection filtering tests', () {
+    test('RecipeModel parses rejected status correctly', () {
+      final data = {
+        'name': 'isa ka laptop',
+        'category': 'Ulam',
+        'region': 'Philippines',
+        'prepTime': '10 mins',
+        'cookTime': '20 mins',
+        'servings': 4,
+        'difficulty': 'Easy',
+        'ingredients': ['laptop'],
+        'instructions': ['turn on'],
+        'tags': ['gadget'],
+        'coverPhotoUrl': 'https://example.com/laptop.jpg',
+        'source': '',
+        'status': 'rejected',
+        'rejectionReason': 'Content rejected: Title is about a laptop, which is not food.',
+      };
+
+      final model = RecipeModel.fromFirestore(data, docId: 'fake_laptop_id');
+      expect(model.status, 'rejected');
+    });
+
+    test('Recipe filtering strictly omits rejected recipes from published lists', () {
+      final recipes = [
+        RecipeModel(
+          id: '1',
+          name: 'Pork Adobo',
+          category: 'Ulam',
+          region: 'Tagalog',
+          prepTime: '15 mins',
+          cookTime: '30 mins',
+          servings: 4,
+          difficulty: 'Easy',
+          ingredients: ['Pork'],
+          instructions: ['Cook'],
+          tags: ['adobo'],
+          coverPhotoUrl: '',
+          source: '',
+          authorId: 'user_123',
+          isSystemRecipe: false,
+          status: 'approved',
+        ),
+        RecipeModel(
+          id: '2',
+          name: 'isa ka laptop',
+          category: 'Ulam',
+          region: 'Philippines',
+          prepTime: '5 mins',
+          cookTime: '5 mins',
+          servings: 1,
+          difficulty: 'Easy',
+          ingredients: ['battery'],
+          instructions: ['plug in'],
+          tags: ['tech'],
+          coverPhotoUrl: '',
+          source: '',
+          authorId: 'user_123',
+          isSystemRecipe: false,
+          status: 'rejected',
+        ),
+        RecipeModel(
+          id: '3',
+          name: 'Pending Sinigang',
+          category: 'Sabaw',
+          region: 'Tagalog',
+          prepTime: '10 mins',
+          cookTime: '25 mins',
+          servings: 4,
+          difficulty: 'Medium',
+          ingredients: ['Pork', 'Tamarind'],
+          instructions: ['Boil'],
+          tags: ['sour'],
+          coverPhotoUrl: '',
+          source: '',
+          authorId: 'user_123',
+          isSystemRecipe: false,
+          status: 'pending',
+        ),
+      ];
+
+      // Simulated public view (includePending: false)
+      final publicRecipes = recipes.where((r) {
+        if (r.status == 'rejected') return false;
+        return r.status == 'approved' || r.isSystemRecipe;
+      }).toList();
+
+      expect(publicRecipes.map((r) => r.name), ['Pork Adobo']);
+      expect(publicRecipes.any((r) => r.status == 'rejected'), isFalse);
+
+      // Simulated author profile view (includePending: true)
+      final authorProfileRecipes = recipes.where((r) {
+        if (r.status == 'rejected') return false;
+        return r.status == 'approved' || r.status == 'pending' || r.isSystemRecipe;
+      }).toList();
+
+      expect(authorProfileRecipes.map((r) => r.name), ['Pork Adobo', 'Pending Sinigang']);
+      expect(authorProfileRecipes.any((r) => r.status == 'rejected'), isFalse);
+    });
+  });
+
+  group('RecipeFormNotifier Reset & Start Fresh Tests', () {
+    test('initial state has step 1 and default clean fields', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final state = container.read(recipeFormNotifierProvider);
+      expect(state.currentStep, 1);
+      expect(state.name, isEmpty);
+      expect(state.description, isEmpty);
+      expect(state.tags, isEmpty);
+      expect(state.servings, 4);
+    });
+
+    test('resetForm resets dirty fields and returns to initial step 1 state', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(recipeFormNotifierProvider.notifier);
+
+      // Mutate state as if filling out a recipe
+      notifier.updateName('Test Adobo');
+      notifier.updateDescription('Savory pork adobo');
+      notifier.updateTags('adobo, pork');
+      notifier.goToStep(3);
+
+      var modifiedState = container.read(recipeFormNotifierProvider);
+      expect(modifiedState.currentStep, 3);
+      expect(modifiedState.name, 'Test Adobo');
+      expect(modifiedState.description, 'Savory pork adobo');
+      expect(modifiedState.tags, 'adobo, pork');
+
+      // Start fresh / reset form
+      notifier.resetForm();
+
+      final resetState = container.read(recipeFormNotifierProvider);
+      expect(resetState.currentStep, 1);
+      expect(resetState.name, isEmpty);
+      expect(resetState.description, isEmpty);
+      expect(resetState.tags, isEmpty);
+      expect(resetState.servings, 4);
     });
   });
 }

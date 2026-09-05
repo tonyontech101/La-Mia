@@ -7,11 +7,12 @@ import 'user_model.dart';
 ///
 /// Provides methods for fetching, streaming, and updating user profiles.
 class UserRepository {
-  UserRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  UserRepository({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  final FirebaseFirestore? _firestore;
+  final FirebaseFirestore _firestore;
 
-  FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _db => _firestore;
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
       _db.collection('users');

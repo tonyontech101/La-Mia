@@ -10,5 +10,13 @@ import { onRecipeCreate } from "./onRecipeCreate";
 import { onRecipeLikeWrite } from "./onRecipeLikeWrite";
 import { onFavoriteWrite } from "./onFavoriteWrite";
 import { updateTrendingScores } from "./updateTrendingScores";
+import { onNotificationCreate } from "./onNotificationCreate";
 
-export { onRecipeCreate, onRecipeLikeWrite, onFavoriteWrite, updateTrendingScores };
+export {
+  onRecipeCreate,
+  onRecipeLikeWrite,
+  onFavoriteWrite,
+  updateTrendingScores,
+  onNotificationCreate,
+};
+

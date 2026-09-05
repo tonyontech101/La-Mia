@@ -199,6 +199,34 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
     super.dispose();
   }
 
+  void _resetAllFields() {
+    _formNotifier.resetForm();
+    _titleController.clear();
+    _descriptionController.clear();
+    _tagsController.clear();
+
+    for (final item in _ingredientItems) {
+      item.dispose();
+    }
+    _ingredientItems.clear();
+    _ingredientItems.add(_IngredientRowData());
+
+    for (final item in _instructionItems) {
+      item.dispose();
+    }
+    _instructionItems.clear();
+    _instructionItems.add(_InstructionStepData());
+
+    for (final controller in _chefsTipControllers) {
+      controller.dispose();
+    }
+    _chefsTipControllers.clear();
+    _chefsTipControllers.add(TextEditingController());
+
+    _previewActiveTabIndex = 0;
+    setState(() {});
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────────
 
   List<String> get _formattedChefsTips {
@@ -416,18 +444,25 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
       if (!mounted) return;
 
       switch (exitAction) {
+        case VerificationExitAction.approved:
+          _showToast('Recipe approved and published! 🎉');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.pop(context, true);
+          });
+          break;
         case VerificationExitAction.editRecipe:
           // Stay on the recipe editor — fields are still filled in
           break;
         case VerificationExitAction.startFresh:
-          Navigator.pop(context, true);
+          _resetAllFields();
+          _showToast('Form cleared. Ready for a fresh recipe! 🍳');
           break;
-        case VerificationExitAction.approved:
         case VerificationExitAction.backToFeed:
-          Navigator.pop(context, true);
-          break;
         case null:
-          // User pressed system back on a non-processing phase
+          // User exited before approval (timed out or canceled) — do NOT report published
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.pop(context, false);
+          });
           break;
       }
     } catch (e) {
@@ -1509,6 +1544,7 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
         const SizedBox(height: 10),
         FeedRecipeCard(
           recipe: tempRecipe,
+          localImageFile: formState.selectedImageFile,
           onTap: null, // Static preview
         ),
         const SizedBox(height: 24),

@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'notification_router.dart';
 
 class LocalNotificationService {
   LocalNotificationService._internal();
@@ -44,6 +46,8 @@ class LocalNotificationService {
       // Create default channels for Android
       await _createNotificationChannels();
 
+      await checkAppLaunchNotification();
+
       _initialized = true;
     } catch (e) {
       debugPrint('LocalNotificationService initialize error: $e');
@@ -51,17 +55,16 @@ class LocalNotificationService {
   }
 
   static void _onDidReceiveNotificationResponse(NotificationResponse response) {
-    // Handle foreground selection
-    if (response.payload != null) {
-      // Decode payload and navigate
-      debugPrint("Foreground notification clicked: ${response.payload}");
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      NotificationRouter.navigateWithPayload(response.payload!);
     }
   }
 
+  @pragma('vm:entry-point')
   static void _onDidReceiveBackgroundNotificationResponse(NotificationResponse response) {
     // Handle background / killed action selection
     if (response.payload != null) {
-      debugPrint("Background notification clicked: ${response.payload}");
+      debugPrint('Background notification clicked: ${response.payload}');
     }
   }
 
@@ -95,6 +98,15 @@ class LocalNotificationService {
       enableVibration: true,
     );
 
+    const AndroidNotificationChannel systemChannel = AndroidNotificationChannel(
+      'system_updates',
+      'System Updates',
+      description: 'Alerts for recipe likes, comments, and community interactions.',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _localNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -103,6 +115,24 @@ class LocalNotificationService {
       await androidImplementation.createNotificationChannel(mealChannel);
       await androidImplementation.createNotificationChannel(timerChannel);
       await androidImplementation.createNotificationChannel(suggestionsChannel);
+      await androidImplementation.createNotificationChannel(systemChannel);
+    }
+  }
+
+  /// Checks if the app was launched by tapping a local notification.
+  Future<void> checkAppLaunchNotification() async {
+    try {
+      final launchDetails = await _localNotificationsPlugin.getNotificationAppLaunchDetails();
+      if (launchDetails != null &&
+          launchDetails.didNotificationLaunchApp &&
+          launchDetails.notificationResponse?.payload != null &&
+          launchDetails.notificationResponse!.payload!.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          NotificationRouter.navigateWithPayload(launchDetails.notificationResponse!.payload!);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking local notification app launch details: $e');
     }
   }
 
@@ -252,5 +282,35 @@ class LocalNotificationService {
   /// Cancels all scheduled notifications
   Future<void> cancelAllNotifications() async {
     await _localNotificationsPlugin.cancelAll();
+  }
+
+  static const int dailySuggestionNotificationId = 99901;
+
+  Future<void> scheduleDailySuggestion() async {
+    await scheduleDailyRepeatingNotification(
+      id: dailySuggestionNotificationId,
+      title: 'Ano Pong Ulam? 🍲',
+      body: "Time to plan or discover today's delicious Filipino dishes!",
+      time: const TimeOfDay(hour: 11, minute: 0),
+      channelId: 'daily_suggestions',
+      channelName: 'Daily Meal Suggestions',
+      payload: jsonEncode({'targetType': 'planner', 'route': '/planner'}),
+    );
+  }
+
+  Future<void> cancelDailySuggestion() async {
+    await cancelNotification(dailySuggestionNotificationId);
+  }
+
+  Future<void> cancelMealRemindersForWeek(List<String> dateKeys) async {
+    for (final dateKey in dateKeys) {
+      try {
+        final date = DateTime.parse(dateKey);
+        final baseId = date.year * 10000 + date.month * 100 + date.day;
+        for (int slot = 1; slot <= 4; slot++) {
+          await cancelNotification(baseId * 10 + slot);
+        }
+      } catch (_) {}
+    }
   }
 }

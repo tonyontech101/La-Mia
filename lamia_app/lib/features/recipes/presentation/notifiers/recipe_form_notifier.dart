@@ -58,6 +58,8 @@ class RecipeFormNotifier extends _$RecipeFormNotifier {
     return const RecipeFormState();
   }
 
+  void resetForm() => state = const RecipeFormState();
+
   // ── Simple field updates ─────────────────────────────────────────────────
 
   void updateName(String value) => state = state.copyWith(name: value);
@@ -103,14 +105,32 @@ class RecipeFormNotifier extends _$RecipeFormNotifier {
 
   // ── Photo ────────────────────────────────────────────────────────────────
 
-  void setSelectedImageFile(File? file) =>
-      state = state.copyWith(selectedImageFile: file, coverPhotoUrl: null);
+  void setSelectedImageFile(File? file) {
+    if (file == null) {
+      state = state.copyWith(clearSelectedImageFile: true);
+    } else {
+      state = state.copyWith(
+        selectedImageFile: file,
+        clearCoverPhotoUrl: true,
+      );
+    }
+  }
 
-  void setSelectedCoverPhotoUrl(String? url) =>
-      state = state.copyWith(coverPhotoUrl: url, selectedImageFile: null);
+  void setSelectedCoverPhotoUrl(String? url) {
+    if (url == null) {
+      state = state.copyWith(clearCoverPhotoUrl: true);
+    } else {
+      state = state.copyWith(
+        coverPhotoUrl: url,
+        clearSelectedImageFile: true,
+      );
+    }
+  }
 
-  void clearPhoto() =>
-      state = state.copyWith(selectedImageFile: null, coverPhotoUrl: null);
+  void clearPhoto() => state = state.copyWith(
+        clearSelectedImageFile: true,
+        clearCoverPhotoUrl: true,
+      );
 
   // ── Step navigation ──────────────────────────────────────────────────────
 
@@ -181,6 +201,10 @@ class RecipeFormNotifier extends _$RecipeFormNotifier {
       case 1:
         if (state.name.trim().isEmpty) {
           return 'Please enter a recipe title';
+        }
+        if (state.selectedImageFile == null &&
+            (state.coverPhotoUrl == null || state.coverPhotoUrl!.trim().isEmpty)) {
+          return 'Please add a cover photo of your dish';
         }
         return null;
       case 2:
@@ -559,7 +583,9 @@ class RecipeFormState {
     int? cookTimeMin,
     String? tags,
     File? selectedImageFile,
+    bool clearSelectedImageFile = false,
     String? coverPhotoUrl,
+    bool clearCoverPhotoUrl = false,
     int? currentStep,
     List<String>? ingredientStrings,
     List<String>? instructionStrings,
@@ -576,8 +602,12 @@ class RecipeFormState {
       prepTimeMin: prepTimeMin ?? this.prepTimeMin,
       cookTimeMin: cookTimeMin ?? this.cookTimeMin,
       tags: tags ?? this.tags,
-      selectedImageFile: selectedImageFile,
-      coverPhotoUrl: coverPhotoUrl,
+      selectedImageFile: clearSelectedImageFile
+          ? null
+          : (selectedImageFile ?? this.selectedImageFile),
+      coverPhotoUrl: clearCoverPhotoUrl
+          ? null
+          : (coverPhotoUrl ?? this.coverPhotoUrl),
       currentStep: currentStep ?? this.currentStep,
       ingredientStrings: ingredientStrings ?? this.ingredientStrings,
       instructionStrings: instructionStrings ?? this.instructionStrings,
