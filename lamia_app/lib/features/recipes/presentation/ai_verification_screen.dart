@@ -56,6 +56,13 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
   // 'processing' | 'approved' | 'rejected' | 'timeout'
   String _phase = 'processing';
   String _rejectionReason = '';
+  bool _isExiting = false;
+
+  void _exit(VerificationExitAction action) {
+    if (_isExiting || !mounted) return;
+    _isExiting = true;
+    Navigator.pop(context, action);
+  }
 
   // ── Animations ───────────────────────────────────────────────────────────────
   late final AnimationController _pulseController;
@@ -245,7 +252,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
     // Auto-navigate after 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted && _phase == 'approved') {
-        Navigator.pop(context, VerificationExitAction.approved);
+        _exit(VerificationExitAction.approved);
       }
     });
   }
@@ -677,8 +684,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
           _buildPrimaryActionButton(
             label: 'Back to Feed',
             icon: Icons.home_rounded,
-            onTap: () =>
-                Navigator.pop(context, VerificationExitAction.approved),
+            onTap: () => _exit(VerificationExitAction.approved),
           ),
 
           const SizedBox(height: 16),
@@ -851,8 +857,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
           _buildPrimaryActionButton(
             label: 'Edit My Recipe',
             icon: Icons.edit_rounded,
-            onTap: () =>
-                Navigator.pop(context, VerificationExitAction.editRecipe),
+            onTap: () => _exit(VerificationExitAction.editRecipe),
           ),
 
           const SizedBox(height: 12),
@@ -861,8 +866,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
           _buildOutlinedActionButton(
             label: 'Start Fresh',
             icon: Icons.refresh_rounded,
-            onTap: () =>
-                Navigator.pop(context, VerificationExitAction.startFresh),
+            onTap: () => _exit(VerificationExitAction.startFresh),
           ),
         ],
       ),
@@ -1036,7 +1040,7 @@ class _AiVerificationScreenState extends ConsumerState<AiVerificationScreen>
         .catchError((_) {});
 
     if (mounted) {
-      Navigator.pop(context, VerificationExitAction.backToFeed);
+      _exit(VerificationExitAction.backToFeed);
     }
   }
 

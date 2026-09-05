@@ -199,6 +199,34 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
     super.dispose();
   }
 
+  void _resetAllFields() {
+    _formNotifier.resetForm();
+    _titleController.clear();
+    _descriptionController.clear();
+    _tagsController.clear();
+
+    for (final item in _ingredientItems) {
+      item.dispose();
+    }
+    _ingredientItems.clear();
+    _ingredientItems.add(_IngredientRowData());
+
+    for (final item in _instructionItems) {
+      item.dispose();
+    }
+    _instructionItems.clear();
+    _instructionItems.add(_InstructionStepData());
+
+    for (final controller in _chefsTipControllers) {
+      controller.dispose();
+    }
+    _chefsTipControllers.clear();
+    _chefsTipControllers.add(TextEditingController());
+
+    _previewActiveTabIndex = 0;
+    setState(() {});
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────────
 
   List<String> get _formattedChefsTips {
@@ -418,19 +446,23 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
       switch (exitAction) {
         case VerificationExitAction.approved:
           _showToast('Recipe approved and published! 🎉');
-          Navigator.pop(context, true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.pop(context, true);
+          });
           break;
         case VerificationExitAction.editRecipe:
           // Stay on the recipe editor — fields are still filled in
           break;
         case VerificationExitAction.startFresh:
-          _formNotifier.resetForm();
-          Navigator.pop(context, false);
+          _resetAllFields();
+          _showToast('Form cleared. Ready for a fresh recipe! 🍳');
           break;
         case VerificationExitAction.backToFeed:
         case null:
           // User exited before approval (timed out or canceled) — do NOT report published
-          Navigator.pop(context, false);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.pop(context, false);
+          });
           break;
       }
     } catch (e) {

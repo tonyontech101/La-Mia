@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lamia_app/features/recipes/data/recipe_model.dart';
 import 'package:lamia_app/features/recipes/presentation/notifiers/recipe_form_notifier.dart';
@@ -316,6 +317,49 @@ void main() {
 
       expect(authorProfileRecipes.map((r) => r.name), ['Pork Adobo', 'Pending Sinigang']);
       expect(authorProfileRecipes.any((r) => r.status == 'rejected'), isFalse);
+    });
+  });
+
+  group('RecipeFormNotifier Reset & Start Fresh Tests', () {
+    test('initial state has step 1 and default clean fields', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final state = container.read(recipeFormNotifierProvider);
+      expect(state.currentStep, 1);
+      expect(state.name, isEmpty);
+      expect(state.description, isEmpty);
+      expect(state.tags, isEmpty);
+      expect(state.servings, 4);
+    });
+
+    test('resetForm resets dirty fields and returns to initial step 1 state', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(recipeFormNotifierProvider.notifier);
+
+      // Mutate state as if filling out a recipe
+      notifier.updateName('Test Adobo');
+      notifier.updateDescription('Savory pork adobo');
+      notifier.updateTags('adobo, pork');
+      notifier.goToStep(3);
+
+      var modifiedState = container.read(recipeFormNotifierProvider);
+      expect(modifiedState.currentStep, 3);
+      expect(modifiedState.name, 'Test Adobo');
+      expect(modifiedState.description, 'Savory pork adobo');
+      expect(modifiedState.tags, 'adobo, pork');
+
+      // Start fresh / reset form
+      notifier.resetForm();
+
+      final resetState = container.read(recipeFormNotifierProvider);
+      expect(resetState.currentStep, 1);
+      expect(resetState.name, isEmpty);
+      expect(resetState.description, isEmpty);
+      expect(resetState.tags, isEmpty);
+      expect(resetState.servings, 4);
     });
   });
 }
