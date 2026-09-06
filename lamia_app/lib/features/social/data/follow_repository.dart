@@ -1,8 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/current_user_provider.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../auth/data/user_model.dart';
 import '../../notifications/data/notification_model.dart';
 import '../../notifications/data/notification_repository.dart';
+
+/// Real-time stream of user IDs that the current signed-in user is following.
+final currentUserFollowingIdsProvider = StreamProvider<Set<String>>((ref) {
+  final currentUid = ref.watch(currentUserIdProvider);
+  if (currentUid == null) return Stream.value(const <String>{});
+  final followRepo = ref.watch(followRepositoryProvider);
+  return followRepo.followingIdsStream(currentUid);
+});
 
 /// Manages the follow/unfollow relationship between users.
 ///
@@ -123,6 +134,16 @@ class FollowRepository {
         .collection('users')
         .get();
     return snap.docs.map((d) => d.id).toList();
+  }
+
+  /// Emits real-time updates of all target UIDs that [uid] is following.
+  Stream<Set<String>> followingIdsStream(String uid) {
+    return _firestore
+        .collection('following')
+        .doc(uid)
+        .collection('users')
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => d.id).toSet());
   }
 
   /// Returns the [UserModel] list of users that [uid] is following.

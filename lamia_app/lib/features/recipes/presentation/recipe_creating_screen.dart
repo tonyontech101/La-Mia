@@ -1545,6 +1545,7 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
         FeedRecipeCard(
           recipe: tempRecipe,
           localImageFile: formState.selectedImageFile,
+          isOwnRecipe: true,
           onTap: null, // Static preview
         ),
         const SizedBox(height: 24),

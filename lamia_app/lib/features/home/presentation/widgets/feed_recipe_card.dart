@@ -27,6 +27,8 @@ class FeedRecipeCard extends StatelessWidget {
     super.key,
     required this.recipe,
     this.localImageFile,
+    this.isFollowing = false,
+    this.isOwnRecipe = false,
     this.onTap,
     this.onFollowTap,
     this.onLongPress,
@@ -34,6 +36,8 @@ class FeedRecipeCard extends StatelessWidget {
 
   final RecipeModel recipe;
   final File? localImageFile;
+  final bool isFollowing;
+  final bool isOwnRecipe;
   final VoidCallback? onTap;
   final VoidCallback? onFollowTap;
   final VoidCallback? onLongPress;
@@ -281,22 +285,29 @@ class FeedRecipeCard extends StatelessWidget {
           ),
         ],
 
-        if (!recipe.isSystemRecipe) ...[
+        // Follow button in the corner (hidden for system recipes, own recipes, recipes without author, or when no handler provided)
+        if (!recipe.isSystemRecipe && !isOwnRecipe && recipe.authorId != null && recipe.authorId!.isNotEmpty && onFollowTap != null) ...[
           const Spacer(),
 
-          // "+ Follow" button in the corner
           GestureDetector(
             onTap: onFollowTap,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.textPrimary,
+                color: isFollowing
+                    ? AppColors.surfaceAlt
+                    : AppColors.textPrimary,
                 borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: isFollowing
+                    ? Border.all(color: AppColors.border, width: 1.0)
+                    : null,
               ),
               child: Text(
-                '+ Follow',
+                isFollowing ? 'Following' : '+ Follow',
                 style: AppTypography.caption(
-                  color: AppColors.onPrimary,
+                  color: isFollowing
+                      ? AppColors.textPrimary
+                      : AppColors.onPrimary,
                 ).copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 11,
