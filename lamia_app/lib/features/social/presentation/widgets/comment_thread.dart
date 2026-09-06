@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../data/comment_model.dart';
 import '../../data/comment_repository.dart';
 import 'comment_input.dart';
@@ -143,9 +144,16 @@ class _CommentThreadState extends State<CommentThread> {
           _subscribeToReplies();
           setState(() => _expanded = true);
         }
+        AppSnackbar.show(context, message: 'Reply sent!');
       }
-    } catch (_) {
-      // Errors handled by parent via AppSnackbar if needed
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'Failed to post reply: $e',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -161,6 +169,7 @@ class _CommentThreadState extends State<CommentThread> {
           comment: _parent,
           currentUserUid: user?.uid,
           isTopLevel: true,
+          onToggleLike: () => _handleToggleLike(_parent),
           onReply: user != null ? _openReplyComposer : null,
           onDelete: () => _handleDelete(isTopLevel: true),
         ),
@@ -294,7 +303,21 @@ class _CommentThreadState extends State<CommentThread> {
           commentId: targetId,
           isTopLevel: isTopLevel,
         );
-      } catch (_) {}
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            message: isTopLevel ? 'Comment deleted' : 'Reply deleted',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            message: 'Failed to delete: $e',
+            isError: true,
+          );
+        }
+      }
     }
   }
 

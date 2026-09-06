@@ -69,18 +69,42 @@ service cloud.firestore {
           ]);
     }
 
-    /// Helper: a single counter field changed by exactly +1.
+    /// Helper: a single counter field changed by exactly +1 (or initialized to 1 if missing).
     function counterIncremented(field) {
       return request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly([field])
-          && request.resource.data[field] == resource.data[field] + 1;
+          && (
+            (!(field in resource.data) && request.resource.data[field] == 1)
+            || (field in resource.data && request.resource.data[field] == resource.data[field] + 1)
+          );
     }
 
     /// Helper: a single counter field changed by exactly -1.
     function counterDecremented(field) {
       return request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly([field])
+          && (field in resource.data)
           && request.resource.data[field] == resource.data[field] - 1;
+    }
+
+    /// Helper: comment count decremented by 1 or cascade (for top-level + replies).
+    function commentCountDecremented() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['commentCount'])
+          && ('commentCount' in resource.data)
+          && request.resource.data.commentCount < resource.data.commentCount
+          && request.resource.data.commentCount >= 0;
+    }
+
+    /// Helper: recipe rating statistics updated (ratingAvg + ratingCount).
+    function ratingStatsUpdated() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['ratingAvg', 'ratingCount'])
+          && request.resource.data.ratingAvg is number
+          && request.resource.data.ratingAvg >= 0
+          && request.resource.data.ratingAvg <= 5
+          && request.resource.data.ratingCount is int
+          && request.resource.data.ratingCount >= 0;
     }
 
     // ── Recipes ────────────────────────────────────────────────────────────
@@ -146,6 +170,8 @@ service cloud.firestore {
             || counterDecremented('favoriteCount')
             || counterIncremented('commentCount')
             || counterDecremented('commentCount')
+            || commentCountDecremented()
+            || ratingStatsUpdated()
           )
         )
         || isAdmin()
@@ -157,12 +183,19 @@ service cloud.firestore {
 
     // ── Ratings (one per user per recipe) ───────────────────────────────────
 
-    match /recipes/{recipeId}/ratings/{userId} {
+    // Top-level ratings used by RatingRepository: ratings/{recipeId}/users/{userId}
+    match /ratings/{recipeId}/users/{userId} {
       allow read: if isSignedIn();
       allow write: if isUser(userId)
-          && request.resource.data.value is number
-          && request.resource.data.value >= 1
-          && request.resource.data.value <= 5;
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5;
+    }
+
+    // Legacy nested path for backwards compatibility
+    match /recipes/{recipeId}/ratings/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isUser(userId);
     }
 
     // ── Comments ────────────────────────────────────────────────────────────
