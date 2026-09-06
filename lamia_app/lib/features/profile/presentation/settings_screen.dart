@@ -512,7 +512,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Credits & Acknowledgements',
                   style: AppTypography.title(color: AppColors.textPrimary)
@@ -861,6 +871,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ),
                                   child: Column(
                                     children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.asset(
+                                          'assets/images/logo.png',
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
                                       Text(
                                         'La-Mia (Beta Build)',
                                         style: AppTypography.body(

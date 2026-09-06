@@ -107,6 +107,16 @@ class _AppSplash extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 88,
+                  height: 88,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text('La Mia', style: AppTypography.brandWordmark()),
               const SizedBox(height: 6),
               Container(

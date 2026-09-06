@@ -104,20 +104,36 @@ class _Wordmark extends StatelessWidget {
       header: true,
       label: 'La Mia',
       child: ExcludeSemantics(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('La Mia', style: AppTypography.wordmark()),
-            const SizedBox(height: AppSpacing.xxs),
-            // Short amber underline stroke under the wordmark.
-            Container(
-              width: 32,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
               ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('La Mia', style: AppTypography.wordmark()),
+                const SizedBox(height: AppSpacing.xxs),
+                // Short amber underline stroke under the wordmark.
+                Container(
+                  width: 32,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
