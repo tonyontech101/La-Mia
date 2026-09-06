@@ -219,21 +219,24 @@ class FeedRecipeCard extends StatelessWidget {
                 ? AppColors.primary.withValues(alpha: 0.12)
                 : AppColors.surfaceAlt,
           ),
-          child: Center(
+          child: ClipOval(
             child: recipe.isSystemRecipe
-                ? const Icon(
-                    Icons.restaurant_rounded,
-                    size: 14,
-                    color: AppColors.primary,
+                ? Image.asset(
+                    'assets/images/logo.png',
+                    width: 28,
+                    height: 28,
+                    fit: BoxFit.cover,
                   )
-                : Text(
-                    recipe.authorName.isNotEmpty
-                        ? recipe.authorName[0].toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
+                : Center(
+                    child: Text(
+                      recipe.authorName.isNotEmpty
+                          ? recipe.authorName[0].toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
           ),
@@ -278,28 +281,30 @@ class FeedRecipeCard extends StatelessWidget {
           ),
         ],
 
-        const Spacer(),
+        if (!recipe.isSystemRecipe) ...[
+          const Spacer(),
 
-        // "+ Follow" button in the corner
-        GestureDetector(
-          onTap: onFollowTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.textPrimary,
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-            ),
-            child: Text(
-              '+ Follow',
-              style: AppTypography.caption(
-                color: AppColors.onPrimary,
-              ).copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
+          // "+ Follow" button in the corner
+          GestureDetector(
+            onTap: onFollowTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+              child: Text(
+                '+ Follow',
+                style: AppTypography.caption(
+                  color: AppColors.onPrimary,
+                ).copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

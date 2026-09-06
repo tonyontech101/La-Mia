@@ -617,10 +617,11 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                     ),
                                     child: ClipOval(
                                       child: recipe.isSystemRecipe
-                                          ? const Icon(
-                                              Icons.restaurant_rounded,
-                                              size: 20,
-                                              color: AppColors.textPrimary,
+                                          ? Image.asset(
+                                              'assets/images/logo.png',
+                                              width: 38,
+                                              height: 38,
+                                              fit: BoxFit.cover,
                                             )
                                           : recipe.authorPhotoUrl != null
                                               ? CachedNetworkImage(
@@ -685,14 +686,25 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                             ),
                                           ),
                                         ] else if (recipe.isSystemRecipe) ...[
-                                          const SizedBox(height: 1),
-                                          const Text(
-                                            '+ follow',
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textSecondary,
-                                            ),
+                                          const SizedBox(height: 2),
+                                          const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.verified_rounded,
+                                                size: 13,
+                                                color: AppColors.primary,
+                                              ),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'Official Recipe',
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ],
