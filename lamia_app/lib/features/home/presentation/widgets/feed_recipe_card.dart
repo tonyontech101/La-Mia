@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/providers/user_profile_provider.dart';
 import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
 
@@ -22,7 +24,7 @@ import '../../../recipes/data/recipe_model.dart';
 /// │ the description of the dish...       │
 /// └──────────────────────────────────────┘
 /// ```
-class FeedRecipeCard extends StatelessWidget {
+class FeedRecipeCard extends ConsumerWidget {
   const FeedRecipeCard({
     super.key,
     required this.recipe,
@@ -30,6 +32,7 @@ class FeedRecipeCard extends StatelessWidget {
     this.isFollowing = false,
     this.isOwnRecipe = false,
     this.onTap,
+    this.onAuthorTap,
     this.onFollowTap,
     this.onLongPress,
   });
@@ -39,11 +42,19 @@ class FeedRecipeCard extends StatelessWidget {
   final bool isFollowing;
   final bool isOwnRecipe;
   final VoidCallback? onTap;
+  final VoidCallback? onAuthorTap;
   final VoidCallback? onFollowTap;
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.watch(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final effectiveAuthorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : recipe.authorName;
+    final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ?? recipe.authorPhotoUrl;
     return PressableScale(
       pressedScale: 0.985,
       child: GestureDetector(
@@ -82,7 +93,10 @@ class FeedRecipeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Username row with follow + See More
-                    _buildUserRow(),
+                    _buildUserRow(
+                      authorName: effectiveAuthorName,
+                      authorPhotoUrl: effectiveAuthorPhotoUrl,
+                    ),
 
                     const SizedBox(height: 10),
 
@@ -209,57 +223,103 @@ class FeedRecipeCard extends StatelessWidget {
   }
 
   // ── User row (avatar, @username, + follow, See More button) ─────────
+  Widget _buildUserRow({
+    required String authorName,
+    required String? authorPhotoUrl,
+  }) {
+    final authorLink = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (!recipe.isSystemRecipe && onAuthorTap != null) ? onAuthorTap : null,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Author avatar circle
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: recipe.isSystemRecipe
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : AppColors.surfaceAlt,
+            ),
+            child: ClipOval(
+              child: recipe.isSystemRecipe
+                  ? Image.asset(
+                      'assets/images/logo.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                    )
+                  : (authorPhotoUrl != null && authorPhotoUrl.isNotEmpty)
+                      ? CachedNetworkImage(
+                          imageUrl: authorPhotoUrl,
+                          width: 28,
+                          height: 28,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Center(
+                            child: Text(
+                              authorName.isNotEmpty
+                                  ? authorName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, _, _) => Center(
+                            child: Text(
+                              authorName.isNotEmpty
+                                  ? authorName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            authorName.isNotEmpty
+                                ? authorName[0].toUpperCase()
+                                : 'U',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+            ),
+          ),
+          const SizedBox(width: 8),
 
-  Widget _buildUserRow() {
+          // @username
+          Flexible(
+            child: Text(
+              '@${authorName.replaceAll(' ', '').toLowerCase()}',
+              style: AppTypography.caption(
+                color: AppColors.textPrimary,
+              ).copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
     return Row(
       children: [
-        // Author avatar circle
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: recipe.isSystemRecipe
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : AppColors.surfaceAlt,
-          ),
-          child: ClipOval(
-            child: recipe.isSystemRecipe
-                ? Image.asset(
-                    'assets/images/logo.png',
-                    width: 28,
-                    height: 28,
-                    fit: BoxFit.cover,
-                  )
-                : Center(
-                    child: Text(
-                      recipe.authorName.isNotEmpty
-                          ? recipe.authorName[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // @username
         Flexible(
-          child: Text(
-            '@${recipe.authorName.replaceAll(' ', '').toLowerCase()}',
-            style: AppTypography.caption(
-              color: AppColors.textPrimary,
-            ).copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: authorLink,
         ),
 
         // System recipe badge

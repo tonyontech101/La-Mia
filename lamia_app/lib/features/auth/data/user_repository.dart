@@ -32,10 +32,14 @@ class UserRepository {
   /// Returns a real-time stream of a user profile. Emits `null` when the
   /// document does not exist or is deleted.
   Stream<UserModel?> getUserStream(String uid) {
-    return _usersRef.doc(uid).snapshots().map((doc) {
-      if (!doc.exists || doc.data() == null) return null;
-      return UserModel.fromFirestore(doc);
-    });
+    try {
+      return _usersRef.doc(uid).snapshots().map((doc) {
+        if (!doc.exists || doc.data() == null) return null;
+        return UserModel.fromFirestore(doc);
+      });
+    } catch (_) {
+      return Stream.fromFuture(getUser(uid));
+    }
   }
 
   // ── Update ───────────────────────────────────────────────────────────────

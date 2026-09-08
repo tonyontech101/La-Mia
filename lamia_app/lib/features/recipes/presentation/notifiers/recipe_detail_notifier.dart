@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/providers/current_user_provider.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../auth/data/user_model.dart';
 import '../../../recipes/data/recipe_model.dart';
 
 part 'recipe_detail_notifier.g.dart';
@@ -107,14 +108,58 @@ class RecipeDetailNotifier extends _$RecipeDetailNotifier {
 
   /// Loads the current user's social interactions for this recipe.
   Future<void> loadSocialState() async {
+    final authorId = state.recipe.authorId;
+    final isRealUserRecipe = authorId != null && !state.recipe.isSystemRecipe;
+
+    // Fetch live author profile so authorName and authorPhotoUrl stay synchronized with profile edits.
+    UserModel? authorUser;
+    if (isRealUserRecipe) {
+      try {
+        final userRepo = ref.read(userRepositoryProvider);
+        authorUser = await userRepo.getUser(authorId);
+      } catch (_) {}
+    }
+
+    var currentRecipe = state.recipe;
+    if (authorUser != null) {
+      currentRecipe = currentRecipe.copyWith(
+        authorName: authorUser.displayName.isNotEmpty
+            ? authorUser.displayName
+            : currentRecipe.authorName,
+        authorPhotoUrl: authorUser.photoUrl ?? currentRecipe.authorPhotoUrl,
+      );
+
+      // Auto-heal: If the signed-in user is the author and the recipe document has stale author data,
+      // sync the recipe in Firestore in the background.
+      if (_userId == authorId &&
+          (authorUser.displayName != state.recipe.authorName ||
+              (authorUser.photoUrl != null &&
+                  authorUser.photoUrl != state.recipe.authorPhotoUrl))) {
+        try {
+          final recipeRepo = ref.read(recipeRepositoryProvider);
+          recipeRepo.updateAuthorInfo(
+            uid: authorId!,
+            displayName: authorUser.displayName,
+            photoUrl: authorUser.photoUrl,
+          );
+        } catch (_) {}
+      }
+    }
+
     final userId = _userId;
     if (userId == null) {
-      state = state.copyWith(socialLoading: false);
+      state = state.copyWith(
+        recipe: currentRecipe,
+        socialLoading: false,
+      );
       return;
     }
     final recipeId = state.recipe.id;
     if (recipeId == null) {
-      state = state.copyWith(socialLoading: false);
+      state = state.copyWith(
+        recipe: currentRecipe,
+        socialLoading: false,
+      );
       return;
     }
 
@@ -127,10 +172,10 @@ class RecipeDetailNotifier extends _$RecipeDetailNotifier {
       final results = await Future.wait([
         likeRepo.isLiked(recipeId: recipeId, userId: userId),
         favoritesRepo.isSaved(recipeId: recipeId, userId: userId),
-        if (state.recipe.authorId != null && !state.recipe.isSystemRecipe)
+        if (isRealUserRecipe)
           followRepo.isFollowing(
             currentUid: userId,
-            targetUid: state.recipe.authorId!,
+            targetUid: authorId,
           )
         else
           Future.value(false),
@@ -138,6 +183,7 @@ class RecipeDetailNotifier extends _$RecipeDetailNotifier {
       ]);
 
       state = state.copyWith(
+        recipe: currentRecipe,
         isLiked: results[0] as bool,
         isBookmarked: results[1] as bool,
         isFollowing: results[2] as bool,
@@ -145,7 +191,10 @@ class RecipeDetailNotifier extends _$RecipeDetailNotifier {
         socialLoading: false,
       );
     } catch (_) {
-      state = state.copyWith(socialLoading: false);
+      state = state.copyWith(
+        recipe: currentRecipe,
+        socialLoading: false,
+      );
     }
   }
 

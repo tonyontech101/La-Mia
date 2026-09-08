@@ -200,6 +200,18 @@ class EditProfileNotifier extends _$EditProfileNotifier {
         featuredAchievementId: state.selectedAchievementId,
         clearFeaturedAchievement: state.selectedAchievementId == null,
       );
+
+      // Sync author information across all user's recipes
+      try {
+        final recipeRepo = ref.read(recipeRepositoryProvider);
+        await recipeRepo.updateAuthorInfo(
+          uid: uid,
+          displayName: name,
+          photoUrl: photoChanged ? photoUrl : null,
+        );
+      } catch (_) {
+        // Recipe sync non-fatal; user document is already saved.
+      }
     } catch (_) {
       state = state.copyWith(isSaving: false);
       return SaveProfileStatus.error;

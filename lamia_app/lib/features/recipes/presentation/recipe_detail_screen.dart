@@ -9,11 +9,13 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/providers/user_profile_provider.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../social/data/follow_repository.dart';
 import '../../social/presentation/widgets/comment_section.dart';
 import '../data/recipe_model.dart';
 import 'notifiers/recipe_detail_notifier.dart';
@@ -345,6 +347,12 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   Future<void> _shareRecipe() async {
     final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
     final recipe = detailState.recipe;
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.read(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final authorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : (recipe.authorName.isNotEmpty ? recipe.authorName : widget.recipe.authorName);
     final ingredients = recipe.ingredients
         .asMap()
         .entries
@@ -358,7 +366,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
     final text = '''
 🍽️ ${recipe.name}
-By ${recipe.authorName} on La Mia
+By $authorName on La Mia
 
 📝 ${recipe.description.isNotEmpty ? recipe.description : 'A delicious ${recipe.category} recipe.'}
 
@@ -386,6 +394,21 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
   Widget build(BuildContext context) {
     final detailState = ref.watch(recipeDetailNotifierProvider(widget.recipe));
     final recipe = detailState.recipe;
+    final followingIds = ref.watch(currentUserFollowingIdsProvider).value;
+    final isFollowingAuthor = (recipe.authorId != null && followingIds != null)
+        ? followingIds.contains(recipe.authorId)
+        : detailState.isFollowing;
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.watch(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final effectiveAuthorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : (recipe.authorName.isNotEmpty
+            ? recipe.authorName
+            : widget.recipe.authorName);
+    final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ??
+        recipe.authorPhotoUrl ??
+        widget.recipe.authorPhotoUrl;
     final chefsTips = recipe.chefsTips.isNotEmpty
         ? recipe.chefsTips
         : _defaultChefsTips;
@@ -623,14 +646,14 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                               height: 38,
                                               fit: BoxFit.cover,
                                             )
-                                          : recipe.authorPhotoUrl != null
+                                          : effectiveAuthorPhotoUrl != null
                                               ? CachedNetworkImage(
-                                                  imageUrl: recipe.authorPhotoUrl!,
+                                                  imageUrl: effectiveAuthorPhotoUrl,
                                                   fit: BoxFit.cover,
                                                   errorWidget: (_, _, _) => Center(
                                                     child: Text(
-                                                      recipe.authorName.isNotEmpty
-                                                          ? recipe.authorName[0].toUpperCase()
+                                                      effectiveAuthorName.isNotEmpty
+                                                          ? effectiveAuthorName[0].toUpperCase()
                                                           : 'U',
                                                       style: const TextStyle(
                                                         fontWeight: FontWeight.bold,
@@ -641,8 +664,8 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                                 )
                                               : Center(
                                                   child: Text(
-                                                    recipe.authorName.isNotEmpty
-                                                        ? recipe.authorName[0].toUpperCase()
+                                                    effectiveAuthorName.isNotEmpty
+                                                        ? effectiveAuthorName[0].toUpperCase()
                                                         : 'U',
                                                     style: const TextStyle(
                                                       fontWeight: FontWeight.bold,
@@ -660,7 +683,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          recipe.authorName.toLowerCase(),
+                                          effectiveAuthorName.toLowerCase(),
                                           style: const TextStyle(
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w700,
@@ -677,7 +700,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                                 ? null
                                                 : _handleFollowTap,
                                             child: Text(
-                                              detailState.isFollowing ? 'following' : '+ follow',
+                                              isFollowingAuthor ? 'following' : '+ follow',
                                               style: const TextStyle(
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w600,

@@ -12,6 +12,7 @@ import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
+import '../../profile/presentation/profile_screen.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -167,6 +168,28 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => RecipeDetailScreen(recipe: recipe),
+      ),
+    );
+    if (mounted && _activeTab == 0) {
+      _followingLoaded = false;
+      _loadFollowingRecipes();
+    }
+  }
+
+  Future<void> _navigateToAuthorProfile(RecipeModel recipe) async {
+    final authorId = recipe.authorId;
+    if (authorId == null || recipe.isSystemRecipe) return;
+
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user != null && authorId == user.uid && widget.onNavigateToTab != null) {
+      widget.onNavigateToTab!(3);
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(targetUserId: authorId),
       ),
     );
     if (mounted && _activeTab == 0) {
@@ -472,6 +495,7 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                                     isOwnRecipe: user != null &&
                                         recipe.authorId == user.uid,
                                     onTap: () => _onRecipeTap(recipe),
+                                    onAuthorTap: () => _navigateToAuthorProfile(recipe),
                                     onFollowTap: () => _handleFollowTap(recipe),
                                     onLongPress: (user != null &&
                                             recipe.authorId == user.uid &&

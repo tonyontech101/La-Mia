@@ -362,4 +362,41 @@ void main() {
       expect(resetState.servings, 4);
     });
   });
+
+  group('RecipeModel copyWith Tests', () {
+    test('copyWith updates authorName and authorPhotoUrl while keeping other fields intact', () {
+      final model = RecipeModel(
+        id: 'rec-1',
+        name: 'Ramen',
+        description: 'Warm broth',
+        category: 'Sabaw',
+        region: 'Japan',
+        prepTime: '40 mins',
+        cookTime: '45 mins',
+        servings: 2,
+        difficulty: 'Hard',
+        ingredients: ['1 pc egg', '1 pc noodle'],
+        instructions: ['Boil broth', 'Add noodles'],
+        tags: ['Sabaw', 'Hard'],
+        coverPhotoUrl: 'https://example.com/ramen.jpg',
+        source: '',
+        authorId: 'user-jayzer-123',
+        authorName: 'venus relator',
+        authorPhotoUrl: 'https://example.com/old_photo.jpg',
+      );
+
+      final updated = model.copyWith(
+        authorName: 'Jayzer Relator',
+        authorPhotoUrl: 'https://example.com/new_photo.jpg',
+      );
+
+      expect(updated.id, 'rec-1');
+      expect(updated.name, 'Ramen');
+      expect(updated.authorId, 'user-jayzer-123');
+      expect(updated.authorName, 'Jayzer Relator');
+      expect(updated.authorPhotoUrl, 'https://example.com/new_photo.jpg');
+      expect(updated.ingredients, model.ingredients);
+      expect(updated.difficulty, 'Hard');
+    });
+  });
 }

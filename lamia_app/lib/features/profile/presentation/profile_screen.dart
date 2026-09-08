@@ -846,6 +846,10 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         : null;
 
     final tabRecipes = _getTabRecipes();
+    final followingIds = ref.watch(currentUserFollowingIdsProvider).value;
+    final effectiveIsFollowing = (_displayedUid != null && followingIds != null)
+        ? followingIds.contains(_displayedUid)
+        : _isFollowing;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1012,7 +1016,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   '0'),
                           isGuest: widget.isGuest,
                           isOwnProfile: _isOwnProfile,
-                          isFollowing: _isFollowing,
+                          isFollowing: effectiveIsFollowing,
                           onEditProfileTap: _isOwnProfile
                               ? _navigateToEditProfile
                               : null,

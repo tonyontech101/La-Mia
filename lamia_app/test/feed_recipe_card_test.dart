@@ -1,7 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:lamia_app/core/providers/user_profile_provider.dart';
+import 'package:lamia_app/features/auth/data/user_model.dart';
 import 'package:lamia_app/features/home/presentation/widgets/feed_recipe_card.dart';
 import 'package:lamia_app/features/recipes/data/recipe_model.dart';
 
@@ -48,13 +51,16 @@ void main() {
     isSystemRecipe: true,
   );
 
-  Widget buildTestCard(Widget card) {
-    return MaterialApp(
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: SizedBox(
-            width: 360,
-            child: card,
+  Widget buildTestCard(Widget card, {List<Override> overrides = const []}) {
+    return ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SizedBox(
+              width: 360,
+              child: card,
+            ),
           ),
         ),
       ),
@@ -135,5 +141,54 @@ void main() {
 
     await tester.tap(find.text('Following'));
     expect(followTapped, isTrue);
+  });
+
+  testWidgets('FeedRecipeCard renders live author name from userProfileProvider over stale authorName', (tester) async {
+    final liveAuthor = UserModel(
+      uid: 'author-user-42',
+      displayName: 'Jayzer Relator',
+      bio: '',
+      photoUrl: null,
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      buildTestCard(
+        FeedRecipeCard(
+          recipe: userRecipe, // has stale authorName: 'Chef Maria'
+          isFollowing: false,
+          isOwnRecipe: false,
+        ),
+        overrides: [
+          userProfileProvider('author-user-42').overrideWith(
+            (ref) => Stream.value(liveAuthor),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    // Stale name should not be displayed; live name should be displayed
+    expect(find.text('@jayzerrelator'), findsOneWidget);
+    expect(find.text('@chefmaria'), findsNothing);
+  });
+
+  testWidgets('FeedRecipeCard invokes onAuthorTap when tapping author username/avatar', (tester) async {
+    var authorTapped = false;
+
+    await tester.pumpWidget(
+      buildTestCard(
+        FeedRecipeCard(
+          recipe: userRecipe,
+          isFollowing: false,
+          isOwnRecipe: false,
+          onAuthorTap: () => authorTapped = true,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('@chefmaria'));
+    expect(authorTapped, isTrue);
   });
 }
