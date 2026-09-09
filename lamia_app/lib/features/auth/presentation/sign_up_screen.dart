@@ -20,6 +20,7 @@ import '../../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
 import 'email_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
+import '../../legal/presentation/legal_document_screen.dart';
 import 'widgets/auth_scaffold.dart';
 import 'widgets/password_strength_meter.dart';
 
@@ -252,7 +253,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   }
 
   void _openLegal(String which) {
-    AppSnackbar.show(context, message: '$which coming soon.');
+    Navigator.of(context).push(
+      fadePageRoute(
+        which == 'Privacy Policy'
+            ? LegalDocumentScreen.privacyPolicy()
+            : LegalDocumentScreen.termsOfService(),
+      ),
+    );
   }
 
   void _goToLogin() {
