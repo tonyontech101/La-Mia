@@ -135,9 +135,15 @@ class EditProfileNotifier extends _$EditProfileNotifier {
 
   // ── Badge selection ──────────────────────────────────────────────────────
 
-  /// Selects (or deselects) a showcase badge.
+  /// Selects (or deselects) a showcase badge. Tapping the currently selected badge unequips it.
   void selectAchievement(String? id) {
-    if (id == state.selectedAchievementId) return;
+    if (id != null && id == state.selectedAchievementId) {
+      state = state.copyWith(
+        selectedAchievementId: null,
+        clearSelectedAchievement: true,
+      );
+      return;
+    }
     state = state.copyWith(
       selectedAchievementId: id,
       clearSelectedAchievement: id == null,

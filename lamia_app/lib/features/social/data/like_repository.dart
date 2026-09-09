@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../notifications/data/notification_model.dart';
@@ -99,18 +100,36 @@ class LikeRepository {
     await batch.commit();
 
     if (!isCurrentlyLiked &&
-        authorRef != null &&
-        recipeAuthorId != userId) {
-      final name = senderName?.isNotEmpty == true ? senderName! : 'A foodie';
+        targetAuthorId != null &&
+        targetAuthorId.isNotEmpty &&
+        targetAuthorId != 'null' &&
+        targetAuthorId != userId) {
+      String? effectiveSenderName = senderName;
+      String? effectiveSenderPhotoUrl = senderPhotoUrl;
+      if (effectiveSenderName == null || effectiveSenderName.isEmpty || effectiveSenderPhotoUrl == null) {
+        try {
+          final authUser = FirebaseAuth.instance.currentUser;
+          if (authUser != null && authUser.uid == userId) {
+            if (effectiveSenderName == null || effectiveSenderName.isEmpty) {
+              effectiveSenderName = authUser.displayName;
+            }
+            effectiveSenderPhotoUrl ??= authUser.photoURL;
+          }
+        } catch (_) {}
+      }
+      final name = effectiveSenderName?.isNotEmpty == true
+          ? effectiveSenderName!
+          : 'A foodie';
+
       _notifRepo
           .sendNotification(
-            recipientId: recipeAuthorId!,
+            recipientId: targetAuthorId,
             type: NotificationType.recipeLike,
             title: 'New Recipe Like',
             body: '$name liked "${recipeTitle ?? 'your recipe'}".',
             senderId: userId,
             senderName: name,
-            senderPhotoUrl: senderPhotoUrl,
+            senderPhotoUrl: effectiveSenderPhotoUrl,
             targetId: recipeId,
             targetType: TargetType.recipe,
           )

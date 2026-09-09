@@ -87,6 +87,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         return const Center(child: CircularProgressIndicator());
                       }
 
+                      if (snapshot.hasError) {
+                        return _buildErrorState(snapshot.error);
+                      }
+
                       final notifications = snapshot.data ?? [];
                       if (notifications.isEmpty) {
                         return _buildEmptyState();
@@ -157,6 +161,42 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         side: BorderSide(
           color: isSelected ? AppColors.primary : AppColors.border,
           width: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 64,
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Could not load notifications',
+              style: AppTypography.title(color: AppColors.textPrimary).copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Something went wrong while fetching your notifications. Please check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textSecondary).copyWith(fontSize: 13),
+            ),
+          ],
         ),
       ),
     );

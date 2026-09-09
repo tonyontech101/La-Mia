@@ -11,27 +11,45 @@ class NotificationRepository {
   CollectionReference<Map<String, dynamic>> _userNotifications(String userId) =>
       _firestore.collection('users').doc(userId).collection('notifications');
 
+  static final Map<String, DateTime> _recentDispatches = {};
+
   /// Streams notifications for a user, ordered by newest first, optionally filtered by category.
   Stream<List<NotificationModel>> watchNotifications(String userId, {String? filter}) {
-    Query<Map<String, dynamic>> query = _userNotifications(userId).orderBy('createdAt', descending: true);
+    // Query by createdAt descending (automatically indexed single field in Firestore).
+    // Filtering by category is performed in-memory to prevent missing composite index errors.
+    return _userNotifications(userId)
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((snap) {
+          final notifications =
+              snap.docs.map((doc) => NotificationModel.fromFirestore(doc)).toList();
 
-    if (filter != null && filter != 'all') {
-      List<String> types = [];
-      if (filter == 'social') {
-        types = ['recipe_like', 'recipe_comment', 'comment_like', 'comment_reply', 'new_follower', 'following_new_recipe'];
-      } else if (filter == 'planner') {
-        types = ['meal_reminder', 'daily_suggestion'];
-      } else if (filter == 'system') {
-        types = ['recipe_approved', 'achievement', 'system'];
-      }
+          if (filter == null || filter == 'all') {
+            return notifications;
+          }
 
-      if (types.isNotEmpty) {
-        query = query.where('type', whereIn: types);
-      }
-    }
-
-    return query.snapshots().map((snap) =>
-        snap.docs.map((doc) => NotificationModel.fromFirestore(doc)).toList());
+          return notifications.where((n) {
+            switch (filter) {
+              case 'social':
+                return n.type == NotificationType.recipeLike ||
+                    n.type == NotificationType.recipeComment ||
+                    n.type == NotificationType.commentLike ||
+                    n.type == NotificationType.commentReply ||
+                    n.type == NotificationType.newFollower ||
+                    n.type == NotificationType.followingNewRecipe;
+              case 'planner':
+                return n.type == NotificationType.mealReminder ||
+                    n.type == NotificationType.dailySuggestion;
+              case 'system':
+                return n.type == NotificationType.recipeApproved ||
+                    n.type == NotificationType.achievement ||
+                    n.type == NotificationType.system;
+              default:
+                return true;
+            }
+          }).toList();
+        });
   }
 
   /// Streams real-time count of unread notifications.
@@ -60,24 +78,24 @@ class NotificationRepository {
     // Avoid self-notifications
     if (senderId == recipientId) return;
 
-    // Check for debouncing duplicate social notifications within the last 5 minutes
+    // In-memory debouncing for duplicate social notifications (prevents cross-user read security rule errors)
     if ((type == NotificationType.recipeLike ||
             type == NotificationType.commentLike ||
             type == NotificationType.commentReply) &&
         targetId != null &&
         senderId != null) {
-      final fiveMinAgo = DateTime.now().subtract(const Duration(minutes: 5));
-      final recent = await _userNotifications(recipientId)
-          .where('type', isEqualTo: type.value)
-          .where('targetId', isEqualTo: targetId)
-          .where('senderId', isEqualTo: senderId)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(fiveMinAgo))
-          .limit(1)
-          .get();
-
-      if (recent.docs.isNotEmpty) {
-        // Notification already generated recently, skip to prevent spam
+      final key = '${recipientId}_${type.value}_${targetId}_$senderId';
+      final lastSent = _recentDispatches[key];
+      final now = DateTime.now();
+      if (lastSent != null && now.difference(lastSent) < const Duration(minutes: 2)) {
+        // Debounce duplicate interaction from this client within 2 minutes
         return;
+      }
+      _recentDispatches[key] = now;
+      if (_recentDispatches.length > 200) {
+        _recentDispatches.removeWhere(
+          (_, time) => now.difference(time) > const Duration(minutes: 10),
+        );
       }
     }
 

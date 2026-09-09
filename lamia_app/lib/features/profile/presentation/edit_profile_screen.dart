@@ -516,7 +516,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                                         milliseconds: 240,
                                       ),
                                       child: _buildCard(
-                                        child: _ShowcaseBadgeSection(
+                                        child: ShowcaseBadgeSection(
                                           achievements:
                                               _userAchievements,
                                           selectedId:
@@ -933,8 +933,9 @@ class _ImageSourceButton extends StatelessWidget {
 // Showcase Badge Section (interactive achievement list & equip manager)
 // ---------------------------------------------------------------------------
 
-class _ShowcaseBadgeSection extends StatefulWidget {
-  const _ShowcaseBadgeSection({
+class ShowcaseBadgeSection extends StatelessWidget {
+  const ShowcaseBadgeSection({
+    super.key,
     required this.achievements,
     required this.selectedId,
     required this.onSelected,
@@ -947,32 +948,19 @@ class _ShowcaseBadgeSection extends StatefulWidget {
   final UserModel? currentUserModel;
 
   @override
-  State<_ShowcaseBadgeSection> createState() => _ShowcaseBadgeSectionState();
-}
-
-class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
-  int _filterIndex = 0; // 0: All, 1: Unlocked, 2: Locked
-
-  @override
   Widget build(BuildContext context) {
-    final unlocked = widget.achievements.where((a) => a.isUnlocked).toList();
-    final locked = widget.achievements.where((a) => !a.isUnlocked).toList();
+    // Only show acquired (unlocked) badges in edit profile
+    final unlocked = achievements.where((a) => a.isUnlocked).toList();
 
     AchievementItem? currentlyEquipped;
-    if (widget.selectedId != null) {
-      for (final a in widget.achievements) {
-        if (a.id == widget.selectedId) {
+    if (selectedId != null) {
+      for (final a in achievements) {
+        if (a.id == selectedId) {
           currentlyEquipped = a;
           break;
         }
       }
     }
-
-    final filteredList = switch (_filterIndex) {
-      1 => unlocked,
-      2 => locked,
-      _ => widget.achievements,
-    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -997,7 +985,7 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Pin one badge to shine on your profile header.',
+                    'Pin one acquired badge to shine on your profile header.',
                     style: AppTypography.caption(color: AppColors.textSecondary),
                   ),
                 ],
@@ -1009,7 +997,7 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => AchievementsScreen(
-                      user: widget.currentUserModel,
+                      user: currentUserModel,
                       isChefOfMonth: false,
                     ),
                   ),
@@ -1048,50 +1036,18 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
 
         const SizedBox(height: AppSpacing.md),
 
-        // 3. Filter Segmented Pills
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterChip(
-                index: 0,
-                label: 'All (${widget.achievements.length})',
-                icon: Icons.grid_view_rounded,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              _buildFilterChip(
-                index: 1,
-                label: 'Unlocked (${unlocked.length})',
-                icon: Icons.lock_open_rounded,
-                activeColor: AppColors.primary,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              _buildFilterChip(
-                index: 2,
-                label: 'Locked (${locked.length})',
-                icon: Icons.lock_outline_rounded,
-              ),
-            ],
-          ),
-        ),
+        // 3. Default "Kitchen Level" Option
+        _buildDefaultOptionCard(),
 
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
 
-        // 4. Default "Kitchen Level" Option (Visible in All or Unlocked view)
-        if (_filterIndex != 2) ...[
-          _buildDefaultOptionCard(),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-
-        // 5. Achievement Cards List
-        if (filteredList.isEmpty)
+        // 4. Acquired Badges List
+        if (unlocked.isEmpty)
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
             alignment: Alignment.center,
             child: Text(
-              _filterIndex == 1
-                  ? 'No achievements unlocked yet.\nCook and share recipes to unlock badges!'
-                  : 'All achievements are unlocked!',
+              'No badges acquired yet.\nComplete achievements to unlock badges you can showcase!',
               style: AppTypography.caption(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -1100,11 +1056,11 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: filteredList.length,
+            itemCount: unlocked.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xs),
             itemBuilder: (context, index) {
-              final item = filteredList[index];
-              final isEquipped = item.id == widget.selectedId;
+              final item = unlocked[index];
+              final isEquipped = item.id == selectedId;
               return _buildAchievementCard(item, isEquipped: isEquipped);
             },
           ),
@@ -1257,7 +1213,7 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
             ),
           ),
           TextButton(
-            onPressed: () => widget.onSelected(null),
+            onPressed: () => onSelected(null),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.error,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1275,58 +1231,12 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
     );
   }
 
-  Widget _buildFilterChip({
-    required int index,
-    required String label,
-    required IconData icon,
-    Color? activeColor,
-  }) {
-    final isSelected = _filterIndex == index;
-    final color = activeColor ?? AppColors.secondary;
-
-    return PressableScale(
-      pressedScale: 0.96,
-      onTap: () => setState(() => _filterIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? color : AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(
-            color: isSelected ? color : AppColors.border,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 13,
-              color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 4.5),
-            Text(
-              label,
-              style: AppTypography.caption(
-                color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
-              ).copyWith(
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 11.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildDefaultOptionCard() {
-    final isEquipped = widget.selectedId == null;
+    final isEquipped = selectedId == null;
 
     return PressableScale(
       pressedScale: 0.98,
-      onTap: () => widget.onSelected(null),
+      onTap: () => onSelected(null),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
@@ -1395,7 +1305,7 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
               )
             else
               OutlinedButton(
-                onPressed: () => widget.onSelected(null),
+                onPressed: () => onSelected(null),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary),
@@ -1422,149 +1332,20 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
     AchievementItem item, {
     required bool isEquipped,
   }) {
-    if (item.isUnlocked) {
-      return PressableScale(
-        pressedScale: 0.98,
-        onTap: () => widget.onSelected(item.id),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isEquipped
-                ? item.badgeColor.withValues(alpha: 0.07)
-                : AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.card),
-            border: Border.all(
-              color: isEquipped ? item.badgeColor : AppColors.border,
-              width: isEquipped ? 1.8 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: item.badgeColor.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(item.icon, color: item.badgeColor, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            item.title,
-                            style: AppTypography.bodyStrong(
-                              color: AppColors.textPrimary,
-                            ).copyWith(fontSize: 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: item.badgeColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                          ),
-                          child: Text(
-                            '+${item.xpReward} XP',
-                            style: AppTypography.caption(color: item.badgeColor)
-                                .copyWith(fontSize: 9.5, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.description,
-                      style: AppTypography.caption(color: AppColors.textSecondary)
-                          .copyWith(fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (isEquipped)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                  decoration: BoxDecoration(
-                    color: item.badgeColor,
-                    borderRadius: BorderRadius.circular(AppRadii.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_rounded,
-                        size: 12,
-                        color: item.badgeColor.computeLuminance() > 0.5
-                            ? AppColors.textPrimary
-                            : AppColors.onPrimary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Equipped',
-                        style: AppTypography.caption(
-                          color: item.badgeColor.computeLuminance() > 0.5
-                              ? AppColors.textPrimary
-                              : AppColors.onPrimary,
-                        ).copyWith(fontSize: 11, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                OutlinedButton(
-                  onPressed: () => widget.onSelected(item.id),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: item.badgeColor,
-                    side: BorderSide(color: item.badgeColor),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                    ),
-                  ),
-                  child: Text(
-                    'Equip',
-                    style: AppTypography.caption(color: item.badgeColor)
-                        .copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Locked Achievement
     return PressableScale(
       pressedScale: 0.98,
-      onTap: () {
-        AppSnackbar.show(
-          context,
-          message: '${item.title} (Locked): ${item.description} (${item.currentProgress}/${item.maxProgress})',
-        );
-      },
+      onTap: () => onSelected(isEquipped ? null : item.id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt.withValues(alpha: 0.6),
+          color: isEquipped
+              ? item.badgeColor.withValues(alpha: 0.07)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadii.card),
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+          border: Border.all(
+            color: isEquipped ? item.badgeColor : AppColors.border,
+            width: isEquipped ? 1.8 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -1572,14 +1353,10 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.border.withValues(alpha: 0.5),
+                color: item.badgeColor.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.lock_outline_rounded,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
+              child: Icon(item.icon, color: item.badgeColor, size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -1592,7 +1369,7 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
                         child: Text(
                           item.title,
                           style: AppTypography.bodyStrong(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textPrimary,
                           ).copyWith(fontSize: 13),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1605,14 +1382,13 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
                           vertical: 1.5,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.border.withValues(alpha: 0.6),
+                          color: item.badgeColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                         ),
                         child: Text(
-                          'Locked',
-                          style: AppTypography.caption(
-                            color: AppColors.textSecondary,
-                          ).copyWith(fontSize: 9.5, fontWeight: FontWeight.w600),
+                          '+${item.xpReward} XP',
+                          style: AppTypography.caption(color: item.badgeColor)
+                              .copyWith(fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -1620,40 +1396,87 @@ class _ShowcaseBadgeSectionState extends State<_ShowcaseBadgeSection> {
                   const SizedBox(height: 2),
                   Text(
                     item.description,
-                    style: AppTypography.caption(
-                      color: AppColors.textSecondary.withValues(alpha: 0.8),
-                    ).copyWith(fontSize: 11),
+                    style: AppTypography.caption(color: AppColors.textSecondary)
+                        .copyWith(fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(3),
-                          child: LinearProgressIndicator(
-                            value: item.progressPercentage,
-                            minHeight: 4,
-                            backgroundColor: AppColors.border,
-                            valueColor: AlwaysStoppedAnimation(
-                              item.badgeColor.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${item.currentProgress}/${item.maxProgress}',
-                        style: AppTypography.caption(
-                          color: AppColors.textSecondary,
-                        ).copyWith(fontSize: 10, fontWeight: FontWeight.w600),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            if (isEquipped)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: item.badgeColor,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_rounded,
+                          size: 12,
+                          color: item.badgeColor.computeLuminance() > 0.5
+                              ? AppColors.textPrimary
+                              : AppColors.onPrimary,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Equipped',
+                          style: AppTypography.caption(
+                            color: item.badgeColor.computeLuminance() > 0.5
+                                ? AppColors.textPrimary
+                                : AppColors.onPrimary,
+                          ).copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  OutlinedButton(
+                    onPressed: () => onSelected(null),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                    child: Text(
+                      'Unequip',
+                      style: AppTypography.caption(color: AppColors.error)
+                          .copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              )
+            else
+              OutlinedButton(
+                onPressed: () => onSelected(item.id),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: item.badgeColor,
+                  side: BorderSide(color: item.badgeColor),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                ),
+                child: Text(
+                  'Equip',
+                  style: AppTypography.caption(color: item.badgeColor)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
           ],
         ),
       ),

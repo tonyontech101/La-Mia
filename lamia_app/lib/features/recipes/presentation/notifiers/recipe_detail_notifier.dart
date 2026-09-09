@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/providers/auth_service_provider.dart';
 import '../../../../core/providers/current_user_provider.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../../core/utils/app_logger.dart';
@@ -214,12 +215,21 @@ class RecipeDetailNotifier extends _$RecipeDetailNotifier {
 
     try {
       final likeRepo = ref.read(likeRepositoryProvider);
+      final authUser = ref.read(authServiceProvider).currentUser;
+      final userProfile = ref.read(currentUserProfileProvider).valueOrNull;
+      final senderName = (userProfile != null && userProfile.displayName.isNotEmpty)
+          ? userProfile.displayName
+          : authUser?.displayName;
+      final senderPhotoUrl = (userProfile?.photoUrl?.isNotEmpty ?? false)
+          ? userProfile!.photoUrl
+          : authUser?.photoURL;
+
       final newState = await likeRepo.toggleLike(
         recipeId: recipeId,
         userId: userId,
         recipeAuthorId: state.recipe.authorId,
-        senderName: null, // populated by Firebase auth in repo if needed
-        senderPhotoUrl: null,
+        senderName: senderName,
+        senderPhotoUrl: senderPhotoUrl,
         recipeTitle: state.recipe.name,
       );
       state = state.copyWith(
