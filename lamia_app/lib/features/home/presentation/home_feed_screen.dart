@@ -12,6 +12,7 @@ import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../auth/data/user_model.dart';
 import '../../auth/data/user_repository.dart';
+import '../../profile/presentation/profile_screen.dart';
 import '../../recipes/data/recipe_model.dart';
 import '../../recipes/data/recipe_repository.dart';
 import '../../recipes/presentation/recipe_detail_screen.dart';
@@ -110,13 +111,23 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
     if (_followingLoaded) return;
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
-      setState(() => _followingLoaded = true);
+      if (mounted) {
+        setState(() {
+          _followingRecipes = [];
+          _followingLoaded = true;
+        });
+      }
       return;
     }
     try {
       final ids = await _followRepo.getFollowingIds(user.uid);
       if (ids.isEmpty) {
-        if (mounted) setState(() => _followingLoaded = true);
+        if (mounted) {
+          setState(() {
+            _followingRecipes = [];
+            _followingLoaded = true;
+          });
+        }
         return;
       }
       final recipes = await _recipeRepository.recipesFromFollowing(ids);
@@ -144,19 +155,92 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   }
 
   void _onTabChanged(int tab) {
+    final tabChanged = _activeTab != tab;
     setState(() => _activeTab = tab);
-    if (tab == 0 && !_followingLoaded) {
+    if (tab == 0 && (tabChanged || !_followingLoaded)) {
+      _followingLoaded = false;
       _loadFollowingRecipes();
     }
   }
 
-  void _onRecipeTap(RecipeModel recipe) {
-    Navigator.push(
+  Future<void> _onRecipeTap(RecipeModel recipe) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => RecipeDetailScreen(recipe: recipe),
       ),
     );
+    if (mounted && _activeTab == 0) {
+      _followingLoaded = false;
+      _loadFollowingRecipes();
+    }
+  }
+
+  Future<void> _navigateToAuthorProfile(RecipeModel recipe) async {
+    final authorId = recipe.authorId;
+    if (authorId == null || recipe.isSystemRecipe) return;
+
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user != null && authorId == user.uid && widget.onNavigateToTab != null) {
+      widget.onNavigateToTab!(3);
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(targetUserId: authorId),
+      ),
+    );
+    if (mounted && _activeTab == 0) {
+      _followingLoaded = false;
+      _loadFollowingRecipes();
+    }
+  }
+
+  Future<void> _handleFollowTap(RecipeModel recipe) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null || widget.isGuest) {
+      AppSnackbar.show(
+        context,
+        message: 'Sign in to follow creators.',
+        isError: true,
+      );
+      return;
+    }
+    final authorId = recipe.authorId;
+    if (authorId == null || authorId == user.uid || recipe.isSystemRecipe) return;
+
+    try {
+      final isNowFollowing = await _followRepo.toggleFollow(
+        currentUid: user.uid,
+        targetUid: authorId,
+        currentUserName: _currentUserModel?.displayName ?? user.displayName,
+        currentUserPhotoUrl: _currentUserModel?.photoUrl ?? user.photoURL,
+      );
+
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: isNowFollowing
+              ? 'Following ${recipe.authorName}'
+              : 'Unfollowed ${recipe.authorName}',
+        );
+        if (!isNowFollowing && _activeTab == 0) {
+          setState(() {
+            _followingRecipes.removeWhere((r) => r.authorId == authorId);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'Could not update follow status: $e',
+          isError: true,
+        );
+      }
+    }
   }
 
   void _showPostOptionsSheet(RecipeModel recipe) {
@@ -305,6 +389,9 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.read(authServiceProvider).currentUser;
+    final followingIds =
+        ref.watch(currentUserFollowingIdsProvider).valueOrNull ??
+        const <String>{};
     final displayName = widget.isGuest
         ? 'Guest'
         : (_currentUserModel?.displayName ??
@@ -403,7 +490,13 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                                   offset: const Offset(0, 20),
                                   child: FeedRecipeCard(
                                     recipe: recipe,
+                                    isFollowing: recipe.authorId != null &&
+                                        followingIds.contains(recipe.authorId),
+                                    isOwnRecipe: user != null &&
+                                        recipe.authorId == user.uid,
                                     onTap: () => _onRecipeTap(recipe),
+                                    onAuthorTap: () => _navigateToAuthorProfile(recipe),
+                                    onFollowTap: () => _handleFollowTap(recipe),
                                     onLongPress: (user != null &&
                                             recipe.authorId == user.uid &&
                                             !widget.isGuest)

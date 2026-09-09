@@ -35,6 +35,7 @@ class ProfileHeaderWidget extends StatelessWidget {
     this.isGuest = false,
     this.isOwnProfile = true,
     this.isFollowing = false,
+    this.followsYou = false,
     this.onEditProfileTap,
     this.onFollowTap,
     this.onRecipesTap,
@@ -58,6 +59,7 @@ class ProfileHeaderWidget extends StatelessWidget {
   final bool isGuest;
   final bool isOwnProfile;
   final bool isFollowing;
+  final bool followsYou;
   final VoidCallback? onEditProfileTap;
   final VoidCallback? onFollowTap;
   final VoidCallback? onRecipesTap;
@@ -357,7 +359,9 @@ class ProfileHeaderWidget extends StatelessWidget {
                   : BorderSide.none,
             ),
             child: Text(
-              isFollowing ? 'Following' : '+ Follow Chef',
+              isFollowing
+                  ? 'Following'
+                  : (followsYou ? 'Follow Back' : '+ Follow Chef'),
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,

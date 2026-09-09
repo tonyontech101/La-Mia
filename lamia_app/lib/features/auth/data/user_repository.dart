@@ -7,11 +7,12 @@ import 'user_model.dart';
 ///
 /// Provides methods for fetching, streaming, and updating user profiles.
 class UserRepository {
-  UserRepository({FirebaseFirestore? firestore}) : _firestore = firestore;
+  UserRepository({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  final FirebaseFirestore? _firestore;
+  final FirebaseFirestore _firestore;
 
-  FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _db => _firestore;
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
       _db.collection('users');
@@ -31,10 +32,14 @@ class UserRepository {
   /// Returns a real-time stream of a user profile. Emits `null` when the
   /// document does not exist or is deleted.
   Stream<UserModel?> getUserStream(String uid) {
-    return _usersRef.doc(uid).snapshots().map((doc) {
-      if (!doc.exists || doc.data() == null) return null;
-      return UserModel.fromFirestore(doc);
-    });
+    try {
+      return _usersRef.doc(uid).snapshots().map((doc) {
+        if (!doc.exists || doc.data() == null) return null;
+        return UserModel.fromFirestore(doc);
+      });
+    } catch (_) {
+      return Stream.fromFuture(getUser(uid));
+    }
   }
 
   // ── Update ───────────────────────────────────────────────────────────────

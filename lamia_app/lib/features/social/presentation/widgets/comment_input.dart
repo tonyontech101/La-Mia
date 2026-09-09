@@ -158,41 +158,46 @@ class _CommentInputState extends State<CommentInput> {
         const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: Alignment.centerRight,
-          child: ElevatedButton.icon(
-            onPressed:
-                widget.isSubmitting || _effectiveController.text.trim().isEmpty
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _effectiveController,
+            builder: (context, value, _) {
+              final isBlank = value.text.trim().isEmpty;
+              return ElevatedButton.icon(
+                onPressed: widget.isSubmitting || isBlank
                     ? null
                     : () => widget.onSubmit?.call(_effectiveController.text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              disabledBackgroundColor: AppColors.primaryDisabled,
-              foregroundColor: AppColors.onPrimary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadii.button),
-              ),
-            ),
-            icon: widget.isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.onPrimary,
-                      ),
-                    ),
-                  )
-                : const Icon(Icons.send_rounded, size: 16),
-            label: Text(
-              widget.isSubmitting ? 'Posting...' : 'Post Comment',
-              style: AppTypography.button(color: AppColors.onPrimary)
-                  .copyWith(fontSize: 13),
-            ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: AppColors.primaryDisabled,
+                  foregroundColor: AppColors.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.button),
+                  ),
+                ),
+                icon: widget.isSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.onPrimary,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded, size: 16),
+                label: Text(
+                  widget.isSubmitting ? 'Posting...' : 'Post Comment',
+                  style: AppTypography.button(color: AppColors.onPrimary)
+                      .copyWith(fontSize: 13),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -263,41 +268,46 @@ class _CommentInputState extends State<CommentInput> {
             const SizedBox(height: AppSpacing.xs),
             Align(
               alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: widget.isSubmitting ||
-                        _effectiveController.text.trim().isEmpty
-                    ? null
-                    : () => widget.onSubmit?.call(_effectiveController.text),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  disabledBackgroundColor: AppColors.primaryDisabled,
-                  foregroundColor: AppColors.onPrimary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs,
-                  ),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadii.button),
-                  ),
-                ),
-                icon: widget.isSubmitting
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.onPrimary,
-                          ),
-                        ),
-                      )
-                    : const Icon(Icons.reply_rounded, size: 14),
-                label: Text(
-                  widget.isSubmitting ? 'Replying...' : 'Reply',
-                  style: AppTypography.button(color: AppColors.onPrimary)
-                      .copyWith(fontSize: 12),
-                ),
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _effectiveController,
+                builder: (context, value, _) {
+                  final isBlank = value.text.trim().isEmpty;
+                  return ElevatedButton.icon(
+                    onPressed: widget.isSubmitting || isBlank
+                        ? null
+                        : () => widget.onSubmit?.call(_effectiveController.text),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.primaryDisabled,
+                      foregroundColor: AppColors.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.button),
+                      ),
+                    ),
+                    icon: widget.isSubmitting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.onPrimary,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.reply_rounded, size: 14),
+                    label: Text(
+                      widget.isSubmitting ? 'Replying...' : 'Reply',
+                      style: AppTypography.button(color: AppColors.onPrimary)
+                          .copyWith(fontSize: 12),
+                    ),
+                  );
+                },
               ),
             ),
           ],

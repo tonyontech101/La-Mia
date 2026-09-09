@@ -4,10 +4,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../data/notification_repository.dart';
 import 'local_notification_service.dart';
+import 'notification_router.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint("Handling background messaging: ${message.messageId}");
+  debugPrint('Handling background messaging: ${message.messageId}');
 }
 
 class FCMService {
@@ -61,9 +62,33 @@ class FCMService {
         }
       });
 
+      // Listen to background notification taps (app in background)
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        if (message.data.isNotEmpty) {
+          NotificationRouter.navigateWithPayload(jsonEncode(message.data));
+        }
+      });
+
+      // Check cold-start notification (app terminated)
+      _checkInitialMessage();
+
       _initialized = true;
     } catch (e) {
       debugPrint('FCMService initialize error: $e');
+    }
+  }
+
+  /// Checks if the app was launched by tapping a notification from a terminated state.
+  Future<void> _checkInitialMessage() async {
+    try {
+      final initialMessage = await _fcm.getInitialMessage();
+      if (initialMessage != null && initialMessage.data.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          NotificationRouter.navigateWithPayload(jsonEncode(initialMessage.data));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking initial FCM message: $e');
     }
   }
 

@@ -26,31 +26,47 @@ class DashboardHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left: LaMia brand wordmark + amber accent underline + subtitle
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Left: LaMia brand logo + wordmark + amber accent underline + subtitle
+          Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('LaMia', style: AppTypography.brandWordmark()),
-              const SizedBox(height: AppSpacing.xxs),
-              // Amber accent underline — mirrors the auth hero_header motif.
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                'FILIPINO RECIPE & MEAL ASSISTANT',
-                style: AppTypography.caption(color: AppColors.textSecondary)
-                    .copyWith(
-                      fontSize: 9,
-                      letterSpacing: 0.6,
-                      fontWeight: FontWeight.w600,
-                     ),
+              const SizedBox(width: AppSpacing.xs),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('LaMia', style: AppTypography.brandWordmark()),
+                  const SizedBox(height: AppSpacing.xxs),
+                  // Amber accent underline — mirrors the auth hero_header motif.
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'FILIPINO RECIPE & MEAL ASSISTANT',
+                    style: AppTypography.caption(color: AppColors.textSecondary)
+                        .copyWith(
+                          fontSize: 9,
+                          letterSpacing: 0.6,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -14,6 +14,7 @@ import '../../auth/data/user_repository.dart';
 import '../../auth/presentation/email_verification_screen.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
+import '../../notifications/services/local_notification_service.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -325,19 +326,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // --- Preference Actions ---
   Future<void> _onToggleNotifications(bool value) async {
-    setState(() {
-      _enableNotifications = value;
-    });
-
-    if (widget.isGuest) return;
-
     final user = ref.read(authServiceProvider).currentUser;
-    if (user != null) {
-      try {
-        await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).set({
-          'enableNotifications': value,
-        }, SetOptions(merge: true));
-      } catch (_) {}
+
+    if (value) {
+      final granted = await LocalNotificationService.instance.requestPermissions();
+      if (!granted) {
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            message: 'Notification permission was not granted by your device settings.',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      setState(() => _enableNotifications = true);
+
+      if (!widget.isGuest && user != null) {
+        try {
+          await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).set({
+            'enableNotifications': true,
+          }, SetOptions(merge: true));
+        } catch (_) {}
+      }
+
+      if (_notifPrefs.dailySuggestions) {
+        await LocalNotificationService.instance.scheduleDailySuggestion();
+      }
+
+      if (_notifPrefs.mealReminders) {
+        if (user != null) {
+          final plan = await ref.read(mealPlanRepositoryProvider).getCurrentWeekPlan(user.uid);
+          if (plan != null) {
+            await ref.read(mealPlanRepositoryProvider).scheduleMealPlanReminders(plan);
+          }
+        }
+      }
+    } else {
+      setState(() => _enableNotifications = false);
+
+      if (!widget.isGuest && user != null) {
+        try {
+          await ref.read(firebaseFirestoreProvider).collection('users').doc(user.uid).set({
+            'enableNotifications': false,
+          }, SetOptions(merge: true));
+        } catch (_) {}
+      }
+
+      await LocalNotificationService.instance.cancelAllNotifications();
     }
   }
 
@@ -377,6 +414,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       try {
         await _notifRepo.updateNotificationPreferences(user.uid, updated);
       } catch (_) {}
+    }
+
+    if (key == 'dailySuggestions') {
+      if (value) {
+        await LocalNotificationService.instance.scheduleDailySuggestion();
+      } else {
+        await LocalNotificationService.instance.cancelDailySuggestion();
+      }
+    } else if (key == 'mealReminders') {
+      if (value) {
+        if (user != null) {
+          final plan = await ref.read(mealPlanRepositoryProvider).getCurrentWeekPlan(user.uid);
+          if (plan != null) {
+            await ref.read(mealPlanRepositoryProvider).scheduleMealPlanReminders(plan);
+          }
+        }
+      } else {
+        if (user != null) {
+          final plan = await ref.read(mealPlanRepositoryProvider).getCurrentWeekPlan(user.uid);
+          if (plan != null) {
+            await LocalNotificationService.instance.cancelMealRemindersForWeek(plan.days.keys.toList());
+          }
+        }
+      }
     }
   }
 
@@ -451,7 +512,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Credits & Acknowledgements',
                   style: AppTypography.title(color: AppColors.textPrimary)
@@ -800,6 +871,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ),
                                   child: Column(
                                     children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.asset(
+                                          'assets/images/logo.png',
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
                                       Text(
                                         'La-Mia (Beta Build)',
                                         style: AppTypography.body(

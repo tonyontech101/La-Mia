@@ -7,6 +7,8 @@ class VerticalPoppingButton extends StatefulWidget {
   final Color activeColor;
   final Color inactiveColor;
   final int count;
+  final String? label;
+  final bool showCount;
   final VoidCallback onTap;
 
   const VerticalPoppingButton({
@@ -16,7 +18,9 @@ class VerticalPoppingButton extends StatefulWidget {
     required this.isActive,
     required this.activeColor,
     required this.inactiveColor,
-    required this.count,
+    this.count = 0,
+    this.label,
+    this.showCount = true,
     required this.onTap,
   });
 
@@ -91,16 +95,29 @@ class _VerticalPoppingButtonState extends State<VerticalPoppingButton>
                     widget.isActive ? widget.activeColor : widget.inactiveColor,
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${widget.count}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color:
-                    widget.isActive ? widget.activeColor : widget.inactiveColor,
+            if (widget.label != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                widget.label!,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color:
+                      widget.isActive ? widget.activeColor : widget.inactiveColor,
+                ),
               ),
-            ),
+            ] else if (widget.showCount) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${widget.count}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color:
+                      widget.isActive ? widget.activeColor : widget.inactiveColor,
+                ),
+              ),
+            ],
           ],
         ),
       ),

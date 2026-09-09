@@ -39,6 +39,7 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen> {
   List<UserModel> _allFollowing = [];
   List<UserModel> _filteredUsers = [];
   final Set<String> _followingIds = {};
+  final Set<String> _followerIds = {};
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -64,12 +65,16 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen> {
       final myFollowingList = currentUid != null
           ? await _followRepo.getFollowingIds(currentUid)
           : <String>[];
+      final myFollowerList = currentUid != null
+          ? await _followRepo.getFollowerIds(currentUid)
+          : <String>[];
 
       if (mounted) {
         setState(() {
           _allFollowers = followers;
           _allFollowing = following;
           _followingIds.addAll(myFollowingList);
+          _followerIds.addAll(myFollowerList);
           _applyFilter();
           _isLoading = false;
         });
@@ -149,7 +154,9 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = ref.read(currentUserIdProvider);
+    final currentUid = ref.watch(currentUserIdProvider);
+    final liveFollowerIds = ref.watch(currentUserFollowerIdsProvider).value;
+    final effectiveFollowerIds = liveFollowerIds ?? _followerIds;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -554,7 +561,11 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen> {
                                                       : BorderSide.none,
                                                 ),
                                                 child: Text(
-                                                  isFollowing ? 'Following' : '+ Follow',
+                                                  isFollowing
+                                                      ? 'Following'
+                                                      : (effectiveFollowerIds.contains(user.uid)
+                                                          ? 'Follow Back'
+                                                          : '+ Follow'),
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w700,

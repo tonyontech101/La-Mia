@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,11 +10,13 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/providers/user_profile_provider.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/slide_tab_switcher.dart';
 import '../../../core/widgets/sliding_tab_bar.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../social/data/follow_repository.dart';
 import '../../social/presentation/widgets/comment_section.dart';
 import '../data/recipe_model.dart';
 import 'notifiers/recipe_detail_notifier.dart';
@@ -97,117 +100,236 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
-        margin: const EdgeInsets.fromLTRB(AppSpacing.screenH, 0, AppSpacing.screenH, 0),
         decoration: const BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-          border: Border.fromBorderSide(
-            BorderSide(color: AppColors.textPrimary, width: 1.5),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 16,
+              offset: Offset(0, -2),
+            ),
+          ],
         ),
         child: SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD6D1C9),
-                  borderRadius: BorderRadius.circular(2),
+              const SizedBox(height: 10),
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Title: Share to
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Share to',
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              _buildMenuRow(
-                icon: Icons.ios_share_rounded,
-                label: 'Share recipe',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _shareRecipe();
-                },
+
+              // Row 1: Share options
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    _buildTikTokActionItem(
+                      icon: Icons.ios_share_rounded,
+                      label: 'Share this recipe',
+                      iconColor: AppColors.primary,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _shareRecipe();
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTikTokActionItem(
+                      icon: Icons.link_rounded,
+                      label: 'Copy link',
+                      iconColor: const Color(0xFF27AE60),
+                      backgroundColor: const Color(0xFF27AE60).withValues(alpha: 0.1),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Clipboard.setData(
+                          ClipboardData(text: 'https://lamia.app/recipe/${recipe.id}'),
+                        );
+                        AppSnackbar.show(context, message: 'Recipe link copied to clipboard!');
+                      },
+                    ),
+                  ],
+                ),
               ),
-              _buildMenuRow(
-                icon: Icons.calendar_today_rounded,
-                label: 'Add to planner',
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _openAddToPlannerPicker();
-                },
+              const SizedBox(height: 16),
+
+              // Divider
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  height: 0.8,
+                  color: AppColors.border.withValues(alpha: 0.6),
+                ),
               ),
-              _buildMenuRow(
-                icon: Icons.shopping_basket_rounded,
-                label: 'Add ingredients to grocery list',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final userId = ref.read(currentUserIdProvider);
-                  if (userId == null) {
-                    AppSnackbar.show(context, message: 'Please sign in to add to grocery list');
-                    return;
-                  }
-                  try {
-                    final groceryRepo = ref.read(groceryListRepositoryProvider);
-                    await groceryRepo.addIngredientsFromRecipe(
-                      userId: userId,
-                      recipe: recipe,
-                    );
-                    if (mounted) {
-                      AppSnackbar.show(
-                        context,
-                        message: '${recipe.ingredients.length} ingredients added to grocery list.',
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      AppSnackbar.show(context, message: 'Could not add to grocery list: $e', isError: true);
-                    }
-                  }
-                },
+              const SizedBox(height: 14),
+
+              // Title: Recipe Actions
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Recipe Actions',
+                  style: AppTypography.caption(
+                    color: AppColors.textSecondary,
+                  ).copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-              _buildMenuRow(
-                icon: Icons.link_rounded,
-                label: 'Copy link',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(text: 'https://lamia.app/recipe/${recipe.id}'));
-                  AppSnackbar.show(context, message: 'Link copied.');
-                },
-              ),
-              if (isAuthor) ...[
-                Container(height: 1, color: AppColors.textPrimary.withValues(alpha: 0.15)),
-                _buildMenuRow(
-                  icon: Icons.edit_rounded,
-                  label: 'Edit',
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RecipeCreatingScreen(recipeToEdit: recipe),
+              const SizedBox(height: 12),
+
+              // Row 2: Action options (horizontal scroll like TikTok)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    _buildTikTokActionItem(
+                      icon: Icons.calendar_month_rounded,
+                      label: 'Add to planner',
+                      iconColor: const Color(0xFFE67E22),
+                      backgroundColor: const Color(0xFFE67E22).withValues(alpha: 0.1),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _openAddToPlannerPicker();
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTikTokActionItem(
+                      icon: Icons.shopping_basket_rounded,
+                      label: 'Add to groceries',
+                      iconColor: AppColors.primary,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final userId = ref.read(currentUserIdProvider);
+                        if (userId == null) {
+                          AppSnackbar.show(context, message: 'Please sign in to add to grocery list');
+                          return;
+                        }
+                        try {
+                          final groceryRepo = ref.read(groceryListRepositoryProvider);
+                          await groceryRepo.addIngredientsFromRecipe(
+                            userId: userId,
+                            recipe: recipe,
+                          );
+                          if (mounted) {
+                            AppSnackbar.show(
+                              context,
+                              message: '${recipe.ingredients.length} ingredients added to grocery list.',
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            AppSnackbar.show(context, message: 'Could not add to grocery list: $e', isError: true);
+                          }
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTikTokActionItem(
+                      icon: Icons.flag_rounded,
+                      label: 'Report',
+                      iconColor: AppColors.error,
+                      backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showReportDialog(recipe);
+                      },
+                    ),
+                    if (isAuthor) ...[
+                      const SizedBox(width: 10),
+                      _buildTikTokActionItem(
+                        icon: Icons.edit_rounded,
+                        label: 'Edit recipe',
+                        iconColor: const Color(0xFF8E44AD),
+                        backgroundColor: const Color(0xFF8E44AD).withValues(alpha: 0.1),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RecipeCreatingScreen(recipeToEdit: recipe),
+                            ),
+                          ).then((updated) {
+                            if (updated == true) {
+                              ref
+                                  .read(recipeDetailNotifierProvider(widget.recipe).notifier)
+                                  .reloadRecipe();
+                            }
+                          });
+                        },
                       ),
-                    ).then((updated) {
-                      if (updated == true) {
-                        ref
-                            .read(recipeDetailNotifierProvider(widget.recipe).notifier)
-                            .reloadRecipe();
-                      }
-                    });
-                  },
+                      const SizedBox(width: 10),
+                      _buildTikTokActionItem(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Delete',
+                        iconColor: AppColors.error,
+                        backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _confirmDeleteRecipe();
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-                _buildMenuRow(
-                  icon: Icons.delete_outline_rounded,
-                  label: 'Remove',
-                  labelColor: AppColors.error,
-                  iconColor: AppColors.error,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _confirmDeleteRecipe();
-                  },
+              ),
+              const SizedBox(height: 18),
+
+              // Bottom Cancel Button (TikTok style)
+              Container(
+                height: 0.8,
+                color: AppColors.border.withValues(alpha: 0.7),
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: InkWell(
+                  onTap: () => Navigator.pop(ctx),
+                  child: const Center(
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -215,38 +337,154 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     );
   }
 
-  Widget _buildMenuRow({
+  Widget _buildTikTokActionItem({
     required IconData icon,
     required String label,
+    required Color iconColor,
+    required Color backgroundColor,
     required VoidCallback onTap,
-    Widget? trailing,
-    Color? labelColor,
-    Color? iconColor,
   }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF80756C),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: iconColor ?? Colors.white, size: 18),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTypography.bodyStrong(color: labelColor ?? AppColors.textPrimary),
+    return SizedBox(
+      width: 76,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: backgroundColor,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: 54,
+                height: 54,
+                child: Center(
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
               ),
             ),
-            ?trailing,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(RecipeModel recipe) {
+    String selectedReason = 'Inappropriate content';
+    final reasons = [
+      'Inappropriate content',
+      'Misleading or dangerous recipe',
+      'Spam or advertising',
+      'Not an authentic or original recipe',
+      'Other',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.card)),
+          backgroundColor: AppColors.surface,
+          title: const Row(
+            children: [
+              Icon(Icons.flag_rounded, color: AppColors.error, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Report Recipe',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Please select why you are reporting this recipe:',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              ...reasons.map((reason) {
+                final isSelected = selectedReason == reason;
+                return InkWell(
+                  onTap: () => setDialogState(() => selectedReason = reason),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                          size: 18,
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            reason,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                try {
+                  FirebaseFirestore.instance.collection('reports').add({
+                    'recipeId': recipe.id,
+                    'recipeName': recipe.name,
+                    'authorId': recipe.authorId,
+                    'reporterId': ref.read(currentUserIdProvider),
+                    'reason': selectedReason,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+                } catch (_) {}
+                AppSnackbar.show(
+                  context,
+                  message: 'Report submitted. Thank you for keeping La Mia safe.',
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              ),
+              child: const Text('Submit Report'),
+            ),
           ],
         ),
       ),
@@ -345,6 +583,12 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   Future<void> _shareRecipe() async {
     final detailState = ref.read(recipeDetailNotifierProvider(widget.recipe));
     final recipe = detailState.recipe;
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.read(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final authorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : (recipe.authorName.isNotEmpty ? recipe.authorName : widget.recipe.authorName);
     final ingredients = recipe.ingredients
         .asMap()
         .entries
@@ -358,7 +602,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
     final text = '''
 🍽️ ${recipe.name}
-By ${recipe.authorName} on La Mia
+By $authorName on La Mia
 
 📝 ${recipe.description.isNotEmpty ? recipe.description : 'A delicious ${recipe.category} recipe.'}
 
@@ -386,6 +630,23 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
   Widget build(BuildContext context) {
     final detailState = ref.watch(recipeDetailNotifierProvider(widget.recipe));
     final recipe = detailState.recipe;
+    final followingIds = ref.watch(currentUserFollowingIdsProvider).value;
+    final followerIds = ref.watch(currentUserFollowerIdsProvider).value;
+    final isFollowingAuthor = (recipe.authorId != null && followingIds != null)
+        ? followingIds.contains(recipe.authorId)
+        : detailState.isFollowing;
+    final authorFollowsYou = recipe.authorId != null && followerIds?.contains(recipe.authorId) == true;
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.watch(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final effectiveAuthorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : (recipe.authorName.isNotEmpty
+            ? recipe.authorName
+            : widget.recipe.authorName);
+    final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ??
+        recipe.authorPhotoUrl ??
+        widget.recipe.authorPhotoUrl;
     final chefsTips = recipe.chefsTips.isNotEmpty
         ? recipe.chefsTips
         : _defaultChefsTips;
@@ -407,6 +668,12 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
           ).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textPrimary),
+            onPressed: _openMoreMenu,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 32),
@@ -611,19 +878,20 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                     ),
                                     child: ClipOval(
                                       child: recipe.isSystemRecipe
-                                          ? const Icon(
-                                              Icons.restaurant_rounded,
-                                              size: 20,
-                                              color: AppColors.textPrimary,
+                                          ? Image.asset(
+                                              'assets/images/logo.png',
+                                              width: 38,
+                                              height: 38,
+                                              fit: BoxFit.cover,
                                             )
-                                          : recipe.authorPhotoUrl != null
+                                          : effectiveAuthorPhotoUrl != null
                                               ? CachedNetworkImage(
-                                                  imageUrl: recipe.authorPhotoUrl!,
+                                                  imageUrl: effectiveAuthorPhotoUrl,
                                                   fit: BoxFit.cover,
                                                   errorWidget: (_, _, _) => Center(
                                                     child: Text(
-                                                      recipe.authorName.isNotEmpty
-                                                          ? recipe.authorName[0].toUpperCase()
+                                                      effectiveAuthorName.isNotEmpty
+                                                          ? effectiveAuthorName[0].toUpperCase()
                                                           : 'U',
                                                       style: const TextStyle(
                                                         fontWeight: FontWeight.bold,
@@ -634,8 +902,8 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                                 )
                                               : Center(
                                                   child: Text(
-                                                    recipe.authorName.isNotEmpty
-                                                        ? recipe.authorName[0].toUpperCase()
+                                                    effectiveAuthorName.isNotEmpty
+                                                        ? effectiveAuthorName[0].toUpperCase()
                                                         : 'U',
                                                     style: const TextStyle(
                                                       fontWeight: FontWeight.bold,
@@ -653,7 +921,7 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          recipe.authorName.toLowerCase(),
+                                          effectiveAuthorName.toLowerCase(),
                                           style: const TextStyle(
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w700,
@@ -670,7 +938,9 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                                 ? null
                                                 : _handleFollowTap,
                                             child: Text(
-                                              detailState.isFollowing ? 'following' : '+ follow',
+                                              isFollowingAuthor
+                                                  ? 'following'
+                                                  : (authorFollowsYou ? 'follow back' : '+ follow'),
                                               style: const TextStyle(
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w600,
@@ -679,14 +949,25 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                             ),
                                           ),
                                         ] else if (recipe.isSystemRecipe) ...[
-                                          const SizedBox(height: 1),
-                                          const Text(
-                                            '+ follow',
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textSecondary,
-                                            ),
+                                          const SizedBox(height: 2),
+                                          const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.verified_rounded,
+                                                size: 13,
+                                                color: AppColors.primary,
+                                              ),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'Official Recipe',
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ],
@@ -726,15 +1007,16 @@ Discovered on La Mia — Filipino Recipes App 🇵🇭
                                     : _handleBookmarkTap,
                               ),
                               const SizedBox(width: 6),
-                              // Share popping button
+                              // 3-dot More menu popping button
                               VerticalPoppingButton(
-                                activeIcon: Icons.reply_rounded,
-                                inactiveIcon: Icons.reply_rounded,
+                                activeIcon: Icons.more_horiz_rounded,
+                                inactiveIcon: Icons.more_horiz_rounded,
                                 isActive: false,
                                 activeColor: AppColors.textPrimary,
                                 inactiveColor: const Color(0xFF6E6259),
-                                count: 0,
-                                onTap: _shareRecipe,
+                                showCount: false,
+                                label: 'More',
+                                onTap: _openMoreMenu,
                               ),
                             ],
                           ),

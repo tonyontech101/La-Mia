@@ -45,8 +45,9 @@ class RecipeRepository {
       return bScore.compareTo(aScore);
     });
     return docs
-        .take(limit)
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.status == 'approved' || r.isSystemRecipe)
+        .take(limit)
         .toList();
   }
 
@@ -329,15 +330,25 @@ class RecipeRepository {
     int limit = 50,
     bool includePending = false,
   }) async {
-    final snap = await _firestore
+    Query<Map<String, dynamic>> query = _firestore
         .collection('recipes')
-        .where('authorId', isEqualTo: authorId)
-        .get();
+        .where('authorId', isEqualTo: authorId);
+    if (!includePending) {
+      query = query.where('status', isEqualTo: 'approved');
+    }
+    final snap = await query.get();
     final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where(
-          (r) => includePending || r.status == 'approved' || r.isSystemRecipe,
-        )
+        .where((r) {
+          // A rejected recipe must NEVER be shown or posted anywhere.
+          if (r.status == 'rejected') return false;
+          if (includePending) {
+            return r.status == 'approved' ||
+                r.status == 'pending' ||
+                r.isSystemRecipe;
+          }
+          return r.status == 'approved' || r.isSystemRecipe;
+        })
         .toList();
     recipes.sort((a, b) {
       final aTime = a.createdAt ?? DateTime(2000);
@@ -447,7 +458,9 @@ class RecipeRepository {
         .where((r) {
           // Only user-submitted recipes (not system/seeded) count for
           // Chef of the Month.
-          if (r.authorId == null || r.isSystemRecipe) return false;
+          if (r.authorId == null || r.isSystemRecipe || r.status != 'approved') {
+            return false;
+          }
           return r.createdAt != null;
         })
         .toList();
@@ -521,6 +534,31 @@ class RecipeRepository {
         .collection('recipes')
         .doc(recipeId)
         .update(recipe.toFirestore());
+  }
+
+  /// Updates denormalized author name and photo across all recipes authored by [uid].
+  Future<void> updateAuthorInfo({
+    required String uid,
+    required String displayName,
+    String? photoUrl,
+  }) async {
+    final snap = await _firestore
+        .collection('recipes')
+        .where('authorId', isEqualTo: uid)
+        .get();
+    if (snap.docs.isEmpty) return;
+
+    final batch = _firestore.batch();
+    for (final doc in snap.docs) {
+      final updateData = <String, dynamic>{
+        'authorName': displayName,
+      };
+      if (photoUrl != null) {
+        updateData['authorPhotoUrl'] = photoUrl;
+      }
+      batch.update(doc.reference, updateData);
+    }
+    await batch.commit();
   }
 
   /// Deletes a recipe from Firestore.

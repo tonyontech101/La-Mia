@@ -135,9 +135,15 @@ class EditProfileNotifier extends _$EditProfileNotifier {
 
   // ── Badge selection ──────────────────────────────────────────────────────
 
-  /// Selects (or deselects) a showcase badge.
+  /// Selects (or deselects) a showcase badge. Tapping the currently selected badge unequips it.
   void selectAchievement(String? id) {
-    if (id == state.selectedAchievementId) return;
+    if (id != null && id == state.selectedAchievementId) {
+      state = state.copyWith(
+        selectedAchievementId: null,
+        clearSelectedAchievement: true,
+      );
+      return;
+    }
     state = state.copyWith(
       selectedAchievementId: id,
       clearSelectedAchievement: id == null,
@@ -200,6 +206,18 @@ class EditProfileNotifier extends _$EditProfileNotifier {
         featuredAchievementId: state.selectedAchievementId,
         clearFeaturedAchievement: state.selectedAchievementId == null,
       );
+
+      // Sync author information across all user's recipes
+      try {
+        final recipeRepo = ref.read(recipeRepositoryProvider);
+        await recipeRepo.updateAuthorInfo(
+          uid: uid,
+          displayName: name,
+          photoUrl: photoChanged ? photoUrl : null,
+        );
+      } catch (_) {
+        // Recipe sync non-fatal; user document is already saved.
+      }
     } catch (_) {
       state = state.copyWith(isSaving: false);
       return SaveProfileStatus.error;

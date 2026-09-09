@@ -149,6 +149,68 @@ class RecipeModel {
     return '~ $b';
   }
 
+  RecipeModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? category,
+    String? region,
+    String? prepTime,
+    String? cookTime,
+    int? servings,
+    String? difficulty,
+    List<String>? ingredients,
+    List<String>? instructions,
+    List<String>? chefsTips,
+    List<String>? tags,
+    String? coverPhotoUrl,
+    String? source,
+    String? authorId,
+    String? authorName,
+    String? authorPhotoUrl,
+    bool? isSystemRecipe,
+    int? likeCount,
+    int? commentCount,
+    int? favoriteCount,
+    double? ratingAvg,
+    int? ratingCount,
+    int? trendingScore,
+    String? status,
+    DateTime? createdAt,
+    String? budget,
+  }) {
+    return RecipeModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      region: region ?? this.region,
+      prepTime: prepTime ?? this.prepTime,
+      cookTime: cookTime ?? this.cookTime,
+      servings: servings ?? this.servings,
+      difficulty: difficulty ?? this.difficulty,
+      ingredients: ingredients ?? this.ingredients,
+      instructions: instructions ?? this.instructions,
+      chefsTips: chefsTips ?? this.chefsTips,
+      tags: tags ?? this.tags,
+      coverPhotoUrl: coverPhotoUrl ?? this.coverPhotoUrl,
+      source: source ?? this.source,
+      authorId: authorId ?? this.authorId,
+      authorName: authorName ?? this.authorName,
+      authorPhotoUrl: authorPhotoUrl ?? this.authorPhotoUrl,
+      isSystemRecipe: isSystemRecipe ?? this.isSystemRecipe,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      favoriteCount: favoriteCount ?? this.favoriteCount,
+      ratingAvg: ratingAvg ?? this.ratingAvg,
+      ratingCount: ratingCount ?? this.ratingCount,
+      trendingScore: trendingScore ?? this.trendingScore,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      budget: budget ?? this.budget,
+    );
+  }
+
   /// Creates a [RecipeModel] from the JSON stored in recipe `.txt` files.
   ///
   /// [coverPhotoUrl] must be supplied separately (from Firebase Storage)

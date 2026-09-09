@@ -25,7 +25,6 @@ class CommentRepository {
   /// Real-time stream of top-level comments for a given recipe, newest first.
   Stream<List<CommentModel>> getCommentsStream(String recipeId) {
     return _commentsRef(recipeId)
-        .where('isReply', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) {
@@ -42,6 +41,7 @@ class CommentRepository {
             }
           })
           .whereType<CommentModel>()
+          .where((comment) => comment.isTopLevel)
           .toList();
     });
   }
@@ -53,10 +53,9 @@ class CommentRepository {
   }) {
     return _commentsRef(recipeId)
         .where('parentCommentId', isEqualTo: parentCommentId)
-        .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snap) {
-      return snap.docs
+      final replies = snap.docs
           .map((doc) {
             try {
               return CommentModel.fromFirestore(doc, recipeId: recipeId);
@@ -70,6 +69,8 @@ class CommentRepository {
           })
           .whereType<CommentModel>()
           .toList();
+      replies.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return replies;
     });
   }
 

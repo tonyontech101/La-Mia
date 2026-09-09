@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/providers/user_profile_provider.dart';
 import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
+import '../../../social/data/follow_repository.dart';
 
 /// Full-width social-feed recipe card matching the wireframe layout.
 ///
@@ -20,22 +25,42 @@ import '../../../recipes/data/recipe_model.dart';
 /// │ the description of the dish...       │
 /// └──────────────────────────────────────┘
 /// ```
-class FeedRecipeCard extends StatelessWidget {
+class FeedRecipeCard extends ConsumerWidget {
   const FeedRecipeCard({
     super.key,
     required this.recipe,
+    this.localImageFile,
+    this.isFollowing = false,
+    this.followsYou = false,
+    this.isOwnRecipe = false,
     this.onTap,
+    this.onAuthorTap,
     this.onFollowTap,
     this.onLongPress,
   });
 
   final RecipeModel recipe;
+  final File? localImageFile;
+  final bool isFollowing;
+  final bool followsYou;
+  final bool isOwnRecipe;
   final VoidCallback? onTap;
+  final VoidCallback? onAuthorTap;
   final VoidCallback? onFollowTap;
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authorProfile = (recipe.authorId != null && !recipe.isSystemRecipe)
+        ? ref.watch(userProfileProvider(recipe.authorId!)).valueOrNull
+        : null;
+    final effectiveAuthorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
+        ? authorProfile.displayName
+        : recipe.authorName;
+    final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ?? recipe.authorPhotoUrl;
+    final followerIds = ref.watch(currentUserFollowerIdsProvider).value;
+    final effectiveFollowsYou = followsYou ||
+        (recipe.authorId != null && followerIds?.contains(recipe.authorId) == true);
     return PressableScale(
       pressedScale: 0.985,
       child: GestureDetector(
@@ -74,7 +99,11 @@ class FeedRecipeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Username row with follow + See More
-                    _buildUserRow(),
+                    _buildUserRow(
+                      authorName: effectiveAuthorName,
+                      authorPhotoUrl: effectiveAuthorPhotoUrl,
+                      followsYou: effectiveFollowsYou,
+                    ),
 
                     const SizedBox(height: 10),
 
@@ -121,25 +150,30 @@ class FeedRecipeCard extends StatelessWidget {
           // Photo
           AspectRatio(
             aspectRatio: 16 / 10,
-            child: recipe.coverPhotoUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: recipe.coverPhotoUrl,
+            child: localImageFile != null
+                ? Image.file(
+                    localImageFile!,
                     fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(
-                      color: AppColors.surfaceAlt,
-                      child: const Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                  )
+                : (recipe.coverPhotoUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: recipe.coverPhotoUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          color: AppColors.surfaceAlt,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    errorWidget: (_, _, _) => _buildPhotoPlaceholder(),
-                  )
-                : _buildPhotoPlaceholder(),
+                        errorWidget: (_, _, _) => _buildPhotoPlaceholder(),
+                      )
+                    : _buildPhotoPlaceholder()),
           ),
 
           // Bottom gradient scrim so tag pills stay legible
@@ -196,54 +230,104 @@ class FeedRecipeCard extends StatelessWidget {
   }
 
   // ── User row (avatar, @username, + follow, See More button) ─────────
+  Widget _buildUserRow({
+    required String authorName,
+    required String? authorPhotoUrl,
+    bool followsYou = false,
+  }) {
+    final authorLink = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (!recipe.isSystemRecipe && onAuthorTap != null) ? onAuthorTap : null,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Author avatar circle
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: recipe.isSystemRecipe
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : AppColors.surfaceAlt,
+            ),
+            child: ClipOval(
+              child: recipe.isSystemRecipe
+                  ? Image.asset(
+                      'assets/images/logo.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                    )
+                  : (authorPhotoUrl != null && authorPhotoUrl.isNotEmpty)
+                      ? CachedNetworkImage(
+                          imageUrl: authorPhotoUrl,
+                          width: 28,
+                          height: 28,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Center(
+                            child: Text(
+                              authorName.isNotEmpty
+                                  ? authorName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, _, _) => Center(
+                            child: Text(
+                              authorName.isNotEmpty
+                                  ? authorName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            authorName.isNotEmpty
+                                ? authorName[0].toUpperCase()
+                                : 'U',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+            ),
+          ),
+          const SizedBox(width: 8),
 
-  Widget _buildUserRow() {
+          // @username
+          Flexible(
+            child: Text(
+              '@${authorName.replaceAll(' ', '').toLowerCase()}',
+              style: AppTypography.caption(
+                color: AppColors.textPrimary,
+              ).copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
     return Row(
       children: [
-        // Author avatar circle
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: recipe.isSystemRecipe
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : AppColors.surfaceAlt,
-          ),
-          child: Center(
-            child: recipe.isSystemRecipe
-                ? const Icon(
-                    Icons.restaurant_rounded,
-                    size: 14,
-                    color: AppColors.primary,
-                  )
-                : Text(
-                    recipe.authorName.isNotEmpty
-                        ? recipe.authorName[0].toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // @username
         Flexible(
-          child: Text(
-            '@${recipe.authorName.replaceAll(' ', '').toLowerCase()}',
-            style: AppTypography.caption(
-              color: AppColors.textPrimary,
-            ).copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: authorLink,
         ),
 
         // System recipe badge
@@ -269,28 +353,39 @@ class FeedRecipeCard extends StatelessWidget {
           ),
         ],
 
-        const Spacer(),
+        // Follow button in the corner (hidden for system recipes, own recipes, recipes without author, or when no handler provided)
+        if (!recipe.isSystemRecipe && !isOwnRecipe && recipe.authorId != null && recipe.authorId!.isNotEmpty && onFollowTap != null) ...[
+          const Spacer(),
 
-        // "+ Follow" button in the corner
-        GestureDetector(
-          onTap: onFollowTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.textPrimary,
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-            ),
-            child: Text(
-              '+ Follow',
-              style: AppTypography.caption(
-                color: AppColors.onPrimary,
-              ).copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
+          GestureDetector(
+            onTap: onFollowTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isFollowing
+                    ? AppColors.surfaceAlt
+                    : AppColors.textPrimary,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: isFollowing
+                    ? Border.all(color: AppColors.border, width: 1.0)
+                    : null,
+              ),
+              child: Text(
+                isFollowing
+                    ? 'Following'
+                    : (followsYou ? 'Follow Back' : '+ Follow'),
+                style: AppTypography.caption(
+                  color: isFollowing
+                      ? AppColors.textPrimary
+                      : AppColors.onPrimary,
+                ).copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

@@ -39,10 +39,24 @@ class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmittingComment = false;
   CommentRepository? _resolvedRepo;
+  Stream<List<CommentModel>>? _commentsStream;
 
   @override
   void initState() {
     super.initState();
+    _initRepoAndStream();
+  }
+
+  @override
+  void didUpdateWidget(CommentSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.recipe.id != widget.recipe.id ||
+        oldWidget._commentRepo != widget._commentRepo) {
+      _initRepoAndStream();
+    }
+  }
+
+  void _initRepoAndStream() {
     if (widget._commentRepo != null) {
       _resolvedRepo = widget._commentRepo;
     } else {
@@ -51,6 +65,12 @@ class _CommentSectionState extends State<CommentSection> {
       } catch (_) {
         _resolvedRepo = null;
       }
+    }
+    final recipeId = widget.recipe.id;
+    if (_resolvedRepo != null && recipeId != null) {
+      _commentsStream = _resolvedRepo!.getCommentsStream(recipeId);
+    } else {
+      _commentsStream = null;
     }
   }
 
@@ -185,11 +205,12 @@ class _CommentSectionState extends State<CommentSection> {
           if (user == null)
             CommentInput(
               variant: CommentInputVariant.guestGate,
-              onSignIn: () {
-                Navigator.push(
+              onSignIn: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
+                if (mounted) setState(() {});
               },
             )
           else
@@ -205,7 +226,7 @@ class _CommentSectionState extends State<CommentSection> {
 
           // ── Comment list ──
           StreamBuilder<List<CommentModel>>(
-            stream: _commentRepo!.getCommentsStream(recipeId),
+            stream: _commentsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
                   !snapshot.hasData) {

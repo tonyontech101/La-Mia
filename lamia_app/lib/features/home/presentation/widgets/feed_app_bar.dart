@@ -79,11 +79,26 @@ class FeedAppBar extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'La Mia',
-                  style: AppTypography.wordmark(
-                    color: AppColors.textPrimary,
-                  ).copyWith(fontSize: 22),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'La Mia',
+                      style: AppTypography.wordmark(
+                        color: AppColors.textPrimary,
+                      ).copyWith(fontSize: 22),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
