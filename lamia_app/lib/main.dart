@@ -6,6 +6,7 @@ import 'app/app.dart';
 import 'firebase_options.dart';
 import 'features/notifications/services/local_notification_service.dart';
 import 'features/notifications/services/fcm_service.dart';
+import 'core/services/deep_link_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,6 +113,13 @@ void main() async {
     await FCMService.instance.initialize();
   } catch (e) {
     debugPrint('Notification services init warning (requires full app restart after adding new plugins): $e');
+  }
+
+  // Initialize deep linking for recipe sharing
+  try {
+    await DeepLinkService.instance.init();
+  } catch (e) {
+    debugPrint('DeepLinkService init warning: $e');
   }
 
   runApp(const ProviderScope(child: LaMiaApp()));

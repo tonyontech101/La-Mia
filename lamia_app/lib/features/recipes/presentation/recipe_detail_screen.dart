@@ -19,6 +19,7 @@ import '../../profile/presentation/profile_screen.dart';
 import '../../social/data/follow_repository.dart';
 import '../../social/presentation/widgets/comment_section.dart';
 import '../data/recipe_model.dart';
+import '../utils/recipe_share_helper.dart';
 import 'notifiers/recipe_detail_notifier.dart';
 import 'recipe_creating_screen.dart';
 import 'widgets/planner_slot_picker.dart';
@@ -171,10 +172,12 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       backgroundColor: const Color(0xFF27AE60).withValues(alpha: 0.1),
                       onTap: () {
                         Navigator.pop(ctx);
-                        Clipboard.setData(
-                          ClipboardData(text: 'https://lamia.app/recipe/${recipe.id}'),
+                        final url = RecipeShareHelper.generateRecipeUrl(recipe.id ?? '');
+                        Clipboard.setData(ClipboardData(text: url));
+                        AppSnackbar.show(
+                          context,
+                          message: 'Recipe link copied to clipboard!',
                         );
-                        AppSnackbar.show(context, message: 'Recipe link copied to clipboard!');
                       },
                     ),
                   ],
@@ -589,41 +592,36 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     final authorName = (authorProfile != null && authorProfile.displayName.isNotEmpty)
         ? authorProfile.displayName
         : (recipe.authorName.isNotEmpty ? recipe.authorName : widget.recipe.authorName);
-    final ingredients = recipe.ingredients
-        .asMap()
-        .entries
-        .map((e) => '  ${e.key + 1}. ${e.value}')
-        .join('\n');
-    final instructions = recipe.instructions
-        .asMap()
-        .entries
-        .map((e) => '  Step ${e.key + 1}: ${e.value}')
-        .join('\n');
 
-    final text = '''
-🍽️ ${recipe.name}
-By $authorName on La Mia
-
-📝 ${recipe.description.isNotEmpty ? recipe.description : 'A delicious ${recipe.category} recipe.'}
-
-⏱ Prep: ${recipe.approximatePrepTime}  •  Cook: ${recipe.approximateCookTime}  •  Serves: ${recipe.approximateServings}
-🔥 Difficulty: ${recipe.difficulty}  •  ${recipe.approximateBudget}
-
-🛒 INGREDIENTS
-$ingredients
-
-👨‍🍳 INSTRUCTIONS
-$instructions
-
-Discovered on La Mia — Filipino Recipes App 🇵🇭
-''';
-
-    await SharePlus.instance.share(
-      ShareParams(
-        text: text,
-        subject: recipe.name,
-      ),
+    final text = RecipeShareHelper.generateShareText(
+      recipe: recipe,
+      authorName: authorName,
     );
+
+    try {
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box != null
+          ? (box.localToGlobal(Offset.zero) & box.size)
+          : null;
+
+      await SharePlus.instance.share(
+        ShareParams(
+          text: text,
+          subject: recipe.name,
+          sharePositionOrigin: origin,
+        ),
+      );
+    } catch (_) {
+      // Graceful fallback for devices or environments where native share sheet is unavailable
+      final url = RecipeShareHelper.generateRecipeUrl(recipe.id ?? '');
+      await Clipboard.setData(ClipboardData(text: url));
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'Sharing is unavailable on this device. Recipe link copied!',
+        );
+      }
+    }
   }
 
   @override
