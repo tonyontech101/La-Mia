@@ -146,7 +146,7 @@ class FakeWriteBatch implements WriteBatch {
   @override
   void delete(DocumentReference<Object?> document) {
     operations.add('delete: ${(document as FakeDocRef).id}');
-    (document as FakeDocRef).exists = false;
+    document.exists = false;
   }
 
   @override

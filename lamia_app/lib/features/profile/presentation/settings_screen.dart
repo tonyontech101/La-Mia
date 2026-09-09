@@ -15,6 +15,7 @@ import '../../auth/presentation/email_verification_screen.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/services/local_notification_service.dart';
+import '../../legal/presentation/legal_document_screen.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -843,6 +844,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         onChanged: (val) => _onUpdateGranularPreference('dailySuggestions', val),
                                       ),
                                     ],
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 28),
+
+                              // LEGAL SECTION HEADER
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8, bottom: 8),
+                                child: Text(
+                                  'LEGAL & POLICIES',
+                                  style: AppTypography.caption(
+                                    color: AppColors.textSecondary,
+                                  ).copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+
+                              // LEGAL CARD
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: AppColors.cardShadow,
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildNavigationTile(
+                                      icon: Icons.description_outlined,
+                                      title: 'Terms of Service',
+                                      isFirst: true,
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                LegalDocumentScreen.termsOfService(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    const Divider(height: 1, color: AppColors.border),
+                                    _buildNavigationTile(
+                                      icon: Icons.privacy_tip_outlined,
+                                      title: 'Privacy Policy',
+                                      isLast: true,
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                LegalDocumentScreen.privacyPolicy(),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ],
                                 ),
                               ),

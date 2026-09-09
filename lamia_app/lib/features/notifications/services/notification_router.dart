@@ -107,6 +107,13 @@ class NotificationRouter {
     }
   }
 
+  /// Directly routes the application to a recipe by its document ID.
+  static void navigateToRecipe(String recipeId) {
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return;
+    _navigateToRecipe(context, recipeId);
+  }
+
   static void _navigateToRecipe(BuildContext context, String recipeId) async {
     // Show a loading overlay dialog
     showDialog(
