@@ -10,6 +10,7 @@ import '../../../../app/theme/app_typography.dart';
 import '../../../../core/providers/user_profile_provider.dart';
 import '../../../../core/widgets/pressable_scale.dart';
 import '../../../recipes/data/recipe_model.dart';
+import '../../../social/data/follow_repository.dart';
 
 /// Full-width social-feed recipe card matching the wireframe layout.
 ///
@@ -30,6 +31,7 @@ class FeedRecipeCard extends ConsumerWidget {
     required this.recipe,
     this.localImageFile,
     this.isFollowing = false,
+    this.followsYou = false,
     this.isOwnRecipe = false,
     this.onTap,
     this.onAuthorTap,
@@ -40,6 +42,7 @@ class FeedRecipeCard extends ConsumerWidget {
   final RecipeModel recipe;
   final File? localImageFile;
   final bool isFollowing;
+  final bool followsYou;
   final bool isOwnRecipe;
   final VoidCallback? onTap;
   final VoidCallback? onAuthorTap;
@@ -55,6 +58,9 @@ class FeedRecipeCard extends ConsumerWidget {
         ? authorProfile.displayName
         : recipe.authorName;
     final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ?? recipe.authorPhotoUrl;
+    final followerIds = ref.watch(currentUserFollowerIdsProvider).value;
+    final effectiveFollowsYou = followsYou ||
+        (recipe.authorId != null && followerIds?.contains(recipe.authorId) == true);
     return PressableScale(
       pressedScale: 0.985,
       child: GestureDetector(
@@ -96,6 +102,7 @@ class FeedRecipeCard extends ConsumerWidget {
                     _buildUserRow(
                       authorName: effectiveAuthorName,
                       authorPhotoUrl: effectiveAuthorPhotoUrl,
+                      followsYou: effectiveFollowsYou,
                     ),
 
                     const SizedBox(height: 10),
@@ -226,6 +233,7 @@ class FeedRecipeCard extends ConsumerWidget {
   Widget _buildUserRow({
     required String authorName,
     required String? authorPhotoUrl,
+    bool followsYou = false,
   }) {
     final authorLink = GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -363,7 +371,9 @@ class FeedRecipeCard extends ConsumerWidget {
                     : null,
               ),
               child: Text(
-                isFollowing ? 'Following' : '+ Follow',
+                isFollowing
+                    ? 'Following'
+                    : (followsYou ? 'Follow Back' : '+ Follow'),
                 style: AppTypography.caption(
                   color: isFollowing
                       ? AppColors.textPrimary

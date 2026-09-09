@@ -86,6 +86,9 @@ void main() {
           currentUserFollowingIdsProvider.overrideWith(
             (ref) => Stream.value({'author-uid-1'}),
           ),
+          currentUserFollowerIdsProvider.overrideWith(
+            (ref) => Stream.value(<String>{}),
+          ),
         ],
         child: MaterialApp(
           home: RecipeDetailScreen(

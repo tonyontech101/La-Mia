@@ -15,6 +15,14 @@ final currentUserFollowingIdsProvider = StreamProvider<Set<String>>((ref) {
   return followRepo.followingIdsStream(currentUid);
 });
 
+/// Real-time stream of user IDs who follow the current signed-in user.
+final currentUserFollowerIdsProvider = StreamProvider<Set<String>>((ref) {
+  final currentUid = ref.watch(currentUserIdProvider);
+  if (currentUid == null) return Stream.value(const <String>{});
+  final followRepo = ref.watch(followRepositoryProvider);
+  return followRepo.followerIdsStream(currentUid);
+});
+
 /// Manages the follow/unfollow relationship between users.
 ///
 /// Uses two parallel subcollections for efficient bidirectional queries:
@@ -126,6 +134,20 @@ class FollowRepository {
     return doc.exists;
   }
 
+  /// Checks whether [targetUid] follows [currentUid] (i.e. target is following current).
+  Future<bool> isFollowedBy({
+    required String currentUid,
+    required String targetUid,
+  }) async {
+    final doc = await _firestore
+        .collection('followers')
+        .doc(currentUid)
+        .collection('users')
+        .doc(targetUid)
+        .get();
+    return doc.exists;
+  }
+
   /// Returns the UIDs of all users that [uid] is following.
   Future<List<String>> getFollowingIds(String uid) async {
     final snap = await _firestore
@@ -140,6 +162,16 @@ class FollowRepository {
   Stream<Set<String>> followingIdsStream(String uid) {
     return _firestore
         .collection('following')
+        .doc(uid)
+        .collection('users')
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => d.id).toSet());
+  }
+
+  /// Emits real-time updates of all follower UIDs who follow [uid].
+  Stream<Set<String>> followerIdsStream(String uid) {
+    return _firestore
+        .collection('followers')
         .doc(uid)
         .collection('users')
         .snapshots()

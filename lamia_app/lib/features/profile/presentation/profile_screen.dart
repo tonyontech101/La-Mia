@@ -77,6 +77,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isLoadingLikes = false;
   bool _isLoadingSaved = false;
   bool _isFollowing = false;
+  bool _followsYou = false;
   int? _topContributorRank;
   int? _mostCookedRank;
   bool _isChefOfMonth = false;
@@ -157,12 +158,21 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       // Check follow status if viewing another user.
       bool following = false;
+      bool followsYou = false;
       final currentUid = ref.read(currentUserIdProvider);
       if (!_isOwnProfile && currentUid != null) {
-        following = await _followRepo.isFollowing(
-          currentUid: currentUid,
-          targetUid: uid,
-        );
+        final followChecks = await Future.wait([
+          _followRepo.isFollowing(
+            currentUid: currentUid,
+            targetUid: uid,
+          ),
+          _followRepo.isFollowedBy(
+            currentUid: currentUid,
+            targetUid: uid,
+          ),
+        ]);
+        following = followChecks[0];
+        followsYou = followChecks[1];
       }
 
       int? topContributorRank;
@@ -211,6 +221,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           _userRecipes = recipes;
           _totalPostLikes = totalPostLikes;
           _isFollowing = following;
+          _followsYou = followsYou;
           _topContributorRank = topContributorRank;
           _mostCookedRank = mostCookedRank;
           _isChefOfMonth = isChefOfMonth;
@@ -850,6 +861,10 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     final effectiveIsFollowing = (_displayedUid != null && followingIds != null)
         ? followingIds.contains(_displayedUid)
         : _isFollowing;
+    final followerIds = ref.watch(currentUserFollowerIdsProvider).value;
+    final effectiveFollowsYou = (_displayedUid != null && followerIds != null)
+        ? followerIds.contains(_displayedUid)
+        : _followsYou;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1017,6 +1032,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           isGuest: widget.isGuest,
                           isOwnProfile: _isOwnProfile,
                           isFollowing: effectiveIsFollowing,
+                          followsYou: effectiveFollowsYou,
                           onEditProfileTap: _isOwnProfile
                               ? _navigateToEditProfile
                               : null,
