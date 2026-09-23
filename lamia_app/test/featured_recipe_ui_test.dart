@@ -28,6 +28,7 @@ void main() {
     coverPhotoUrl: '',
     source: 'seed',
     authorName: 'Gabriel',
+    isSystemRecipe: false,
     ratingAvg: 4.9,
     ratingCount: 1200,
   );

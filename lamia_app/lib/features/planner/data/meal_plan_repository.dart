@@ -394,33 +394,28 @@ class MealPlanRepository {
 
     if (allRecipes.isEmpty) return newPlan;
 
-    // Filter recipes by category
+    // Filter recipes by canonical category (same mapping as the dashboard).
+    bool nameHas(RecipeModel recipe, List<String> names) =>
+        names.any((n) => recipe.name.toLowerCase().contains(n));
+
     final breakfasts = allRecipes
         .where((r) =>
-            r.category.toLowerCase().contains('almusal') ||
-            r.category.toLowerCase().contains('breakfast') ||
-            r.name.toLowerCase().contains('silog') ||
-            r.name.toLowerCase().contains('egg'))
+            RecipeRepository.canonicalCategory(r.category) == 'almusal' ||
+            nameHas(r, const ['silog', 'egg']))
         .toList();
 
+    const mainCats = {'ulam', 'sabaw', 'gulay', 'inihaw', 'lamang dagat'};
     final mainUlams = allRecipes
         .where((r) =>
-            r.category.toLowerCase().contains('ulam') ||
-            r.category.toLowerCase().contains('main') ||
-            r.category.toLowerCase().contains('chicken') ||
-            r.category.toLowerCase().contains('pork') ||
-            r.category.toLowerCase().contains('beef') ||
-            r.category.toLowerCase().contains('fish') ||
-            r.category.toLowerCase().contains('soup') ||
-            r.category.toLowerCase().contains('gulay'))
+            mainCats.contains(RecipeRepository.canonicalCategory(r.category)) ||
+            nameHas(r, const ['pancit', 'noodle']))
         .toList();
 
+    const meryendaCats = {'merienda', 'panghimagas'};
     final meryendas = allRecipes
         .where((r) =>
-            r.category.toLowerCase().contains('meryenda') ||
-            r.category.toLowerCase().contains('snack') ||
-            r.category.toLowerCase().contains('dessert') ||
-            r.category.toLowerCase().contains('pancit'))
+            meryendaCats.contains(RecipeRepository.canonicalCategory(r.category)) ||
+            nameHas(r, const ['pancit']))
         .toList();
 
     // Helper to pick a varied recipe

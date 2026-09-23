@@ -12,18 +12,22 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/section_states.dart';
 import '../data/recipe_model.dart';
 import '../data/recipe_repository.dart';
+import '../domain/recipe_filters.dart';
 import 'recipe_detail_screen.dart';
 
 /// Data class representing a suggested recipe item with match score & missing items.
 class SuggestedRecipeItem {
   const SuggestedRecipeItem({
     required this.recipe,
-    required this.matchPercentage,
+    this.matchPercentage,
     this.missingIngredients = const [],
   });
 
   final RecipeModel recipe;
-  final int matchPercentage;
+
+  /// Fit score against active filters, or `null` when no filters are active
+  /// (badge is hidden instead of showing a fake percentage).
+  final int? matchPercentage;
   final List<String> missingIngredients;
 }
 
@@ -46,34 +50,30 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
   List<RecipeModel> _allRecipes = const [];
 
   // Committed filter states (applied to the suggestion list).
-  String _selectedMealType = 'Lunch';
-  String _selectedBudget = '< ₱150 (Budget friendly)';
-  double _cookingTimeMinutes = 30.0;
+  String _selectedMealType = 'Any';
+  String _selectedBudget = 'Any';
+  bool _selectedHasTimeLimit = false;
+  double _selectedCookingTimeMinutes = 30.0;
   bool _isCustomTime = false;
-  String _selectedDifficulty = 'Easy';
-  int _selectedServings = 12;
+  String _selectedDifficulty = 'Any';
+  int? _selectedServings;
 
   // Pending filter states (edited inside the sheet until Apply commits them).
-  String _pendingMealType = 'Lunch';
-  String _pendingBudget = '< ₱150 (Budget friendly)';
+  String _pendingMealType = 'Any';
+  String _pendingBudget = 'Any';
+  bool _pendingHasTimeLimit = false;
   double _pendingCookingTimeMinutes = 30.0;
   bool _pendingIsCustomTime = false;
-  String _pendingDifficulty = 'Easy';
-  int _pendingServings = 12;
+  String _pendingDifficulty = 'Any';
+  int? _pendingServings;
 
-  final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
-  final List<String> _budgetOptions = [
-    '< ₱150 (Budget friendly)',
-    '~ ₱150 - ₱300 (Affordable)',
-    '~ ₱300 - ₱500 (Special)',
-    '> ₱500 (Quite Expensive)',
-  ];
+  final List<String> _mealTypes = RecipeFilters.mealTypes;
+  final List<String> _budgetOptions = RecipeFilters.budgetOptions;
+  final List<String> _difficultyOptions = RecipeFilters.difficulties;
 
-  static const String _defaultMealType = 'Lunch';
-  static const String _defaultBudget = '< ₱150 (Budget friendly)';
-  static const double _defaultCookingTime = 30.0;
-  static const String _defaultDifficulty = 'Easy';
-  static const int _defaultServings = 12;
+  static const String _defaultMealType = 'Any';
+  static const String _defaultBudget = 'Any';
+  static const String _defaultDifficulty = 'Any';
 
   static String formatApproximateCookingTime(double minutes) {
     final m = minutes.round();
@@ -90,6 +90,11 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
     if (servings <= 6) return '~ 5-6 serves';
     if (servings <= 8) return '~ 7-8 serves';
     return '> 8 serves';
+  }
+
+  static String _shortBudgetLabel(String option) {
+    if (option == 'Any') return option;
+    return option.split(' (').first;
   }
 
   @override
@@ -111,58 +116,46 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
     });
   }
 
-  /// Number of pending filters that differ from their default values.
+  /// Number of pending filters that differ from their default ("Any") values.
   int get _pendingCount {
     var count = 0;
     if (_pendingMealType != _defaultMealType) count++;
     if (_pendingBudget != _defaultBudget) count++;
-    if (_pendingCookingTimeMinutes.round() != _defaultCookingTime) count++;
+    if (_pendingHasTimeLimit) count++;
     if (_pendingDifficulty != _defaultDifficulty) count++;
-    if (_pendingServings != _defaultServings) count++;
+    if (_pendingServings != null) count++;
     return count;
   }
 
-  /// Number of committed filters that differ from their default values.
+  /// Number of committed filters that differ from their default ("Any") values.
   int get _committedFilterCount {
     var count = 0;
     if (_selectedMealType != _defaultMealType) count++;
     if (_selectedBudget != _defaultBudget) count++;
-    if (_cookingTimeMinutes.round() != _defaultCookingTime) count++;
+    if (_selectedHasTimeLimit) count++;
     if (_selectedDifficulty != _defaultDifficulty) count++;
-    if (_selectedServings != _defaultServings) count++;
+    if (_selectedServings != null) count++;
     return count;
   }
 
   /// Summary text shown on the main-screen filters bar.
   String get _filtersSummary {
     if (_committedFilterCount == 0) return 'All dishes';
-    return '$_selectedMealType · $_selectedBudget · '
-        '${formatApproximateCookingTime(_cookingTimeMinutes)} · $_selectedDifficulty · ${formatApproximateServings(_selectedServings)}';
-  }
-
-  bool _passesMealType(RecipeModel recipe) {
-    // Defaults mean "Any/All": the default meal type never excludes.
-    if (_selectedMealType == _defaultMealType) return true;
-
-    final cat = recipe.category.toLowerCase();
-    final selected = _selectedMealType.toLowerCase();
-
-    switch (selected) {
-      case 'breakfast':
-        return cat.contains('almusal') ||
-            cat.contains('breakfast') ||
-            cat.contains('tapsilog');
-      case 'lunch':
-      case 'dinner':
-        return cat.contains('ulam');
-      case 'snacks':
-        return cat.contains('merienda') ||
-            cat.contains('panghimagas') ||
-            cat.contains('snack');
-      default:
-        // Unknown selection: never wipe the whole list on a miss.
-        return true;
+    final parts = <String>[];
+    if (_selectedMealType != _defaultMealType) parts.add(_selectedMealType);
+    if (_selectedBudget != _defaultBudget) {
+      parts.add(_shortBudgetLabel(_selectedBudget));
     }
+    if (_selectedHasTimeLimit) {
+      parts.add(formatApproximateCookingTime(_selectedCookingTimeMinutes));
+    }
+    if (_selectedDifficulty != _defaultDifficulty) {
+      parts.add(_selectedDifficulty);
+    }
+    if (_selectedServings != null) {
+      parts.add(formatApproximateServings(_selectedServings!));
+    }
+    return parts.join(' · ');
   }
 
   /// Calculates suggestion match score based on filters and recipe characteristics.
@@ -170,72 +163,46 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
     if (recipes.isEmpty) return [];
 
     final suggestions = <SuggestedRecipeItem>[];
+    final maxTime = _selectedHasTimeLimit ? _selectedCookingTimeMinutes : null;
 
     for (final recipe in recipes) {
-      final parsedCookTime =
-          int.tryParse(recipe.cookTime.replaceAll(RegExp(r'[^0-9]'), '')) ?? 25;
+      // True-exclusion gates: drop recipes that fail any active filter.
+      // "Any" means no exclusion for that dimension.
+      if (!RecipeFilters.mealTypeMatches(recipe, _selectedMealType)) continue;
+      if (!RecipeFilters.budgetMatches(recipe, _selectedBudget)) continue;
+      if (!RecipeFilters.timeMatches(recipe, maxTime)) continue;
+      if (!RecipeFilters.difficultyMatches(recipe, _selectedDifficulty)) {
+        continue;
+      }
+      if (!RecipeFilters.servingsMatches(recipe, _selectedServings)) continue;
 
-      // True-exclusion gates: drop recipes that fail any *active* filter.
-      // Defaults mean "Any/All" — a gate only fires when the committed filter
-      // was explicitly changed from its default value.
-      if (_selectedMealType != _defaultMealType && !_passesMealType(recipe)) {
-        continue;
-      }
-      if (_selectedDifficulty != _defaultDifficulty &&
-          recipe.difficulty.toLowerCase() !=
-              _selectedDifficulty.toLowerCase()) {
-        continue;
-      }
-      if (_cookingTimeMinutes.round() != _defaultCookingTime &&
-          parsedCookTime > _cookingTimeMinutes) {
-        continue;
-      }
-      if (_selectedServings != _defaultServings &&
-          recipe.servings > _selectedServings) {
-        continue;
-      }
-
-      // Suitability score for the surviving recipes (100 = perfect fit).
-      var match = 100;
-      final missing = <String>[];
-
-      // Budget matching: Use actual budget if present, otherwise fall back to proxy
-      if (recipe.budget != null) {
-        final rb = recipe.budget!.toLowerCase();
-        final sb = _selectedBudget.toLowerCase();
-        final isBudgetMatch = (sb.contains('150') && (rb.contains('150') || rb.contains('budget'))) ||
-            (sb.contains('300') && (rb.contains('300') || rb.contains('affordable'))) ||
-            (sb.contains('500') && (rb.contains('500') || rb.contains('special'))) ||
-            (sb.contains('expensive') && (rb.contains('expensive') || rb.contains('>')));
-        if (!isBudgetMatch && sb != rb) {
-          match -= 15;
+      // Suitability among survivors. Hidden (null) when nothing is filtered.
+      int? match;
+      if (_committedFilterCount > 0) {
+        match = 100;
+        // Borderline time fit ranks slightly lower.
+        if (maxTime != null && recipe.totalMinutes > maxTime * 0.8) {
+          match -= 5;
         }
-      } else {
-        // Budget placeholder proxy: ingredient count standing in for cost.
-        if (_selectedBudget.contains('150') && recipe.ingredients.length > 8) {
-          match -= 15;
-          missing.add('Special Spices');
-        } else if (_selectedBudget.contains('500') && recipe.ingredients.length <= 5) {
+        // Budget inferred from a missing field is less certain.
+        if (_selectedBudget != _defaultBudget && recipe.budget == null) {
           match -= 10;
         }
-      }
-
-      // Recipes that barely fit the time budget score slightly lower.
-      if (parsedCookTime > _cookingTimeMinutes * 0.8) {
-        match -= 5;
       }
 
       suggestions.add(
         SuggestedRecipeItem(
           recipe: recipe,
           matchPercentage: match,
-          missingIngredients: missing,
         ),
       );
     }
 
-    // Sort by highest match percentage
-    suggestions.sort((a, b) => b.matchPercentage.compareTo(a.matchPercentage));
+    // Sort by highest match percentage only when scores exist.
+    if (suggestions.any((s) => s.matchPercentage != null)) {
+      suggestions.sort((a, b) => (b.matchPercentage ?? -1)
+          .compareTo(a.matchPercentage ?? -1));
+    }
     return suggestions;
   }
 
@@ -251,7 +218,8 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
   void _openFilterSheet() {
     _pendingMealType = _selectedMealType;
     _pendingBudget = _selectedBudget;
-    _pendingCookingTimeMinutes = _cookingTimeMinutes;
+    _pendingHasTimeLimit = _selectedHasTimeLimit;
+    _pendingCookingTimeMinutes = _selectedCookingTimeMinutes;
     _pendingIsCustomTime = _isCustomTime;
     _pendingDifficulty = _selectedDifficulty;
     _pendingServings = _selectedServings;
@@ -406,12 +374,38 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // Filter 3: Cooking Time
+                              // Filter 3: Total Time (prep + cook)
                               _buildFilterBlock(
-                                title: 'Cooking Time',
+                                title: 'Total Time',
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        _FilterChip(
+                                          label: 'Any time',
+                                          isSelected: !_pendingHasTimeLimit,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingHasTimeLimit = false;
+                                            });
+                                          },
+                                        ),
+                                        _FilterChip(
+                                          label: 'Max ${formatApproximateCookingTime(_pendingCookingTimeMinutes)}',
+                                          isSelected: _pendingHasTimeLimit,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingHasTimeLimit = true;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
                                     // Slider Row with approximate time labels
                                     Row(
                                       children: [
@@ -443,13 +437,14 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                             ),
                                             child: Slider(
                                               value: _pendingCookingTimeMinutes
-                                                  .clamp(4.0, 60.0),
+                                                  .clamp(4.0, 120.0),
                                               min: 4.0,
-                                              max: 60.0,
+                                              max: 120.0,
                                               onChanged: (val) {
                                                 setSheetState(() {
                                                   _pendingCookingTimeMinutes =
                                                       val;
+                                                  _pendingHasTimeLimit = true;
                                                 });
                                               },
                                             ),
@@ -477,6 +472,9 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                             setSheetState(() {
                                               _pendingIsCustomTime =
                                                   !_pendingIsCustomTime;
+                                              if (_pendingIsCustomTime) {
+                                                _pendingHasTimeLimit = true;
+                                              }
                                             });
                                           },
                                           borderRadius: BorderRadius.circular(
@@ -535,6 +533,7 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                                     (_pendingCookingTimeMinutes +
                                                             5)
                                                         .clamp(4.0, 120.0);
+                                                _pendingHasTimeLimit = true;
                                               }
                                             });
                                           },
@@ -550,6 +549,7 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                                     (_pendingCookingTimeMinutes -
                                                             5)
                                                         .clamp(4.0, 120.0);
+                                                _pendingHasTimeLimit = true;
                                               }
                                             });
                                           },
@@ -567,7 +567,7 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                 child: Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
-                                  children: const ['Easy', 'Medium', 'Hard']
+                                  children: _difficultyOptions
                                       .map(
                                         (level) => _FilterChip(
                                           label: level,
@@ -591,97 +591,126 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
                                       children: [
-                                        Text(
-                                          '< 2',
-                                          style:
-                                              AppTypography.caption(
-                                                color: AppColors.textSecondary,
-                                              ).copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                        _FilterChip(
+                                          label: 'Any',
+                                          isSelected: _pendingServings == null,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingServings = null;
+                                            });
+                                          },
                                         ),
-                                        Expanded(
-                                          child: SliderTheme(
-                                            data: SliderThemeData(
-                                              activeTrackColor:
-                                                  AppColors.primary,
-                                              inactiveTrackColor:
-                                                  AppColors.border,
-                                              thumbColor: AppColors.surface,
-                                              overlayColor: AppColors.primary
-                                                  .withValues(alpha: 0.2),
-                                              thumbShape:
-                                                  const RoundSliderThumbShape(
-                                                    enabledThumbRadius: 10,
-                                                    elevation: 3,
-                                                  ),
-                                              trackHeight: 4,
-                                            ),
-                                            child: Slider(
-                                              value: _pendingServings
-                                                  .toDouble(),
-                                              min: 1,
-                                              max: 12,
-                                              divisions: 11,
-                                              onChanged: (val) {
-                                                setSheetState(() {
-                                                  _pendingServings = val
-                                                      .round();
-                                                });
-                                              },
+                                        _FilterChip(
+                                          label: 'Max servings',
+                                          isSelected: _pendingServings != null,
+                                          onTap: () {
+                                            setSheetState(() {
+                                              _pendingServings ??= 4;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    if (_pendingServings != null) ...[
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '< 2',
+                                            style: AppTypography.caption(
+                                              color: AppColors.textSecondary,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                        ),
-                                        Text(
-                                          '> 8',
-                                          style:
-                                              AppTypography.caption(
-                                                color: AppColors.textSecondary,
-                                              ).copyWith(
-                                                fontWeight: FontWeight.w600,
+                                          Expanded(
+                                            child: SliderTheme(
+                                              data: SliderThemeData(
+                                                activeTrackColor:
+                                                    AppColors.primary,
+                                                inactiveTrackColor:
+                                                    AppColors.border,
+                                                thumbColor: AppColors.surface,
+                                                overlayColor: AppColors.primary
+                                                    .withValues(alpha: 0.2),
+                                                thumbShape:
+                                                    const RoundSliderThumbShape(
+                                                      enabledThumbRadius: 10,
+                                                      elevation: 3,
+                                                    ),
+                                                trackHeight: 4,
                                               ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          formatApproximateServings(_pendingServings),
-                                          style:
-                                              AppTypography.caption(
-                                                color: AppColors.primary,
-                                              ).copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 12,
+                                              child: Slider(
+                                                value: _pendingServings!
+                                                    .toDouble()
+                                                    .clamp(1.0, 12.0),
+                                                min: 1,
+                                                max: 12,
+                                                divisions: 11,
+                                                onChanged: (val) {
+                                                  setSheetState(() {
+                                                    _pendingServings =
+                                                        val.round();
+                                                  });
+                                                },
                                               ),
-                                        ),
-                                        const Spacer(),
-                                        _StepIconButton(
-                                          icon: Icons.add,
-                                          onTap: () {
-                                            setSheetState(() {
-                                              if (_pendingServings < 12) {
-                                                _pendingServings += 1;
-                                              }
-                                            });
-                                          },
-                                        ),
-                                        const SizedBox(width: 8),
-                                        _StepIconButton(
-                                          icon: Icons.remove,
-                                          onTap: () {
-                                            setSheetState(() {
-                                              if (_pendingServings > 1) {
-                                                _pendingServings -= 1;
-                                              }
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
+                                            ),
+                                          ),
+                                          Text(
+                                            '> 8',
+                                            style: AppTypography.caption(
+                                              color: AppColors.textSecondary,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            formatApproximateServings(
+                                              _pendingServings!,
+                                            ),
+                                            style: AppTypography.caption(
+                                              color: AppColors.primary,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          _StepIconButton(
+                                            icon: Icons.add,
+                                            onTap: () {
+                                              setSheetState(() {
+                                                if (_pendingServings! < 12) {
+                                                  _pendingServings =
+                                                      _pendingServings! + 1;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(width: 8),
+                                          _StepIconButton(
+                                            icon: Icons.remove,
+                                            onTap: () {
+                                              setSheetState(() {
+                                                if (_pendingServings! > 1) {
+                                                  _pendingServings =
+                                                      _pendingServings! - 1;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -708,7 +737,7 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
                           label: _pendingCount == 0
                               ? 'Apply'
                               : 'Apply $_pendingCount Changes',
-                          onPressed: _pendingCount > 0 ? _applyFilters : null,
+                          onPressed: _pendingChanged ? _applyFilters : null,
                         ),
                       ),
                     ],
@@ -722,11 +751,25 @@ class _AnoPongUlamScreenState extends ConsumerState<AnoPongUlamScreen> {
     );
   }
 
+  /// Whether pending sheet values differ from the committed filters.
+  /// Used to enable Apply — including when resetting everything back to Any.
+  bool get _pendingChanged {
+    return _pendingMealType != _selectedMealType ||
+        _pendingBudget != _selectedBudget ||
+        _pendingHasTimeLimit != _selectedHasTimeLimit ||
+        _pendingCookingTimeMinutes.round() !=
+            _selectedCookingTimeMinutes.round() ||
+        _pendingIsCustomTime != _isCustomTime ||
+        _pendingDifficulty != _selectedDifficulty ||
+        _pendingServings != _selectedServings;
+  }
+
   void _applyFilters() {
     setState(() {
       _selectedMealType = _pendingMealType;
       _selectedBudget = _pendingBudget;
-      _cookingTimeMinutes = _pendingCookingTimeMinutes;
+      _selectedHasTimeLimit = _pendingHasTimeLimit;
+      _selectedCookingTimeMinutes = _pendingCookingTimeMinutes;
       _isCustomTime = _pendingIsCustomTime;
       _selectedDifficulty = _pendingDifficulty;
       _selectedServings = _pendingServings;
@@ -1175,7 +1218,8 @@ class _SuggestedRecipeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = item.recipe;
-    final matchColor = _getMatchColor(item.matchPercentage);
+    final match = item.matchPercentage;
+    final matchColor = match != null ? _getMatchColor(match) : null;
 
     return PressableScale(
       pressedScale: 0.98,
@@ -1239,34 +1283,35 @@ class _SuggestedRecipeCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Match Percentage Badge (Top-left as in wireframe)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.cardShadow,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '${item.matchPercentage}% match',
-                        style: AppTypography.caption(
-                          color: matchColor,
-                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
+                  // Match Percentage Badge — only when filters are active.
+                  if (match != null)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.cardShadow,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '$match% match',
+                          style: AppTypography.caption(
+                            color: matchColor!,
+                          ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
 

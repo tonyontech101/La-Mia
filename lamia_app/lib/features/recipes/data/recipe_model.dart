@@ -34,6 +34,8 @@ class RecipeModel {
     this.status = 'approved',
     this.createdAt,
     this.budget,
+    this.prepTimeMin,
+    this.cookTimeMin,
   });
 
   /// Firestore document ID — needed to reference recipes for likes/saves.
@@ -85,6 +87,39 @@ class RecipeModel {
   final DateTime? createdAt;
 
   final String? budget;
+
+  /// Numeric prep/cook minutes. Prefer the seeded Firestore fields
+  /// (`prepTimeMin`/`cookTimeMin`); fall back to parsing the display strings.
+  final int? prepTimeMin;
+  final int? cookTimeMin;
+
+  /// Parses a time string ("1 hr 30 mins", "45 mins", "2 hours", "30") into
+  /// whole minutes. Returns null when no number is present.
+  static int? parseMinutes(String? raw) {
+    if (raw == null) return null;
+    final s = raw.toLowerCase().trim();
+    if (s.isEmpty) return null;
+
+    // h(?![a-z]) / m(?![a-z]) so "1h30m" matches both parts.
+    final hours = RegExp(r'(\d+)\s*(?:hours?|hrs?|h(?![a-z]))')
+        .allMatches(s)
+        .fold<int>(0, (total, m) => total + int.parse(m.group(1)!));
+    final mins = RegExp(r'(\d+)\s*(?:minutes?|mins?|m(?![a-z]))')
+        .allMatches(s)
+        .fold<int>(0, (total, m) => total + int.parse(m.group(1)!));
+    if (hours > 0 || mins > 0) return hours * 60 + mins;
+
+    final bare = RegExp(r'\d+').firstMatch(s);
+    if (bare != null) return int.parse(bare.group(0)!);
+    return null;
+  }
+
+  /// Prep + cook minutes for filtering (falls back to string parsing).
+  int get totalMinutes {
+    final p = prepTimeMin ?? parseMinutes(prepTime) ?? 0;
+    final c = cookTimeMin ?? parseMinutes(cookTime) ?? 0;
+    return p + c;
+  }
 
   /// Approximate cooking time formatted using relational & approximation terms (<, ~, >).
   String get approximateCookTime {
@@ -178,6 +213,8 @@ class RecipeModel {
     String? status,
     DateTime? createdAt,
     String? budget,
+    int? prepTimeMin,
+    int? cookTimeMin,
   }) {
     return RecipeModel(
       id: id ?? this.id,
@@ -208,6 +245,8 @@ class RecipeModel {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       budget: budget ?? this.budget,
+      prepTimeMin: prepTimeMin ?? this.prepTimeMin,
+      cookTimeMin: cookTimeMin ?? this.cookTimeMin,
     );
   }
 
@@ -220,13 +259,17 @@ class RecipeModel {
     Map<String, dynamic> json, {
     required String coverPhotoUrl,
   }) {
+    final prepTime = json['prep_time'] as String;
+    final cookTime = json['cook_time'] as String;
     return RecipeModel(
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       category: json['category'] as String,
       region: json['region'] as String? ?? 'Unknown',
-      prepTime: json['prep_time'] as String,
-      cookTime: json['cook_time'] as String,
+      prepTime: prepTime,
+      cookTime: cookTime,
+      prepTimeMin: parseMinutes(prepTime),
+      cookTimeMin: parseMinutes(cookTime),
       servings: json['servings'] as int,
       difficulty: json['difficulty'] as String,
       ingredients: List<String>.from(json['ingredients'] as List),
@@ -257,14 +300,20 @@ class RecipeModel {
     Map<String, dynamic> data, {
     required String docId,
   }) {
+    final prepTime = data['prepTime'] as String;
+    final cookTime = data['cookTime'] as String;
     return RecipeModel(
       id: docId,
       name: data['name'] as String,
       description: data['description'] as String? ?? '',
       category: data['category'] as String,
       region: data['region'] as String? ?? 'Unknown',
-      prepTime: data['prepTime'] as String,
-      cookTime: data['cookTime'] as String,
+      prepTime: prepTime,
+      cookTime: cookTime,
+      prepTimeMin: (data['prepTimeMin'] as num?)?.toInt() ??
+          parseMinutes(prepTime),
+      cookTimeMin:
+          (data['cookTimeMin'] as num?)?.toInt() ?? parseMinutes(cookTime),
       servings: data['servings'] as int,
       difficulty: data['difficulty'] as String,
       ingredients: (data['ingredients'] as List<dynamic>)
