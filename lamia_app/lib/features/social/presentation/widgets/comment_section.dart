@@ -68,7 +68,7 @@ class _CommentSectionState extends State<CommentSection> {
     }
     final recipeId = widget.recipe.id;
     if (_resolvedRepo != null && recipeId != null) {
-      _commentsStream = _resolvedRepo!.getCommentsStream(recipeId);
+      _commentsStream = _resolvedRepo!.getAllCommentsStream(recipeId);
     } else {
       _commentsStream = null;
     }
@@ -260,24 +260,42 @@ class _CommentSectionState extends State<CommentSection> {
                 );
               }
 
-              final comments = snapshot.data ?? [];
+              final all = snapshot.data ?? [];
+              final topLevel =
+                  all.where((c) => c.isTopLevel).toList(growable: false);
 
-              if (comments.isEmpty) {
+              if (topLevel.isEmpty) {
                 return const CommentEmptyState();
               }
+
+              // Build parent → children map for arbitrary-depth replies.
+              final byParent = <String, List<CommentModel>>{};
+              for (final c in all) {
+                final pid = c.parentCommentId;
+                if (pid == null) continue;
+                (byParent[pid] ??= []).add(c);
+              }
+              for (final list in byParent.values) {
+                list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+              }
+
+              final sortedTop = [...topLevel]
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: comments.length,
+                itemCount: sortedTop.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(height: AppSpacing.lg),
                 itemBuilder: (context, index) {
-                  final comment = comments[index];
+                  final comment = sortedTop[index];
                   return CommentThread(
                     key: ValueKey(comment.id),
                     parent: comment,
                     commentRepository: _commentRepo!,
+                    directReplies: byParent[comment.id] ?? const [],
+                    repliesByParent: byParent,
                   );
                 },
               );
