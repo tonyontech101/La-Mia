@@ -294,9 +294,12 @@ class RecipeModel {
       ratingCount: (data['ratingCount'] as num?)?.toInt() ?? 0,
       trendingScore: (data['trendingScore'] as num?)?.toInt() ?? 0,
       status: data['status'] as String? ?? 'approved',
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] as dynamic).toDate() as DateTime
-          : null,
+      createdAt: () {
+        final raw = data['createdAt'];
+        if (raw is Timestamp) return raw.toDate();
+        if (raw is DateTime) return raw;
+        return null;
+      }(),
       budget: data['budget'] as String?,
     );
   }

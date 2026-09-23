@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import '../../../core/utils/app_logger.dart';
 import '../data/notification_repository.dart';
 import 'local_notification_service.dart';
 import 'notification_router.dart';
@@ -43,7 +44,14 @@ class FCMService {
         if (user != null) {
           try {
             await _notifRepo.saveFcmToken(user.uid, token);
-          } catch (_) {}
+          } catch (e, stackTrace) {
+            AppLogger.error(
+              'Failed to save refreshed FCM token',
+              error: e,
+              stackTrace: stackTrace,
+              category: 'FCMService',
+            );
+          }
         }
       });
 
@@ -101,7 +109,14 @@ class FCMService {
         if (token != null) {
           await _notifRepo.saveFcmToken(user.uid, token);
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to sync FCM token',
+          error: e,
+          stackTrace: stackTrace,
+          category: 'FCMService',
+        );
+      }
     }
   }
 
@@ -114,7 +129,14 @@ class FCMService {
         if (token != null) {
           await _notifRepo.removeFcmToken(user.uid, token);
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to clear FCM token on logout',
+          error: e,
+          stackTrace: stackTrace,
+          category: 'FCMService',
+        );
+      }
     }
   }
 }

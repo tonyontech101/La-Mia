@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../../notifications/data/notification_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../recipes/data/recipe_model.dart';
@@ -115,7 +116,14 @@ class LikeRepository {
             }
             effectiveSenderPhotoUrl ??= authUser.photoURL;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Failed to fetch auth user for like notification',
+            error: e,
+            stackTrace: stackTrace,
+            category: 'LikeRepository',
+          );
+        }
       }
       final name = effectiveSenderName?.isNotEmpty == true
           ? effectiveSenderName!

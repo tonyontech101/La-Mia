@@ -44,13 +44,7 @@ import 'widgets/vertical_popping_button.dart';
   return ('Step ${index + 1}', rawInstruction);
 }
 
-/// Generic chef's tips for any recipe that doesn't yet ship authoritative
-/// tips via its Firestore document. Remove once `recipe.chefsTips` ships.
-const List<String> _defaultChefsTips = [
-  'Use fresh, high-quality ingredients for optimal taste and aroma.',
-  'Adjust seasoning gradually to suit your personal preference.',
-  'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
-];
+
 
 /// Screen displaying complete details of a recipe, featuring:
 /// - Header image & back navigation
@@ -645,9 +639,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     final effectiveAuthorPhotoUrl = authorProfile?.photoUrl ??
         recipe.authorPhotoUrl ??
         widget.recipe.authorPhotoUrl;
-    final chefsTips = recipe.chefsTips.isNotEmpty
-        ? recipe.chefsTips
-        : _defaultChefsTips;
+    final chefsTips = recipe.chefsTips;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -765,8 +757,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // Top Right Rating Badge Pill: ★ 4.9 (1.2k)
-                          Container(
+                          // Top Right Rating Badge Pill
+                          if (!recipe.isSystemRecipe) Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 5,
@@ -778,33 +770,33 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: AppColors.textPrimary,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  detailState.localRatingAvg > 0
-                                      ? detailState.localRatingAvg.toStringAsFixed(1)
-                                      : '4.9',
-                                  style: const TextStyle(
-                                    fontSize: 12,
+                                if (detailState.localRatingAvg > 0) ...[
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 16,
                                     color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w800,
                                   ),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  detailState.localRatingCount > 0
-                                      ? '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})'
-                                      : '(1.2k)',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w500,
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    detailState.localRatingAvg.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
+                                  if (detailState.localRatingCount > 0) ...[
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '(${detailState.localRatingCount >= 1000 ? "${(detailState.localRatingCount / 1000).toStringAsFixed(1)}k" : detailState.localRatingCount})',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ],
                             ),
                           ),
@@ -814,9 +806,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
                       // Short description
                       Text(
-                        recipe.description.isNotEmpty
-                            ? recipe.description
-                            : 'A popular ${recipe.category.toLowerCase()} recipe dated back in traditional Filipino culinary history.',
+                        recipe.description,
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -975,24 +965,26 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                               ),
                             ),
                           ),
-                          // Social Buttons (Likes, Saves, Share)
+                          // Social Buttons (Likes, Saves)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Heart (Like) popping button
-                              VerticalPoppingButton(
-                                activeIcon: Icons.favorite_rounded,
-                                inactiveIcon: Icons.favorite_rounded,
-                                isActive: detailState.isLiked,
-                                activeColor: AppColors.error,
-                                inactiveColor: const Color(0xFF6E6259),
-                                count: detailState.localLikeCount,
-                                onTap: detailState.socialLoading
-                                    ? () {}
-                                    : _handleLikeTap,
-                              ),
-                              const SizedBox(width: 6),
-                              // Bookmark (Save) popping button
+                              // Heart (Like) popping button - only for user-submitted recipes
+                              if (!recipe.isSystemRecipe) ...[
+                                VerticalPoppingButton(
+                                  activeIcon: Icons.favorite_rounded,
+                                  inactiveIcon: Icons.favorite_rounded,
+                                  isActive: detailState.isLiked,
+                                  activeColor: AppColors.error,
+                                  inactiveColor: const Color(0xFF6E6259),
+                                  count: detailState.localLikeCount,
+                                  onTap: detailState.socialLoading
+                                      ? () {}
+                                      : _handleLikeTap,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              // Bookmark (Save) popping button - always visible
                               VerticalPoppingButton(
                                 activeIcon: Icons.bookmark_rounded,
                                 inactiveIcon: Icons.bookmark_rounded,
@@ -1004,8 +996,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                                     ? () {}
                                     : _handleBookmarkTap,
                               ),
+                              // 3-dot More menu - always visible
                               const SizedBox(width: 6),
-                              // 3-dot More menu popping button
                               VerticalPoppingButton(
                                 activeIcon: Icons.more_horiz_rounded,
                                 inactiveIcon: Icons.more_horiz_rounded,
@@ -1066,29 +1058,30 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Centered Rating Prompt & Interactive Stars
-                      Center(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'How do you rate this recipe?',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
+                      // Centered Rating Prompt & Interactive Stars - only for user-submitted recipes
+                      if (!recipe.isSystemRecipe)
+                        Center(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'How do you rate this recipe?',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            PoppingRatingBar(
-                              initialRating: detailState.userRating,
-                              onRatingChanged: _handleRateRecipe,
-                              activeColor: AppColors.accent,
-                              inactiveColor: const Color(0xFFDCD4CA),
-                              starSize: 28,
-                            ),
-                          ],
+                              const SizedBox(height: 10),
+                              PoppingRatingBar(
+                                initialRating: detailState.userRating,
+                                onRatingChanged: _handleRateRecipe,
+                                activeColor: AppColors.accent,
+                                inactiveColor: const Color(0xFFDCD4CA),
+                                starSize: 28,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1340,6 +1333,22 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
       case 2:
         // Tab 3: Chef's Tips
+        if (chefsTips.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+            child: Center(
+              child: Text(
+                'No chef\'s tips added for this recipe.',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+          );
+        }
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),

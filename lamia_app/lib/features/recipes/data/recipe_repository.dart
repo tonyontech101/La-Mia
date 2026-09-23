@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/constants/popular_fallback_recipes.dart';
+import '../../../core/utils/app_logger.dart';
 import 'recipe_model.dart';
 
 /// Reads recipe data from Cloud Firestore.
@@ -27,46 +29,89 @@ class RecipeRepository {
     });
   }
 
-  /// Fetches recipes flagged as featured by editors/seed data.
-  ///
-  /// Queries `isFeatured == true` and returns up to [limit] recipes,
-  /// sorted in-memory by `trendingScore` descending (Firestore cannot
-  /// combine an equality filter with an `orderBy` on a different field
-  /// without a composite index; we keep the query simple here).
-  Future<List<RecipeModel>> featuredRecipes({int limit = 6}) async {
+  /// Checks if any recipe in the collection has user engagement (likes > 0).
+  Future<bool> _hasUserEngagement() async {
     final snap = await _firestore
         .collection('recipes')
-        .where('isFeatured', isEqualTo: true)
+        .where('likeCount', isGreaterThan: 0)
+        .limit(1)
         .get();
-    final docs = snap.docs.toList();
-    docs.sort((a, b) {
-      final aScore = (a.data()['trendingScore'] as num?)?.toInt() ?? 0;
-      final bScore = (b.data()['trendingScore'] as num?)?.toInt() ?? 0;
-      return bScore.compareTo(aScore);
-    });
-    return docs
-        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where((r) => r.status == 'approved' || r.isSystemRecipe)
-        .take(limit)
-        .toList();
+    return snap.docs.isNotEmpty;
   }
 
-  /// Fetches the most popular recipes by trending score.
+  /// Fetches recipes matching the popular Filipino dish fallback list.
   ///
-  /// Ranked by [trendingScore] descending via Firestore `orderBy` —
-  /// includes both featured and non-featured recipes. Returns a different
-  /// set than [featuredRecipes] because it is not filtered by [isFeatured].
-  Future<List<RecipeModel>> popularChoices({int limit = 6}) async {
+  /// Queries Firestore for recipes whose name contains any of the
+  /// [kPopularFilipinoDishes] entries. Returns up to [limit] matches.
+  Future<List<RecipeModel>> _fetchFallbackRecipes({int limit = 10}) async {
+    final results = <RecipeModel>[];
+    for (final dish in kPopularFilipinoDishes) {
+      if (results.length >= limit) break;
+      final snap = await _firestore
+          .collection('recipes')
+          .where('name', isGreaterThanOrEqualTo: dish)
+          .where('name', isLessThanOrEqualTo: '$dish\uf8ff')
+          .limit(limit - results.length)
+          .get();
+      for (final doc in snap.docs) {
+        final recipe = RecipeModel.fromFirestore(doc.data(), docId: doc.id);
+        if ((recipe.status == 'approved' || recipe.isSystemRecipe) &&
+            !results.any((r) => r.id == recipe.id)) {
+          results.add(recipe);
+        }
+      }
+    }
+    return results;
+  }
+
+  /// Fetches featured recipes.
+  ///
+  /// - If no user engagement exists (all likes == 0): returns popular
+  ///   Filipino dishes from [kPopularFilipinoDishes].
+  /// - If users have engaged: returns the most rated recipes
+  ///   (sorted by [ratingCount] descending).
+  Future<List<RecipeModel>> featuredRecipes({int limit = 6}) async {
+    final hasEngagement = await _hasUserEngagement();
+
+    if (!hasEngagement) {
+      return _fetchFallbackRecipes(limit: limit);
+    }
+
     final snap = await _firestore
         .collection('recipes')
-        .orderBy('trendingScore', descending: true)
-        .limit(limit * 2)
+        .where('status', isEqualTo: 'approved')
         .get();
-    return snap.docs
+    final recipes = snap.docs
         .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
-        .where((r) => r.status == 'approved' || r.isSystemRecipe)
-        .take(limit)
+        .where((r) => r.ratingCount > 0 || r.isSystemRecipe)
         .toList();
+    recipes.sort((a, b) => b.ratingCount.compareTo(a.ratingCount));
+    return recipes.take(limit).toList();
+  }
+
+  /// Fetches popular recipes.
+  ///
+  /// - If no user engagement exists (all likes == 0): returns popular
+  ///   Filipino dishes from [kPopularFilipinoDishes].
+  /// - If users have engaged: returns the most liked recipes
+  ///   (sorted by [likeCount] descending).
+  Future<List<RecipeModel>> popularChoices({int limit = 6}) async {
+    final hasEngagement = await _hasUserEngagement();
+
+    if (!hasEngagement) {
+      return _fetchFallbackRecipes(limit: limit);
+    }
+
+    final snap = await _firestore
+        .collection('recipes')
+        .where('status', isEqualTo: 'approved')
+        .get();
+    final recipes = snap.docs
+        .map((d) => RecipeModel.fromFirestore(d.data(), docId: d.id))
+        .where((r) => r.likeCount > 0 || r.isSystemRecipe)
+        .toList();
+    recipes.sort((a, b) => b.likeCount.compareTo(a.likeCount));
+    return recipes.take(limit).toList();
   }
 
   /// Fetches a slice of the recipe collection, ordered by trending score.
@@ -313,7 +358,13 @@ class RecipeRepository {
           })
           .take(limit)
           .toList();
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to search recipes',
+        error: e,
+        stackTrace: stackTrace,
+        category: 'RecipeRepository',
+      );
       return [];
     }
   }
@@ -383,7 +434,13 @@ class RecipeRepository {
             final model = RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
             if (model.status == 'rejected') return null;
             return model;
-          } catch (_) {
+          } catch (e, stackTrace) {
+            AppLogger.error(
+              'Failed to fetch recipe $docId',
+              error: e,
+              stackTrace: stackTrace,
+              category: 'RecipeRepository',
+            );
             return null;
           }
         }),
@@ -514,7 +571,13 @@ class RecipeRepository {
       final doc = await _firestore.collection('recipes').doc(recipeId).get();
       if (!doc.exists || doc.data() == null) return null;
       return RecipeModel.fromFirestore(doc.data()!, docId: doc.id);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to fetch recipe $recipeId',
+        error: e,
+        stackTrace: stackTrace,
+        category: 'RecipeRepository',
+      );
       return null;
     }
   }

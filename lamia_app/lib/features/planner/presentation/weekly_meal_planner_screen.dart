@@ -843,17 +843,25 @@ class _WeeklyMealPlannerScreenState
               const SizedBox(height: AppSpacing.xxs),
               Row(
                 children: [
-                  Text(
-                    item.category,
-                    style: AppTypography.caption(
-                      color: AppColors.textSecondary,
+                  Flexible(
+                    child: Text(
+                      item.category,
+                      style: AppTypography.caption(
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (item.cookTime.isNotEmpty)
-                    Text(
-                      ' \u00B7 ${item.cookTime}',
-                      style: AppTypography.caption(
-                        color: AppColors.textSecondary,
+                    Flexible(
+                      child: Text(
+                        ' \u00B7 ${item.cookTime}',
+                        style: AppTypography.caption(
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],
