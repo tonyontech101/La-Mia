@@ -11,15 +11,16 @@ import '../../auth/data/user_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'widgets/ranked_chef_tile.dart';
 
-/// Full ranking screen showing all ranked chefs with two tabs:
-/// Top Contributors (by followers) and Most Cooked (by recipe count).
+/// Full ranking screen showing all ranked chefs with three tabs:
+/// Top Contributors (by followers), Most Cooked (by recipe count), and
+/// Trending (by recent recipe engagement).
 ///
 /// Navigated to from the leaderboard's "See Full Rank" button or
 /// "TRENDING COOKS" See All link.
 class FullRankingScreen extends ConsumerStatefulWidget {
   const FullRankingScreen({super.key, this.initialTab = 0});
 
-  /// 0 = Top Contributors, 1 = Most Cooked.
+  /// 0 = Top Contributors, 1 = Most Cooked, 2 = Trending.
   final int initialTab;
 
   @override
@@ -32,6 +33,7 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
 
   List<UserModel> _topContributors = [];
   List<UserModel> _mostCooked = [];
+  List<TrendingCook> _trendingCooks = [];
   bool _isLoading = true;
 
   int _loadGeneration = 0;
@@ -50,11 +52,13 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
       final results = await Future.wait([
         _userRepo.topContributorsByFollowers(limit: 100),
         _userRepo.mostCookedByUploadedRecipes(limit: 100),
+        _userRepo.trendingCooks(limit: 100),
       ]);
       if (mounted && generation == _loadGeneration) {
         setState(() {
-          _topContributors = results[0];
-          _mostCooked = results[1];
+          _topContributors = results[0] as List<UserModel>;
+          _mostCooked = results[1] as List<UserModel>;
+          _trendingCooks = results[2] as List<TrendingCook>;
           _isLoading = false;
         });
       }
@@ -68,7 +72,20 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
   @override
   Widget build(BuildContext context) {
     final activeUsers = _activeTab == 0 ? _topContributors : _mostCooked;
-    final metricLabel = _activeTab == 0 ? 'followers' : 'recipes uploaded';
+    final metricLabel = _activeTab == 0
+        ? 'followers'
+        : _activeTab == 1
+            ? 'recipes uploaded'
+            : 'engagement';
+    final isEmpty = _activeTab == 2
+        ? _trendingCooks.isEmpty
+        : activeUsers.isEmpty;
+
+    final description = switch (_activeTab) {
+      0 => 'Ranked by number of followers',
+      1 => 'Ranked by number of recipes uploaded',
+      _ => 'Ranked by recent recipe engagement',
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -143,9 +160,7 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      _activeTab == 0
-                          ? 'Ranked by number of followers'
-                          : 'Ranked by number of recipes uploaded',
+                      description,
                       style: AppTypography.caption(
                         color: AppColors.textSecondary,
                       ).copyWith(
@@ -166,7 +181,7 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
                             color: AppColors.primary,
                           ),
                         )
-                      : activeUsers.isEmpty
+                      : isEmpty
                           ? Center(
                               child: Padding(
                                 padding: const EdgeInsets.all(32),
@@ -183,26 +198,43 @@ class _FullRankingScreenState extends ConsumerState<FullRankingScreen> {
                                 horizontal: AppSpacing.screenH,
                                 vertical: 8,
                               ),
-                              itemCount: activeUsers.length,
+                              itemCount: _activeTab == 2
+                                  ? _trendingCooks.length
+                                  : activeUsers.length,
                               itemBuilder: (context, index) {
-                                final user = activeUsers[index];
-                                final count = _activeTab == 0
-                                    ? user.followerCount
-                                    : user.recipeCount;
+                                final String name;
+                                final int count;
+                                final String uid;
+                                final String? photoUrl;
+                                if (_activeTab == 2) {
+                                  final entry = _trendingCooks[index];
+                                  name = entry.user.displayName;
+                                  count = entry.score;
+                                  uid = entry.user.uid;
+                                  photoUrl = entry.user.photoUrl;
+                                } else {
+                                  final user = activeUsers[index];
+                                  name = user.displayName;
+                                  count = _activeTab == 0
+                                      ? user.followerCount
+                                      : user.recipeCount;
+                                  uid = user.uid;
+                                  photoUrl = user.photoUrl;
+                                }
 
                                 return RankedChefTile(
                                   rank: index + 1,
-                                  chefName: user.displayName,
+                                  chefName: name,
                                   recipesShared: count,
                                   isTopThree: index < 3,
                                   metricLabel: metricLabel,
-                                  photoUrl: user.photoUrl,
+                                  photoUrl: photoUrl,
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => ProfileScreen(
-                                          targetUserId: user.uid,
+                                          targetUserId: uid,
                                         ),
                                       ),
                                     );
@@ -241,7 +273,7 @@ class _FullRankingTabSwitcher extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       child: SlidingTabBar(
         index: activeTab,
-        itemCount: 2,
+        itemCount: 3,
         highlight: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -257,7 +289,7 @@ class _FullRankingTabSwitcher extends StatelessWidget {
         ),
         onChanged: onTabChanged,
         builder: (context, i, isActive) {
-          const labels = ['Top Contributors', 'Most Cooked'];
+          const labels = ['Top Contributors', 'Most Cooked', 'Trending'];
           return Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),

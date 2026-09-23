@@ -78,38 +78,33 @@ class UserRepository {
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
-  /// Fetches users sorted by [recipeCount] descending — "Top Contributors".
-  Future<List<UserModel>> topContributors({int limit = 20}) async {
-    try {
-      final snap = await _usersRef
-          .orderBy('recipeCount', descending: true)
-          .limit(limit)
-          .get();
-      final users = <UserModel>[];
-      for (final d in snap.docs) {
-        try {
-          if (d.data()['recipeCount'] != null) {
-            users.add(UserModel.fromFirestore(d));
-          }
-        } catch (_) {}
-      }
-      return users;
-    } catch (_) {
-      return [];
+  /// Counts uploaded (non-system) recipes per author, capped at the first
+  /// 500 recipe docs — same window the rest of the leaderboard uses.
+  Future<Map<String, int>> _recipeCountsByAuthor() async {
+    final recipes = await _db.collection('recipes').limit(500).get();
+    final counts = <String, int>{};
+    for (final recipe in recipes.docs) {
+      final data = recipe.data();
+      final authorId = data['authorId'] as String?;
+      final isSystemRecipe = data['isSystemRecipe'] as bool? ?? true;
+      if (authorId == null || authorId.isEmpty || isSystemRecipe) continue;
+      counts.update(authorId, (current) => current + 1, ifAbsent: () => 1);
     }
+    return counts;
   }
 
-  /// Fetches users sorted by [followerCount] descending — "Top Contributors".
-  ///
-  /// Ranks cooks by how many followers they have, reflecting their
-  /// community influence and reach on the platform.
-  Future<List<UserModel>> topContributorsByFollowers({int limit = 20}) async {
-    try {
+  /// Fetches users by document ID (chunked — Firestore caps `whereIn` at 30).
+  Future<List<UserModel>> _usersByIds(Set<String> ids) async {
+    final users = <UserModel>[];
+    final idList = ids.toList();
+    for (var i = 0; i < idList.length; i += 30) {
+      final chunk = idList.sublist(
+        i,
+        i + 30 > idList.length ? idList.length : i + 30,
+      );
       final snap = await _usersRef
-          .orderBy('followerCount', descending: true)
-          .limit(limit)
+          .where(FieldPath.documentId, whereIn: chunk)
           .get();
-      final users = <UserModel>[];
       for (final d in snap.docs) {
         try {
           users.add(UserModel.fromFirestore(d));
@@ -117,24 +112,66 @@ class UserRepository {
           AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
         }
       }
-      // If Firestore returned users (even those without the field), that's fine
-      // — fromFirestore defaults followerCount to 0. Return as-is.
+    }
+    return users;
+  }
+
+  /// Fetches users sorted by [followerCount] descending — "Top Contributors".
+  ///
+  /// Only users who have uploaded at least one recipe are ranked, so
+  /// recipe-less accounts (even with followers) never appear in the
+  /// Top 3 or "Trending Cooks" sections.
+  Future<List<UserModel>> topContributorsByFollowers({int limit = 20}) async {
+    try {
+      final authorCounts = await _recipeCountsByAuthor();
+      final authorIds = authorCounts.keys.toSet();
+      if (authorIds.isEmpty) return [];
+
+      // Over-fetch followers so filtering out non-authors still fills [limit].
+      final fetchLimit = limit * 10 > 100 ? limit * 10 : 100;
+      final snap = await _usersRef
+          .orderBy('followerCount', descending: true)
+          .limit(fetchLimit)
+          .get();
+      final users = <UserModel>[];
+      for (final d in snap.docs) {
+        if (!authorIds.contains(d.id)) continue;
+        try {
+          users.add(UserModel.fromFirestore(d));
+        } catch (e) {
+          AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
+        }
+        if (users.length >= limit) break;
+      }
       if (users.isNotEmpty) return users;
-      throw Exception('No users returned from ordered query');
+
+      // No authors in the top follower window — rank the authors directly.
+      final authors = await _usersByIds(authorIds);
+      authors.sort((a, b) => b.followerCount.compareTo(a.followerCount));
+      return authors.take(limit).toList();
     } catch (e) {
       AppLogger.warning('Error fetching top contributors (falling back): $e', 'UserRepository');
-      // Fallback: fetch a larger batch without order, sort in Dart.
-      // Use 200 as the cap so we get the true top-N even if some are unordered.
       try {
+        final authorCounts = await _recipeCountsByAuthor();
+        final authorIds = authorCounts.keys.toSet();
+        if (authorIds.isEmpty) return [];
+
         final fallbackSnap = await _usersRef.limit(200).get();
         final users = <UserModel>[];
         for (final d in fallbackSnap.docs) {
+          if (!authorIds.contains(d.id)) continue;
           try {
             users.add(UserModel.fromFirestore(d));
           } catch (_) {}
         }
-        users.sort((a, b) => b.followerCount.compareTo(a.followerCount));
-        return users.take(limit).toList();
+        if (users.isNotEmpty) {
+          users.sort((a, b) => b.followerCount.compareTo(a.followerCount));
+          return users.take(limit).toList();
+        }
+
+        final authors = await _usersByIds(authorIds);
+        authors.sort((a, b) => b.followerCount.compareTo(a.followerCount));
+        return authors.take(limit).toList();
       } catch (_) {
         return [];
       }
@@ -146,15 +183,7 @@ class UserRepository {
   /// profiles whose counter was never populated.
   Future<List<UserModel>> mostCookedByUploadedRecipes({int limit = 20}) async {
     try {
-      final recipes = await _db.collection('recipes').limit(500).get();
-      final counts = <String, int>{};
-      for (final recipe in recipes.docs) {
-        final data = recipe.data();
-        final authorId = data['authorId'] as String?;
-        final isSystemRecipe = data['isSystemRecipe'] as bool? ?? true;
-        if (authorId == null || authorId.isEmpty || isSystemRecipe) continue;
-        counts.update(authorId, (current) => current + 1, ifAbsent: () => 1);
-      }
+      final counts = await _recipeCountsByAuthor();
 
       final entries = counts.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
@@ -166,6 +195,52 @@ class UserRepository {
       return cooks;
     } catch (e) {
       AppLogger.warning('Error calculating uploaded recipe counts: $e', 'UserRepository');
+      return [];
+    }
+  }
+
+  /// Ranks cooks by recent recipe engagement — "Trending Cooks".
+  ///
+  /// Each approved recipe contributes its `trendingScore`, which the hourly
+  /// Cloud Function refreshes with a 14-day half-life, so the ranking
+  /// reflects who people are engaging with *now* rather than all-time
+  /// totals. If `trendingScore` has not been computed yet, raw likes,
+  /// favorites, and comments are used as a fallback.
+  Future<List<TrendingCook>> trendingCooks({int limit = 6}) async {
+    try {
+      final recipes = await _db
+          .collection('recipes')
+          .where('status', isEqualTo: 'approved')
+          .limit(500)
+          .get();
+      final scores = <String, int>{};
+      for (final recipe in recipes.docs) {
+        final data = recipe.data();
+        final authorId = data['authorId'] as String?;
+        final isSystemRecipe = data['isSystemRecipe'] as bool? ?? true;
+        if (authorId == null || authorId.isEmpty || isSystemRecipe) continue;
+
+        var score = (data['trendingScore'] as num?)?.toInt() ?? 0;
+        if (score <= 0) {
+          score = ((data['likeCount'] as num?)?.toInt() ?? 0) * 2 +
+              ((data['favoriteCount'] as num?)?.toInt() ?? 0) * 3 +
+              ((data['commentCount'] as num?)?.toInt() ?? 0) * 2;
+        }
+        if (score <= 0) continue;
+        scores.update(authorId, (current) => current + score,
+            ifAbsent: () => score);
+      }
+
+      final entries = scores.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final cooks = <TrendingCook>[];
+      for (final entry in entries.take(limit)) {
+        final user = await getUser(entry.key);
+        if (user != null) cooks.add(TrendingCook(user, entry.value));
+      }
+      return cooks;
+    } catch (e) {
+      AppLogger.warning('Error computing trending cooks: $e', 'UserRepository');
       return [];
     }
   }
@@ -227,4 +302,15 @@ class UserRepository {
       return null;
     }
   }
+}
+
+/// A cook with their summed recent-recipe engagement score, used by the
+/// "Trending Cooks" leaderboard section.
+class TrendingCook {
+  const TrendingCook(this.user, this.score);
+
+  final UserModel user;
+
+  /// Summed trending score (or raw engagement fallback) across recipes.
+  final int score;
 }
