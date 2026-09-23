@@ -71,6 +71,7 @@ void main() {
 
     // Achievements Link
     expect(find.text('See your overall achievements!'), findsOneWidget);
+    expect(find.text('See overall achievements!'), findsNothing);
 
     // Interaction test
     await tester.tap(find.text('Following'));
@@ -78,6 +79,85 @@ void main() {
 
     await tester.tap(find.text('Followers'));
     expect(followedTapped, isTrue);
+  });
+
+  testWidgets(
+      'ProfileHeaderWidget hides achievements link on another profile',
+      (tester) async {
+    var achievementsTapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileHeaderWidget(
+              displayName: 'Chef Mario',
+              isOwnProfile: false,
+              isFollowing: false,
+              onFollowTap: () {},
+              onAchievementsTap: () => achievementsTapped = true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('See overall achievements!'), findsNothing);
+    expect(find.text('See your overall achievements!'), findsNothing);
+    expect(achievementsTapped, isFalse);
+  });
+
+  testWidgets(
+      'ProfileHeaderWidget hides ranking badge when rankingLabel is null',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileHeaderWidget(
+              displayName: 'Chef Mario',
+              isOwnProfile: false,
+              isFollowing: false,
+              achievementLevelLabel: 'Level 1 Kitchen Starter',
+              onFollowTap: () {},
+              onAchievementsTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Unranked'), findsNothing);
+    expect(find.text('#Level 1 ranking'), findsNothing);
+    expect(find.text('Level 1'), findsNothing);
+    expect(find.text('#24 ranking'), findsNothing);
+  });
+
+  testWidgets('ProfileHeaderWidget shows Unranked when explicitly unranked',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileHeaderWidget(
+              displayName: 'Chef Mario',
+              isOwnProfile: false,
+              isFollowing: false,
+              rankingLabel: 'Unranked',
+              achievementLevelLabel: 'Level 1 Kitchen Starter',
+              onFollowTap: () {},
+              onAchievementsTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Unranked'), findsOneWidget);
+    expect(find.text('#Level 1 ranking'), findsNothing);
   });
 
   testWidgets('DishCardGrid renders dish cards with larger icons and counts', (tester) async {
