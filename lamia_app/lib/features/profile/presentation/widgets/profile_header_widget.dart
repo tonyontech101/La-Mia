@@ -212,8 +212,10 @@ class ProfileHeaderWidget extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _buildRankingBadge(),
+                  if (rankingLabel != null) ...[
+                    const SizedBox(width: 8),
+                    _buildRankingBadge(),
+                  ],
                 ],
               ),
             ),
@@ -245,8 +247,8 @@ class ProfileHeaderWidget extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // 3. See your overall achievements! Interactive Link
-        if (onAchievementsTap != null)
+        // 3. See your overall achievements! Interactive Link (own profile only)
+        if (isOwnProfile && onAchievementsTap != null)
           Align(
             alignment: Alignment.centerLeft,
             child: PressableScale(
@@ -374,10 +376,10 @@ class ProfileHeaderWidget extends StatelessWidget {
   }
 
   Widget _buildRankingBadge() {
-    final text = rankingLabel ??
-        (achievementLevelLabel != null
-            ? '#${achievementLevelLabel!.split(" ").first} ranking'
-            : '#24 ranking');
+    final text = rankingLabel;
+    if (text == null || text.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),

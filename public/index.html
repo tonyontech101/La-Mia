@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags -->
+  <title id="meta-title">La Mia — Discover, Cook, and Share Delicious Filipino Recipes</title>
+  <meta name="title" content="La Mia — Filipino Recipe Sharing">
+  <meta name="description" id="meta-desc" content="Discover smart Filipino meal suggestions, Ano Pong Ulam, and Cook by Ingredients on La Mia.">
+
+  <!-- Open Graph / Facebook / Messenger Meta Tags -->
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="La Mia">
+  <meta property="og:title" id="og-title" content="Discover Delicious Filipino Recipes on La Mia">
+  <meta property="og:description" id="og-desc" content="Join home cooks and chefs exploring authentic Filipino dishes.">
+  <meta property="og:image" id="og-image" content="https://la-mia-e348d.web.app/assets/logo.png">
+  <meta property="og:url" id="og-url" content="https://la-mia-e348d.web.app">
+
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" id="tw-title" content="Discover Delicious Filipino Recipes on La Mia">
+  <meta name="twitter:description" id="tw-desc" content="Join home cooks and chefs exploring authentic Filipino dishes.">
+  <meta name="twitter:image" id="tw-image" content="https://la-mia-e348d.web.app/assets/logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #C4462B;
+      --secondary: #1B3B8B;
+      --bg: #FBF6EF;
+      --surface: #FFFFFD;
+      --border: #E4D9C9;
+      --text: #2B211B;
+      --text-muted: #6E6259;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      max-width: 480px;
+      width: 100%;
+      padding: 32px 24px;
+      box-shadow: 0 10px 30px rgba(43, 33, 27, 0.08);
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: #FBE7C9;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .recipe-preview-img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .btn-open {
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      border-radius: 14px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-open:hover { opacity: 0.9; }
+    .footer-brand {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🇵🇭 La Mia Recipe</div>
+    <img id="recipe-img" class="recipe-preview-img" alt="Recipe Preview">
+    <h1 id="recipe-name">Nilagang Baboy</h1>
+    <p id="recipe-desc">Discover step-by-step instructions, ingredients, and smart cooking tips on La Mia.</p>
+    <a id="open-app-btn" class="btn-open" href="lamia://">Open in La Mia App</a>
+  </div>
+  <div class="footer-brand">
+    © 2026 La Mia — Discover, Cook, and Share Delicious Recipes
+  </div>
+
+  <script>
+    // Extract recipe ID from URL path /recipe/:id
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const recipeIndex = pathParts.indexOf('recipe');
+    let recipeId = null;
+    if (recipeIndex !== -1 && pathParts.length > recipeIndex + 1) {
+      recipeId = pathParts[recipeIndex + 1];
+    }
+
+    if (recipeId) {
+      const deepLink = 'lamia://recipe/' + recipeId;
+      document.getElementById('open-app-btn').href = deepLink;
+
+      // Auto-attempt redirect to app on mobile devices
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          window.location.href = deepLink;
+        }, 300);
+      }
+
+      // Fetch recipe metadata from Firestore REST API for dynamic display
+      const firestoreUrl = 'https://firestore.googleapis.com/v1/projects/la-mia-e348d/databases/(default)/documents/recipes/' + recipeId;
+      fetch(firestoreUrl)
+        .then(res => res.json())
+        .then(doc => {
+          if (doc && doc.fields) {
+            const name = doc.fields.name ? doc.fields.name.stringValue : 'Filipino Recipe';
+            const desc = doc.fields.description ? doc.fields.description.stringValue : 'A delicious recipe on La Mia.';
+            const photoUrl = doc.fields.coverPhotoUrl ? doc.fields.coverPhotoUrl.stringValue : null;
+
+            document.getElementById('recipe-name').textContent = name;
+            document.getElementById('recipe-desc').textContent = desc;
+
+            if (photoUrl) {
+              const img = document.getElementById('recipe-img');
+              img.src = photoUrl;
+              img.style.display = 'block';
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,11 +53,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     _loadPopular();
   }
 
-  /// Shuffles [recipes] in place for randomized display.
-  void _shuffle(List<RecipeModel> recipes) {
-    recipes.shuffle(Random());
-  }
-
   Future<void> _loadFeatured() async {
     setState(() {
       _isLoadingFeatured = true;
@@ -67,7 +60,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     });
     try {
       final recipes = await _recipeRepository.featuredRecipes();
-      _shuffle(recipes);
       if (mounted) {
         setState(() {
           _featuredRecipes = recipes;
@@ -91,7 +83,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     });
     try {
       final recipes = await _recipeRepository.popularChoices();
-      _shuffle(recipes);
       if (mounted) {
         setState(() {
           _popularRecipes = recipes;

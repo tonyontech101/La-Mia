@@ -302,22 +302,22 @@ class _RecipeCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 13,
-                            color: AppColors.accent,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            recipe.ratingAvg > 0
-                                ? recipe.ratingAvg.toStringAsFixed(1)
-                                : '4.9',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                          if (recipe.ratingAvg > 0 && !recipe.isSystemRecipe) ...[
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 13,
+                              color: AppColors.accent,
                             ),
-                          ),
+                            const SizedBox(width: 2),
+                            Text(
+                              recipe.ratingAvg.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

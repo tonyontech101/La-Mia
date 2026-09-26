@@ -80,6 +80,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _followsYou = false;
   int? _topContributorRank;
   int? _mostCookedRank;
+  bool _ranksLoaded = false;
   bool _isChefOfMonth = false;
   int? _followingCount;
   int? _followerCount;
@@ -129,8 +130,23 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     final generation = ++_profileLoadGeneration;
     final uid = _displayedUid;
     if (uid == null) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _ranksLoaded = true;
+        });
+      }
       return;
+    }
+
+    // Clear ranks from any previously viewed profile so they never flash
+    // under the new user's header while the fresh queries are in flight.
+    if (mounted) {
+      setState(() {
+        _topContributorRank = null;
+        _mostCookedRank = null;
+        _ranksLoaded = false;
+      });
     }
 
     try {
@@ -178,6 +194,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       int? topContributorRank;
       int? mostCookedRank;
       bool isChefOfMonth = false;
+      bool ranksLoaded = false;
       try {
         final rankings = await Future.wait([
           _userRepo.topContributorsByFollowers(limit: 100),
@@ -192,7 +209,12 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         final monthRecipes = rankings[2] as List<RecipeModel>;
         isChefOfMonth =
             monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
-      } catch (_) {}
+        ranksLoaded = true;
+      } catch (_) {
+        // Mark ranks as resolved even on failure so the header does not
+        // fall back to a fake level-as-ranking label.
+        ranksLoaded = true;
+      }
 
       // Fetch real-time count of following and followers directly from subcollections
       int? followingCount;
@@ -224,6 +246,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           _followsYou = followsYou;
           _topContributorRank = topContributorRank;
           _mostCookedRank = mostCookedRank;
+          _ranksLoaded = ranksLoaded;
           _isChefOfMonth = isChefOfMonth;
           _followingCount = followingCount;
           _followerCount = followerCount;
@@ -248,7 +271,10 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (_) {
       if (mounted && generation == _profileLoadGeneration) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _ranksLoaded = true;
+        });
       }
     }
   }
@@ -937,15 +963,16 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   user?.email?.split('@').first),
                           photoUrl: photoUrl,
                           bio: bio,
-                          rankingLabel: _topContributorRank != null
-                              ? '#$_topContributorRank ranking'
-                              : (_mostCookedRank != null
-                                  ? '#$_mostCookedRank ranking'
-                                  : (achievementLevel != null
-                                      ? '#Level ${achievementLevel.number} ranking'
-                                      : (_userRecipes.isNotEmpty
-                                          ? '#${_userRecipes.length} ranking'
-                                          : '#24 ranking'))),
+                          // Leaderboard rank only — never substitute chef
+                          // level (or a dummy #24) while ranks are loading
+                          // or when the user is unranked.
+                          rankingLabel: !_ranksLoaded
+                              ? null
+                              : (_topContributorRank != null
+                                  ? '#$_topContributorRank ranking'
+                                  : (_mostCookedRank != null
+                                      ? '#$_mostCookedRank ranking'
+                                      : 'Unranked')),
                           achievementLevelLabel: achievementLevel == null
                               ? null
                               : 'Level ${achievementLevel.number} ${achievementLevel.title}',
