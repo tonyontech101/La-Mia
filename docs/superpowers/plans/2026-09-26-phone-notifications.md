@@ -210,19 +210,20 @@ git status
 - Consumes: Complete notification pipeline.
 - Produces: Verified static analysis, test suite, and operational instructions.
 
-- [ ] **Step 1: Run Flutter static analysis**
+- [x] **Step 1: Run Flutter static analysis**
 
 Run: `cmd /c "cd /d \"C:\Users\My PC\OneDrive\Documents\LaMia\lamia_app\" && flutter analyze"`
 Expected: 0 errors / 0 issues.
 
-- [ ] **Step 2: Run all notification tests**
+- [x] **Step 2: Run all notification tests**
 
 Run: `cmd /c "cd /d \"C:\Users\My PC\OneDrive\Documents\LaMia\lamia_app\" && flutter test test/features/notifications/"`
 Expected: All tests PASS.
 
-- [ ] **Step 3: Commit final plan & docs**
+- [x] **Step 3: Commit final plan & docs**
 
 ```bash
 git add docs/superpowers/
 git commit -m "docs: finalize phone notifications implementation documentation"
 ```
+

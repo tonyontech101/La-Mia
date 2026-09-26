@@ -1,7 +1,7 @@
 # Phone Notifications Design Specification
 
 **Date:** 2026-09-26  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** Native Android & Firebase Cloud Notification Pipeline  
 
 ---
@@ -143,16 +143,97 @@ const message: admin.messaging.MulticastMessage = {
 
 ## 5. Deployment & Verification Plan
 
-1. **Backend Deployment:**
-   - Compile TypeScript Cloud Functions (`npm --prefix functions run build`).
-   - Deploy `onNotificationCreate` using `firebase deploy --only functions:onNotificationCreate --project la-mia-e348d`.
-   - Verify active status in `firebase functions:list`.
-2. **Flutter Codebase Changes:**
-   - Update `fcm_service.dart` to listen to auth state changes and sync token immediately on login.
-   - Update `AndroidManifest.xml` with channel metadata, exact alarm permissions, and boot receivers.
-   - Run `flutter analyze` to ensure zero compilation or lint errors.
-3. **End-to-End Verification:**
-   - Trigger a notification (e.g. like a recipe from another test account or trigger a meal reminder).
-   - Verify phone displays notification banner/status bar item when app is in foreground.
-   - Minimize app (background) and lock screen (terminated) to verify phone notification displays in system shade with sound and vibration.
-   - Tap notification and verify navigation directly to target screen.
+### 5.1 Completed Implementation Milestones
+- **Android Manifest & Permissions:** `SCHEDULE_EXACT_ALARM`, `ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver`, and default FCM channel metadata (`system_updates`) configured in `AndroidManifest.xml`.
+- **Cloud Functions:** `onNotificationCreate` updated with high-priority Android & APNs payload and deployed to Firebase project `la-mia-e348d` (active in Cloud Functions v2).
+- **Client Token Lifecycle:** `fcm_service.dart` integrated with `FirebaseAuth.instance.authStateChanges()` to automatically register FCM tokens on login and remove tokens on logout before session revocation.
+- **Unit & Static Analysis:** Verified with zero analyzer issues across `lamia_app` and 100% pass rate across test suite.
+
+---
+
+## 6. Operational Manual Device Verification Procedures
+
+This operational test guide provides exact steps for engineers and QA to manually verify push and local notifications on physical Android devices or Google Play emulators.
+
+### 6.1 Prerequisites
+1. Physical Android device (or Google Play emulator) running Android 8.0+ (API 26 through Android 14+ / API 34).
+2. Google Play Services active and up to date on the device.
+3. On Android 13+ (API 33+), ensure runtime notification permission (`POST_NOTIFICATIONS`) is granted in device App Settings -> Notifications.
+4. On Android 12+ (API 31+), ensure "Alarms & Reminders" (`SCHEDULE_EXACT_ALARM`) is permitted in device Special App Access settings.
+
+---
+
+### 6.2 Scenario A: Cloud FCM Push Notification (Social Interactions)
+
+#### Test Case A1: Auth State Token Registration
+1. Launch `La Mia` on the test device.
+2. Sign in with test account (e.g. `User A` / `alice@example.com`).
+3. Open Firebase Console -> Firestore -> `users/{userA_Id}`.
+4. **Verification:**
+   - Confirm that the `fcmTokens` field exists as an array of strings.
+   - Confirm that the device's current FCM token is listed in `fcmTokens`.
+
+#### Test Case A2: Foreground Heads-Up Notification
+1. Keep the app open and visible on screen (Foreground state).
+2. From a second device (or Firebase Console / test script), trigger a new notification under `users/{userA_Id}/notifications/{docId}`:
+   ```json
+   {
+     "title": "New Comment",
+     "body": "User B commented on your Pork Adobo recipe!",
+     "type": "comment",
+     "targetType": "recipe",
+     "targetId": "sample_recipe_123",
+     "targetRoute": "/recipe/sample_recipe_123",
+     "senderId": "user_b_id",
+     "senderName": "User B",
+     "createdAt": "2026-09-26T12:00:00Z"
+   }
+   ```
+3. **Verification:**
+   - The Cloud Function `onNotificationCreate` triggers in `us-central1`.
+   - A heads-up banner notification immediately appears at the top of the device screen.
+   - Default sound and vibration trigger.
+   - Tapping the notification heads-up banner navigates directly to `/recipe/sample_recipe_123`.
+
+#### Test Case A3: Background System Notification Shade
+1. Press the **Home** button on the device (app minimized to Background).
+2. Trigger another notification document in `users/{userA_Id}/notifications`.
+3. **Verification:**
+   - An app notification icon appears in the Android Status Bar.
+   - Pulling down the Android notification shade reveals the notification card under the `system_updates` category.
+   - Tapping the notification resumes the app and opens the target destination.
+
+#### Test Case A4: Terminated / Cold-Start Push Delivery
+1. Open the device's Recent Apps carousel and **swipe away** `La Mia` to completely terminate the process.
+2. Lock the device screen (optional) or leave on home screen.
+3. Create a notification document in `users/{userA_Id}/notifications`.
+4. **Verification:**
+   - The system displays the push notification on the Lock Screen / Status Bar without requiring the app process to be running beforehand.
+   - Tapping the notification launches the app cold and executes post-frame routing to the target screen.
+
+#### Test Case A5: Sign-Out Token Cleanup
+1. Open `La Mia` and sign out of `User A`.
+2. Inspect `users/{userA_Id}` in Firebase Firestore Console.
+3. **Verification:**
+   - The device FCM registration token is pruned from the `fcmTokens` array.
+   - Subsequent notifications created under `users/{userA_Id}/notifications` do not deliver push notifications to this device.
+
+---
+
+### 6.3 Scenario B: Scheduled Local Meal Reminders
+
+#### Test Case B1: Schedule Meal Planner Reminder
+1. Open the app and navigate to **Meal Planner** or **Settings -> Notifications**.
+2. Ensure meal reminder switches are toggled **ON** (Breakfast: 7:30 AM, Lunch: 11:30 AM, Snack: 3:00 PM, Dinner: 6:30 PM, Ano Pong Ulam: 11:00 AM).
+3. To test immediately, adjust the device clock or schedule a reminder 2 minutes in the future.
+4. Put the device to sleep / lock screen.
+5. **Verification:**
+   - At the exact scheduled time, the device vibrates and displays the meal reminder notification banner from the `meal_reminders` channel (`AndroidScheduleMode.exactAllowWhileIdle`).
+
+#### Test Case B2: Device Reboot Persistence
+1. With meal reminders scheduled, completely restart/reboot the Android device.
+2. Once booted and unlocked, do NOT open `La Mia`.
+3. **Verification:**
+   - The `ScheduledNotificationBootReceiver` receives `android.intent.action.BOOT_COMPLETED` and `flutter_local_notifications` restores all exact alarms in the Android `AlarmManager`.
+   - When the next reminder time arrives, the notification fires as expected without needing manual app launch.
+
