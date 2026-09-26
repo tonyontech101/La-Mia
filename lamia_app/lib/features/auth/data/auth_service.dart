@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_error_messages.dart';
+import '../../notifications/services/fcm_service.dart';
 import '../../planner/data/meal_plan_repository.dart';
 
 /// Wraps [FirebaseAuth] with app-specific helpers and user-friendly error
@@ -163,6 +164,9 @@ class AuthService {
   /// Signs out of both Firebase Auth and Google Sign-In.
   Future<void> signOut() async {
     MealPlanRepository.clearCache();
+    try {
+      await FCMService.instance.clearTokenOnLogout();
+    } catch (_) {}
     await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
   }
 
