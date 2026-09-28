@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
@@ -11,6 +12,7 @@ import '../../../core/providers/auth_service_provider.dart';
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/page_transitions.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -711,7 +713,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           iconColor: AppColors.accent,
                           title: 'Earn Chef Rankings',
                           subtitle:
-                              'Receive likes from fellow foodies and get featured on the community leaderboard.',
+                              'Receive likes from fellow chefs and get featured on the community leaderboard.',
                         ),
 
                         const SizedBox(height: 28),
@@ -836,15 +838,28 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       return _buildGuestView(context);
     }
 
-    final user = ref.read(authServiceProvider).currentUser;
+    final user = ref.watch(authStateChangesProvider).valueOrNull ??
+        ref.read(authServiceProvider).currentUser;
+
+    if (_isOwnProfile && !widget.isGuest && user == null) {
+      // Session has been terminated; redirect to Login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        rootNavigatorKey.currentState?.pushAndRemoveUntil(
+          fadePageRoute(const LoginScreen()),
+          (_) => false,
+        );
+      });
+      return const Scaffold(backgroundColor: AppColors.background);
+    }
+
     final displayName =
         _isOwnProfile
             ? (_userModel?.displayName ??
                   (widget.isGuest
-                      ? 'Guest Foodie'
+                      ? 'Guest'
                       : (user?.displayName ??
                             user?.email?.split('@').first ??
-                            'Chef Foodie')))
+                            'Chef')))
             : (_userModel?.displayName ?? 'Chef');
     // When viewing another user, never fall back to the logged-in user's photo.
     final photoUrl =
@@ -856,7 +871,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         _isOwnProfile
             ? (_userModel?.bio ??
                   (widget.isGuest
-                      ? 'Browsing as guest foodie. Sign in to post family recipes!'
+                      ? 'Browsing as guest. Sign in to post family recipes!'
                       : null))
             : _userModel?.bio;
     final achievements = AchievementCatalog.forUser(

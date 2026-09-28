@@ -3,7 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/page_transitions.dart';
+import '../../auth/presentation/login_screen.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/providers/auth_service_provider.dart';
@@ -98,8 +101,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (widget.isGuest) {
       setState(() {
         _isLoadingProfile = false;
-        _nameController.text = 'Guest Foodie';
-        _bioController.text = 'Browsing as guest foodie.';
+        _nameController.text = 'Guest';
+        _bioController.text = 'Browsing as guest.';
       });
       return;
     }
@@ -143,6 +146,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _expandedIndex = index; // expand
       }
     });
+  }
+
+  Future<void> _onSignOut() async {
+    await ref.read(authServiceProvider).signOut();
+    rootNavigatorKey.currentState?.pushAndRemoveUntil(
+      fadePageRoute(const LoginScreen()),
+      (_) => false,
+    );
   }
 
   // --- Password Actions ---
@@ -971,7 +982,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 24),
+                              if (!widget.isGuest) ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _onSignOut,
+                                    icon: const Icon(
+                                      Icons.logout_rounded,
+                                      color: AppColors.error,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      'Sign Out',
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: AppColors.error.withValues(alpha: 0.35),
+                                        width: 1.2,
+                                      ),
+                                      backgroundColor: AppColors.error.withValues(alpha: 0.05),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(AppRadii.button),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                              ],
                             ],
                           ),
                         ),

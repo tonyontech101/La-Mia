@@ -231,7 +231,7 @@ class ProfileHeaderWidget extends StatelessWidget {
             (bio?.trim().isNotEmpty ?? false)
                 ? bio!.trim()
                 : (isGuest
-                    ? 'Browsing as guest foodie. Sign in to share your recipes!'
+                    ? 'Browsing as guest. Sign in to share your recipes!'
                     : 'Bio of user contains here.'),
             style: AppTypography.body(
               color: AppColors.textSecondary,

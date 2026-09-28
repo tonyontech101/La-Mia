@@ -129,7 +129,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     final user = ref.read(authServiceProvider).currentUser;
     final displayName = widget.isGuest
         ? 'Guest'
-        : (user?.displayName ?? user?.email?.split('@').first ?? 'Foodie');
+        : (user?.displayName ?? user?.email?.split('@').first ?? 'Chef');
 
     return Scaffold(
       backgroundColor: AppColors.background,

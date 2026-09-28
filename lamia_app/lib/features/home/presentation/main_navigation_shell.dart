@@ -12,6 +12,9 @@ import '../../planner/presentation/weekly_meal_planner_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'home_feed_screen.dart';
 
+import '../../../app/app.dart';
+import '../../../core/utils/page_transitions.dart';
+import '../../auth/presentation/login_screen.dart';
 import '../../recipes/presentation/recipe_creating_screen.dart';
 
 /// Redesigned Main Navigation Shell based on wireframe.
@@ -79,6 +82,16 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<User?>>(authStateChangesProvider, (prev, next) {
+      final user = next.valueOrNull;
+      if (user == null && !widget.isGuest) {
+        rootNavigatorKey.currentState?.pushAndRemoveUntil(
+          fadePageRoute(const LoginScreen()),
+          (_) => false,
+        );
+      }
+    });
+
     final currentUser = ref.watch(authStateChangesProvider).valueOrNull ??
         FirebaseAuth.instance.currentUser;
     final effectiveIsGuest = widget.isGuest && currentUser == null;

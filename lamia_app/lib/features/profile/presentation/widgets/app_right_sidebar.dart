@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../app/app.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
@@ -147,12 +148,12 @@ class AppRightSidebar extends StatelessWidget {
   final ValueChanged<int>? onNavigateToTab;
 
   Future<void> _onSignOut(BuildContext context) async {
-    Navigator.of(context).pop(); // Close sidebar
+    Navigator.of(context, rootNavigator: true).pop(); // Close sidebar
     await AuthService().signOut();
-    if (!context.mounted) return;
-    Navigator.of(
-      context,
-    ).pushAndRemoveUntil(fadePageRoute(const LoginScreen()), (_) => false);
+    rootNavigatorKey.currentState?.pushAndRemoveUntil(
+      fadePageRoute(const LoginScreen()),
+      (_) => false,
+    );
   }
 
   void _onLeaderboardTap(BuildContext context) {
