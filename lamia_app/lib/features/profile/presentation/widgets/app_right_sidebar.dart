@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../app/app.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -11,9 +13,13 @@ import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/widgets/banig_divider.dart';
 import '../../../../core/widgets/pressable_scale.dart';
 import '../../../auth/data/auth_service.dart';
+import '../../../auth/data/user_model.dart';
+import '../../../auth/data/user_repository.dart';
 import '../../../auth/presentation/login_screen.dart';
 import '../../../auth/presentation/sign_up_screen.dart';
 import '../../../leaderboard/presentation/leaderboard_screen.dart';
+import '../../../recipes/data/recipe_model.dart';
+import '../../../recipes/data/recipe_repository.dart';
 import '../../../recipes/presentation/ano_pong_ulam_screen.dart';
 import '../../../recipes/presentation/cook_by_ingredients_screen.dart';
 import '../achievements_screen.dart';
@@ -24,6 +30,10 @@ void showAppRightSidebar({
   required BuildContext context,
   bool isGuest = false,
   ValueChanged<int>? onNavigateToTab,
+  int? rank,
+  int? unlockedBadgesCount,
+  UserModel? user,
+  bool? isChefOfMonth,
 }) {
   showGeneralDialog(
     context: context,
@@ -37,6 +47,10 @@ void showAppRightSidebar({
         child: AppRightSidebar(
           isGuest: isGuest,
           onNavigateToTab: onNavigateToTab,
+          initialRank: rank,
+          initialUnlockedBadgesCount: unlockedBadgesCount,
+          initialUser: user,
+          initialIsChefOfMonth: isChefOfMonth,
         ),
       );
     },
@@ -137,15 +151,109 @@ class HamburgerButton extends StatelessWidget {
 ///
 /// Monochrome icons, Fraunces chapter headings, BanigDivider at the hinge,
 /// no rainbow chips, no emoji, no Tailwind literals.
-class AppRightSidebar extends StatelessWidget {
+/// The right-side sidebar — household ledger aesthetic.
+///
+/// Monochrome icons, Fraunces chapter headings, BanigDivider at the hinge,
+/// no rainbow chips, no emoji, no Tailwind literals.
+class AppRightSidebar extends StatefulWidget {
   const AppRightSidebar({
     super.key,
     this.isGuest = false,
     this.onNavigateToTab,
+    this.initialRank,
+    this.initialUnlockedBadgesCount,
+    this.initialUser,
+    this.initialIsChefOfMonth,
   });
 
   final bool isGuest;
   final ValueChanged<int>? onNavigateToTab;
+  final int? initialRank;
+  final int? initialUnlockedBadgesCount;
+  final UserModel? initialUser;
+  final bool? initialIsChefOfMonth;
+
+  @override
+  State<AppRightSidebar> createState() => _AppRightSidebarState();
+}
+
+class _AppRightSidebarState extends State<AppRightSidebar> {
+  int? _rank;
+  int? _unlockedBadgesCount;
+  UserModel? _userModel;
+  bool _isChefOfMonth = false;
+  bool _isLoadingRank = false;
+  bool _isLoadingBadges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rank = widget.initialRank;
+    _unlockedBadgesCount = widget.initialUnlockedBadgesCount;
+    _userModel = widget.initialUser;
+    _isChefOfMonth = widget.initialIsChefOfMonth ?? false;
+
+    if (!widget.isGuest) {
+      _loadDataIfNeeded();
+    }
+  }
+
+  Future<void> _loadDataIfNeeded() async {
+    User? authUser;
+    try {
+      authUser = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
+    if (authUser == null) return;
+    final uid = authUser.uid;
+
+    final firestore = FirebaseFirestore.instance;
+    final userRepo = UserRepository(firestore: firestore);
+    final recipeRepo = RecipeRepository(firestore: firestore);
+
+    if (_userModel == null || _unlockedBadgesCount == null) {
+      if (mounted) setState(() => _isLoadingBadges = true);
+      try {
+        final results = await Future.wait([
+          _userModel != null ? Future.value(_userModel) : userRepo.getUser(uid),
+          recipeRepo.recipesCreatedThisMonth(),
+        ]);
+        final user = results[0] as UserModel?;
+        final monthRecipes = results[1] as List<RecipeModel>;
+        final chefOfMonth =
+            monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
+        if (mounted && user != null) {
+          final achievements =
+              AchievementCatalog.forUser(user, isChefOfMonth: chefOfMonth);
+          final unlocked = achievements.where((a) => a.isUnlocked).length;
+          setState(() {
+            _userModel = user;
+            _isChefOfMonth = chefOfMonth;
+            _unlockedBadgesCount = unlocked;
+            _isLoadingBadges = false;
+          });
+        } else if (mounted) {
+          setState(() => _isLoadingBadges = false);
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isLoadingBadges = false);
+      }
+    }
+
+    if (_rank == null && widget.initialRank == null) {
+      if (mounted) setState(() => _isLoadingRank = true);
+      try {
+        final rank = await userRepo.getUserLeaderboardRank(uid);
+        if (mounted) {
+          setState(() {
+            _rank = rank;
+            _isLoadingRank = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isLoadingRank = false);
+      }
+    }
+  }
 
   Future<void> _onSignOut(BuildContext context) async {
     Navigator.of(context, rootNavigator: true).pop(); // Close sidebar
@@ -166,14 +274,42 @@ class AppRightSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
+    final isGuest = widget.isGuest;
     final displayName = isGuest
         ? 'Guest'
-        : (user?.displayName ?? user?.email?.split('@').first ?? 'Chef');
+        : (_userModel?.displayName ??
+            user?.displayName ??
+            user?.email?.split('@').first ??
+            'Chef');
     final email = isGuest ? 'Browsing mode' : (user?.email ?? '');
-    final photoUrl = isGuest ? null : user?.photoURL;
+    final photoUrl = isGuest ? null : (_userModel?.photoUrl ?? user?.photoURL);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final drawerWidth = (screenWidth * 0.84).clamp(280.0, 360.0);
+
+    String? badgesBadge;
+    if (!isGuest) {
+      if (_unlockedBadgesCount != null) {
+        badgesBadge =
+            '$_unlockedBadgesCount ${_unlockedBadgesCount == 1 ? "badge" : "badges"}';
+      } else if (_isLoadingBadges) {
+        badgesBadge = '...';
+      }
+    }
+
+    String? rankBadge;
+    if (!isGuest) {
+      if (_rank != null && _rank! > 0) {
+        rankBadge = '#$_rank';
+      } else if (_isLoadingRank) {
+        rankBadge = '...';
+      } else {
+        rankBadge = 'Unranked';
+      }
+    }
 
     return Material(
       color: Colors.transparent,
@@ -349,14 +485,17 @@ class AppRightSidebar extends StatelessWidget {
                     _ledgerTile(
                       icon: Icons.emoji_events_outlined,
                       title: 'Achievements',
-                      badge: isGuest ? null : '4 badges',
+                      badge: badgesBadge,
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                AchievementsScreen(isGuest: isGuest),
+                            builder: (_) => AchievementsScreen(
+                              isGuest: isGuest,
+                              user: _userModel,
+                              isChefOfMonth: _isChefOfMonth,
+                            ),
                           ),
                         );
                       },
@@ -364,7 +503,7 @@ class AppRightSidebar extends StatelessWidget {
                     _ledgerTile(
                       icon: Icons.leaderboard_rounded,
                       title: 'Rank',
-                      badge: isGuest ? null : '#34',
+                      badge: rankBadge,
                       onTap: () => _onLeaderboardTap(context),
                     ),
                     const SizedBox(height: 14),

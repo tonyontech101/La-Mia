@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:lamia_app/app/theme/app_colors.dart';
+import 'package:lamia_app/features/auth/data/user_model.dart';
+import 'package:lamia_app/features/profile/presentation/achievements_screen.dart';
 import 'package:lamia_app/features/profile/presentation/widgets/dish_card_grid.dart';
 import 'package:lamia_app/features/profile/presentation/widgets/profile_header_widget.dart';
 import 'package:lamia_app/features/recipes/data/recipe_model.dart';
@@ -215,5 +217,45 @@ void main() {
     expect(find.text('Kare-Kare'), findsOneWidget);
     expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(2));
     expect(find.byIcon(Icons.bookmark_rounded), findsNWidgets(2));
+  });
+
+  testWidgets('ProfileHeaderWidget hides status badges when recognitions is empty', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileHeaderWidget(
+              displayName: 'New Chef',
+              username: 'new_chef',
+              rankingLabel: 'Unranked',
+              recognitions: [],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Top Contributor'), findsNothing);
+    expect(find.text('Most Cooked'), findsNothing);
+    expect(find.text('Chef of the Month'), findsNothing);
+  });
+
+  test('AchievementCatalog.forUser locks all achievements for user with zero activity', () {
+    final newUser = UserModel(
+      uid: 'user123',
+      displayName: 'New User',
+      createdAt: DateTime.now(),
+      recipeCount: 0,
+      followerCount: 0,
+      totalLikesReceived: 0,
+    );
+
+    final achievements = AchievementCatalog.forUser(
+      newUser,
+      isChefOfMonth: false,
+    );
+
+    expect(achievements.every((a) => !a.isUnlocked), isTrue);
   });
 }

@@ -137,7 +137,9 @@ class UserRepository {
       for (final d in snap.docs) {
         if (!authorIds.contains(d.id)) continue;
         try {
-          users.add(UserModel.fromFirestore(d));
+          final user = UserModel.fromFirestore(d);
+          if (user.followerCount <= 0) continue;
+          users.add(user);
         } catch (e) {
           AppLogger.warning('Failed to parse user ${d.id}: $e', 'UserRepository');
         }
@@ -147,6 +149,7 @@ class UserRepository {
 
       // No authors in the top follower window — rank the authors directly.
       final authors = await _usersByIds(authorIds);
+      authors.removeWhere((u) => u.followerCount <= 0);
       authors.sort((a, b) => b.followerCount.compareTo(a.followerCount));
       return authors.take(limit).toList();
     } catch (e) {
@@ -161,7 +164,9 @@ class UserRepository {
         for (final d in fallbackSnap.docs) {
           if (!authorIds.contains(d.id)) continue;
           try {
-            users.add(UserModel.fromFirestore(d));
+            final user = UserModel.fromFirestore(d);
+            if (user.followerCount <= 0) continue;
+            users.add(user);
           } catch (_) {}
         }
         if (users.isNotEmpty) {
@@ -170,6 +175,7 @@ class UserRepository {
         }
 
         final authors = await _usersByIds(authorIds);
+        authors.removeWhere((u) => u.followerCount <= 0);
         authors.sort((a, b) => b.followerCount.compareTo(a.followerCount));
         return authors.take(limit).toList();
       } catch (_) {
@@ -185,7 +191,7 @@ class UserRepository {
     try {
       final counts = await _recipeCountsByAuthor();
 
-      final entries = counts.entries.toList()
+      final entries = counts.entries.where((e) => e.value > 0).toList()
         ..sort((a, b) => b.value.compareTo(a.value));
       final cooks = <UserModel>[];
       for (final entry in entries.take(limit)) {
@@ -287,17 +293,34 @@ class UserRepository {
     }
   }
 
-  /// Returns the 1-based leaderboard ranking for [uid] across top contributors,
-  /// or `null` if the user is not in the rankings (e.g., 0 followers or unranked).
+  /// Returns the best 1-based leaderboard ranking for [uid] across top contributors
+  /// and most cooked, or `null` if the user is not in the rankings.
   Future<int?> getUserLeaderboardRank(String uid) async {
     try {
-      final contributors = await topContributorsByFollowers(limit: 100);
+      final results = await Future.wait([
+        topContributorsByFollowers(limit: 100),
+        mostCookedByUploadedRecipes(limit: 100),
+      ]);
+      final contributors = results[0];
+      final cooks = results[1];
+
+      int? bestRank;
       for (var i = 0; i < contributors.length; i++) {
         if (contributors[i].uid == uid && contributors[i].followerCount > 0) {
-          return i + 1;
+          bestRank = i + 1;
+          break;
         }
       }
-      return null;
+      for (var i = 0; i < cooks.length; i++) {
+        if (cooks[i].uid == uid && cooks[i].recipeCount > 0) {
+          final cookedRank = i + 1;
+          if (bestRank == null || cookedRank < bestRank) {
+            bestRank = cookedRank;
+          }
+          break;
+        }
+      }
+      return bestRank;
     } catch (_) {
       return null;
     }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -6,6 +8,9 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/fade_in_view.dart';
 import '../../../core/widgets/pressable_scale.dart';
 import '../../auth/data/user_model.dart';
+import '../../auth/data/user_repository.dart';
+import '../../recipes/data/recipe_model.dart';
+import '../../recipes/data/recipe_repository.dart';
 
 /// Model representing a single user achievement / badge.
 class AchievementItem {
@@ -144,112 +149,72 @@ class AchievementsScreen extends StatefulWidget {
 class _AchievementsScreenState extends State<AchievementsScreen> {
   int _selectedFilterIndex = 0; // 0: All, 1: Culinary, 2: Community, 3: Milestones
 
-  List<AchievementItem> _achievements = const [
-    AchievementItem(
-      id: 'first_dish',
-      title: 'First Sizzle',
-      description: 'Publish your very first recipe to the community.',
-      icon: Icons.soup_kitchen_rounded,
-      category: 'Culinary',
-      xpReward: 50,
-      currentProgress: 1,
-      maxProgress: 1,
-      isUnlocked: true,
-      badgeColor: AppColors.primary,
-    ),
-    AchievementItem(
-      id: 'adobo_master',
-      title: 'Adobo Master',
-      description: 'Cook or share 3 different variations of classic Adobo.',
-      icon: Icons.restaurant_rounded,
-      category: 'Classics',
-      xpReward: 100,
-      currentProgress: 2,
-      maxProgress: 3,
-      isUnlocked: false,
-      badgeColor: Color(0xFFD97706),
-    ),
-    AchievementItem(
-      id: 'crowd_favorite',
-      title: 'Crowd Favorite',
-      description: 'Receive 50 total likes across your shared recipes.',
-      icon: Icons.favorite_rounded,
-      category: 'Community',
-      xpReward: 150,
-      currentProgress: 34,
-      maxProgress: 50,
-      isUnlocked: false,
-      badgeColor: Color(0xFFE11D48),
-    ),
-    AchievementItem(
-      id: 'sinigang_expert',
-      title: 'Sour Power',
-      description: 'Explore and bookmark 5 tangy Sinigang variations.',
-      icon: Icons.ramen_dining_rounded,
-      category: 'Classics',
-      xpReward: 75,
-      currentProgress: 5,
-      maxProgress: 5,
-      isUnlocked: true,
-      badgeColor: Color(0xFF16A34A),
-    ),
-    AchievementItem(
-      id: 'recipe_collector',
-      title: 'Grand Cookbook',
-      description: 'Save 15 mouthwatering recipes to your personal collection.',
-      icon: Icons.bookmark_added_rounded,
-      category: 'Culinary',
-      xpReward: 120,
-      currentProgress: 15,
-      maxProgress: 15,
-      isUnlocked: true,
-      badgeColor: Color(0xFF8B5CF6),
-    ),
-    AchievementItem(
-      id: 'top_contributor',
-      title: 'Leaderboard Contender',
-      description: 'Break into the Top 20 on the monthly Chef Leaderboard.',
-      icon: Icons.workspace_premium_rounded,
-      category: 'Community',
-      xpReward: 250,
-      currentProgress: 1,
-      maxProgress: 1,
-      isUnlocked: true,
-      badgeColor: Color(0xFFF59E0B),
-    ),
-    AchievementItem(
-      id: 'kakanin_crafter',
-      title: 'Kakanin Crafter',
-      description: 'Cook or share 2 traditional sweet Filipino kakanin dishes.',
-      icon: Icons.cake_rounded,
-      category: 'Classics',
-      xpReward: 90,
-      currentProgress: 1,
-      maxProgress: 2,
-      isUnlocked: false,
-      badgeColor: Color(0xFFEC4899),
-    ),
-    AchievementItem(
-      id: 'helpful_critic',
-      title: 'Kitchen Mentor',
-      description: 'Leave 10 helpful tips or reviews on other chefs’ recipes.',
-      icon: Icons.chat_bubble_rounded,
-      category: 'Community',
-      xpReward: 80,
-      currentProgress: 4,
-      maxProgress: 10,
-      isUnlocked: false,
-      badgeColor: Color(0xFF0EA5E9),
-    ),
-  ];
+  List<AchievementItem> _achievements = const [];
+  UserModel? _currentUser;
+  bool _isChefOfMonth = false;
 
   @override
   void initState() {
     super.initState();
+    _currentUser = widget.user;
+    _isChefOfMonth = widget.isChefOfMonth;
     _achievements = AchievementCatalog.forUser(
-      widget.user,
-      isChefOfMonth: widget.isChefOfMonth,
+      _currentUser,
+      isChefOfMonth: _isChefOfMonth,
     );
+
+    if (_currentUser == null && !widget.isGuest) {
+      _loadUserAndAchievements();
+    }
+  }
+
+  Future<void> _loadUserAndAchievements() async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {}
+    if (uid == null) return;
+    try {
+      final userRepo = UserRepository(firestore: FirebaseFirestore.instance);
+      final recipeRepo = RecipeRepository(firestore: FirebaseFirestore.instance);
+      final results = await Future.wait([
+        userRepo.getUser(uid),
+        recipeRepo.recipesCreatedThisMonth(),
+      ]);
+      final user = results[0] as UserModel?;
+      final monthRecipes = results[1] as List<RecipeModel>;
+      final chefOfMonth =
+          monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
+      if (mounted && user != null) {
+        setState(() {
+          _currentUser = user;
+          _isChefOfMonth = chefOfMonth;
+          _achievements = AchievementCatalog.forUser(
+            user,
+            isChefOfMonth: chefOfMonth,
+          );
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void didUpdateWidget(covariant AchievementsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user != widget.user ||
+        oldWidget.isChefOfMonth != widget.isChefOfMonth) {
+      setState(() {
+        _currentUser = widget.user;
+        _isChefOfMonth = widget.isChefOfMonth;
+        _achievements = AchievementCatalog.forUser(
+          _currentUser,
+          isChefOfMonth: _isChefOfMonth,
+        );
+      });
+      if (_currentUser == null && !widget.isGuest) {
+        _loadUserAndAchievements();
+      }
+    }
   }
 
   List<AchievementItem> get _filteredList {
@@ -269,11 +234,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     }
   }
 
-  int get _unlockedCount => widget.isGuest || widget.user == null
+  int get _unlockedCount => widget.isGuest || _currentUser == null
       ? 0
       : _achievements.where((a) => a.isUnlocked).length;
 
-  int get _totalXp => widget.isGuest || widget.user == null
+  int get _totalXp => widget.isGuest || _currentUser == null
       ? 0
       : _achievements
           .where((a) => a.isUnlocked)

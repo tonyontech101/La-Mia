@@ -206,8 +206,13 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         topContributorRank = _rankForUser(
           rankings[0] as List<UserModel>,
           uid,
+          isEligible: (u) => u.followerCount > 0,
         );
-        mostCookedRank = _rankForUser(rankings[1] as List<UserModel>, uid);
+        mostCookedRank = _rankForUser(
+          rankings[1] as List<UserModel>,
+          uid,
+          isEligible: (u) => u.recipeCount > 0,
+        );
         final monthRecipes = rankings[2] as List<RecipeModel>;
         isChefOfMonth =
             monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
@@ -281,8 +286,15 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  int? _rankForUser(List<UserModel> users, String uid) {
-    final index = users.indexWhere((user) => user.uid == uid);
+  int? _rankForUser(
+    List<UserModel> users,
+    String uid, {
+    bool Function(UserModel user)? isEligible,
+  }) {
+    final eligibleUsers = isEligible == null
+        ? users
+        : users.where(isEligible).toList();
+    final index = eligibleUsers.indexWhere((user) => user.uid == uid);
     return index == -1 ? null : index + 1;
   }
 
@@ -361,9 +373,25 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showOptionsMenu(BuildContext context) {
+    final achievements = AchievementCatalog.forUser(
+      _userModel,
+      isChefOfMonth: _isChefOfMonth,
+    );
+    final unlockedBadgesCount = achievements.where((a) => a.isUnlocked).length;
+    final ranks = [_topContributorRank, _mostCookedRank]
+        .where((r) => r != null && r! > 0)
+        .cast<int>()
+        .toList();
+    ranks.sort();
+    final bestRank = ranks.isNotEmpty ? ranks.first : null;
+
     showAppRightSidebar(
       context: context,
       isGuest: widget.isGuest,
+      rank: bestRank,
+      unlockedBadgesCount: unlockedBadgesCount,
+      user: _userModel,
+      isChefOfMonth: _isChefOfMonth,
     );
   }
 
@@ -1026,23 +1054,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 detail: '#$_topContributorRank',
                                 icon: Icons.people_alt_rounded,
                                 color: AppColors.secondary,
-                              )
-                            else
-                              const ProfileRecognition(
-                                label: 'Top Contributor',
-                                icon: Icons.people_alt_rounded,
-                                color: AppColors.secondary,
                               ),
                             if (_mostCookedRank != null)
                               ProfileRecognition(
                                 label: 'Most Cooked',
                                 detail: '#$_mostCookedRank',
-                                icon: Icons.restaurant_menu_rounded,
-                                color: AppColors.primary,
-                              )
-                            else
-                              const ProfileRecognition(
-                                label: 'Most Cooked',
                                 icon: Icons.restaurant_menu_rounded,
                                 color: AppColors.primary,
                               ),

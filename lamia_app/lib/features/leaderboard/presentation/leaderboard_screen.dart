@@ -125,8 +125,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       final contributorRank = _rankForUser(
         rankings[0],
         currentUserId,
+        isEligible: (u) => u.followerCount > 0,
       );
-      final cookedRank = _rankForUser(rankings[1], currentUserId);
+      final cookedRank = _rankForUser(
+        rankings[1],
+        currentUserId,
+        isEligible: (u) => u.recipeCount > 0,
+      );
 
       if (mounted) {
         setState(() {
@@ -137,17 +142,32 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     } catch (_) {}
   }
 
-  int _rankForUser(List<UserModel> users, String uid) {
-    final index = users.indexWhere((user) => user.uid == uid);
+  int _rankForUser(
+    List<UserModel> users,
+    String uid, {
+    bool Function(UserModel user)? isEligible,
+  }) {
+    final eligibleUsers = isEligible == null
+        ? users
+        : users.where(isEligible).toList();
+    final index = eligibleUsers.indexWhere((user) => user.uid == uid);
     return index == -1 ? 0 : index + 1;
   }
 
   void _showOptionsMenu(BuildContext context) {
+    final ranks = [_topContributorRank, _mostCookedRank]
+        .where((r) => r != null && r! > 0)
+        .cast<int>()
+        .toList();
+    ranks.sort();
+    final bestRank = ranks.isNotEmpty ? ranks.first : null;
+
     showAppRightSidebar(
       context: context,
       onNavigateToTab: widget.onNavigateHome != null
           ? (_) => widget.onNavigateHome!()
           : null,
+      rank: bestRank,
     );
   }
 
