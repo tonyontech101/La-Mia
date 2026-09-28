@@ -27,6 +27,8 @@ class EmailOtpVerificationScreen extends ConsumerStatefulWidget {
     this.purpose = 'signup',
     this.targetEmail,
     this.newEmail,
+    this.signupPassword,
+    this.signupDisplayName,
     this.onVerified,
     this.verificationTitle,
     this.verificationSubtitle,
@@ -41,6 +43,12 @@ class EmailOtpVerificationScreen extends ConsumerStatefulWidget {
 
   /// The new email address (only applicable when [purpose] == 'change_email').
   final String? newEmail;
+
+  /// Pending signup password (when verifying before account creation).
+  final String? signupPassword;
+
+  /// Pending signup display name (when verifying before account creation).
+  final String? signupDisplayName;
 
   /// Optional callback executed when verification succeeds.
   final Future<void> Function(BuildContext context)? onVerified;
@@ -189,14 +197,27 @@ class _EmailOtpVerificationScreenState
     });
 
     try {
-      final success = await _authService.verifyEmailOtp(
-        code: code,
-        purpose: widget.purpose,
-        newEmail: widget.newEmail,
-      );
+      if (widget.purpose == 'signup' &&
+          widget.signupPassword != null &&
+          widget.signupPassword!.isNotEmpty) {
+        // New user registration: verify OTP, create account on backend, sign in, and ensure user document
+        await _authService.verifyOtpAndCreateAccount(
+          code: code,
+          email: widget.targetEmail ?? _displayEmail,
+          password: widget.signupPassword!,
+          displayName: widget.signupDisplayName ?? '',
+        );
+      } else {
+        final success = await _authService.verifyEmailOtp(
+          code: code,
+          purpose: widget.purpose,
+          newEmail: widget.newEmail,
+          targetEmail: widget.targetEmail,
+        );
 
-      if (!success) {
-        throw Exception('Verification code was rejected.');
+        if (!success) {
+          throw Exception('Verification code was rejected.');
+        }
       }
 
       if (!mounted) return;
@@ -403,7 +424,9 @@ class _EmailOtpVerificationScreenState
           Center(
             child: TextButton(
               onPressed: () {
-                if (widget.onVerified != null || widget.purpose != 'signup') {
+                if (widget.signupPassword != null) {
+                  Navigator.of(context).pop();
+                } else if (widget.onVerified != null || widget.purpose != 'signup') {
                   Navigator.of(context).pop(false);
                 } else {
                   _backToLogin();
@@ -414,7 +437,9 @@ class _EmailOtpVerificationScreenState
                 foregroundColor: AppColors.textSecondary,
               ),
               child: Text(
-                (widget.onVerified != null || widget.purpose != 'signup')
+                (widget.signupPassword != null ||
+                        widget.onVerified != null ||
+                        widget.purpose != 'signup')
                     ? 'Cancel'
                     : 'Back to login',
                 style: AppTypography.body(color: AppColors.textSecondary),

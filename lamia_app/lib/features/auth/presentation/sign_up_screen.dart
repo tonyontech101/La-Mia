@@ -182,42 +182,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
     setState(() => _creating = true);
     try {
-      await _authService.createAccountWithEmail(
-        email: _emailController.text,
-        password: _passwordController.text,
-        displayName: _nameController.text,
-      );
-      if (!mounted) return;
-
-      // Send the OTP verification code via Resend before navigating.
       final signupEmail = _emailController.text.trim();
-      bool otpSent = true;
-      try {
-        await _authService.sendEmailOtp(
-          purpose: 'signup',
-          targetEmail: signupEmail,
-        );
-      } catch (_) {
-        otpSent = false;
-      }
+      final signupPassword = _passwordController.text;
+      final signupDisplayName = _nameController.text.trim();
+
+      // Request the OTP verification code via Resend.
+      // NOTE: We DO NOT create the account in Firebase Auth or Firestore yet.
+      // The account will only be created AFTER the user successfully verifies the OTP.
+      await _authService.sendEmailOtp(
+        purpose: 'signup',
+        targetEmail: signupEmail,
+      );
       if (!mounted) return;
 
       AppSnackbar.show(
         context,
-        message: otpSent
-            ? 'Account created! Enter the verification code sent to your email.'
-            : 'Account created! Tap "Resend Code" to receive your verification code.',
+        message: 'Verification code sent! Please check your email.',
       );
 
-      // Navigate to the OTP verification screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => EmailOtpVerificationScreen(
+      // Navigate to the OTP verification screen with pending registration info.
+      Navigator.of(context).push(
+        fadePageRoute(
+          EmailOtpVerificationScreen(
             purpose: 'signup',
             targetEmail: signupEmail,
+            signupPassword: signupPassword,
+            signupDisplayName: signupDisplayName,
           ),
         ),
-        (_) => false,
       );
     } catch (e) {
       if (!mounted) return;

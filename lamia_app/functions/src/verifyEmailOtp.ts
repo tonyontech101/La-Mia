@@ -10,11 +10,8 @@ const db = admin.firestore();
 
 export const verifyEmailOtp = onCall({ cors: true }, async (request) => {
   const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "You must be signed in to verify a code.");
-  }
+  const { code, purpose, newEmail, email, targetEmail, password, displayName } = request.data || {};
 
-  const { code, purpose, newEmail } = request.data || {};
   if (!code || typeof code !== "string" || !/^\d{6}$/.test(code.trim())) {
     throw new HttpsError("invalid-argument", "Please enter a valid 6-digit verification code.");
   }
@@ -26,7 +23,23 @@ export const verifyEmailOtp = onCall({ cors: true }, async (request) => {
     );
   }
 
-  const docId = `${uid}_${purpose}`;
+  let docId: string;
+  let recipientEmail: string | undefined;
+
+  if (purpose === "signup") {
+    recipientEmail = (email || targetEmail || request.auth?.token?.email)?.trim()?.toLowerCase();
+    if (!recipientEmail || !recipientEmail.includes("@")) {
+      throw new HttpsError("invalid-argument", "A valid email is required.");
+    }
+    const emailHash = crypto.createHash("sha256").update(recipientEmail).digest("hex");
+    docId = `signup_${emailHash}`;
+  } else {
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "You must be signed in to verify a code.");
+    }
+    docId = `${uid}_${purpose}`;
+  }
+
   const otpRef = db.collection("otp_verifications").doc(docId);
   const otpDoc = await otpRef.get();
 
@@ -87,28 +100,56 @@ export const verifyEmailOtp = onCall({ cors: true }, async (request) => {
   await otpRef.delete();
 
   if (purpose === "signup") {
-    // Mark email as verified in Firebase Auth
-    await admin.auth().updateUser(uid, {
-      emailVerified: true,
-    });
-    return {
-      success: true,
-      emailVerified: true,
-      message: "Email verified successfully.",
-    };
+    // If user is already signed in (legacy unverified user logging in), mark email as verified
+    if (uid) {
+      await admin.auth().updateUser(uid, {
+        emailVerified: true,
+      });
+      return {
+        success: true,
+        emailVerified: true,
+        message: "Email verified successfully.",
+      };
+    }
+
+    // New user registration: create the account in Firebase Auth now that OTP is verified!
+    if (!password || typeof password !== "string" || password.length < 6) {
+      throw new HttpsError("invalid-argument", "A valid password is required to complete account creation.");
+    }
+
+    try {
+      const newUser = await admin.auth().createUser({
+        email: recipientEmail,
+        password: password,
+        displayName: displayName ? String(displayName).trim() : undefined,
+        emailVerified: true,
+      });
+
+      return {
+        success: true,
+        emailVerified: true,
+        uid: newUser.uid,
+        message: "Account created and verified successfully.",
+      };
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        throw new HttpsError("already-exists", "The email address is already in use by another account.");
+      }
+      throw new HttpsError("internal", err.message || "Failed to create account.");
+    }
   }
 
   if (purpose === "change_email") {
     const updatedEmail = (newEmail || data.email).trim().toLowerCase();
     // Update user's email in Firebase Auth and set emailVerified to true
-    await admin.auth().updateUser(uid, {
+    await admin.auth().updateUser(uid!, {
       email: updatedEmail,
       emailVerified: true,
     });
 
     // Sync email in Firestore users/{uid} document
     try {
-      await db.collection("users").doc(uid).set(
+      await db.collection("users").doc(uid!).set(
         { email: updatedEmail, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
         { merge: true }
       );

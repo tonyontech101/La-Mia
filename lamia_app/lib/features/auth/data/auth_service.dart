@@ -237,6 +237,7 @@ class AuthService {
     required String code,
     required String purpose,
     String? newEmail,
+    String? targetEmail,
   }) async {
     try {
       final callable = _functions.httpsCallable('verifyEmailOtp');
@@ -245,6 +246,8 @@ class AuthService {
         'purpose': purpose,
         if (newEmail != null && newEmail.isNotEmpty)
           'newEmail': newEmail.trim(),
+        if (targetEmail != null && targetEmail.isNotEmpty)
+          'targetEmail': targetEmail.trim(),
       });
 
       // Reload user to sync updated Firebase Auth state (e.g. emailVerified = true)
@@ -255,6 +258,48 @@ class AuthService {
         return data['success'] == true;
       }
       return false;
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(e.message ?? 'Invalid verification code.');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Verification failed: $e');
+    }
+  }
+
+  /// Verifies the OTP code for a new signup, creates the account in Firebase Auth
+  /// with emailVerified: true on the backend, signs in locally, and ensures the
+  /// Firestore user document is created.
+  Future<User> verifyOtpAndCreateAccount({
+    required String code,
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('verifyEmailOtp');
+      final result = await callable.call({
+        'code': code.trim(),
+        'purpose': 'signup',
+        'email': email.trim(),
+        'password': password,
+        'displayName': displayName.trim(),
+      });
+
+      final data = result.data;
+      if (data is! Map || data['success'] != true) {
+        throw Exception('Verification failed.');
+      }
+
+      // Account was created on server with emailVerified = true.
+      // Sign in locally with the credentials.
+      final user = await signInWithEmail(
+        email: email.trim(),
+        password: password,
+      );
+
+      // Ensure Firestore user document exists
+      await _ensureUserDocument(user);
+      return user;
     } on FirebaseFunctionsException catch (e) {
       throw Exception(e.message ?? 'Invalid verification code.');
     } catch (e) {

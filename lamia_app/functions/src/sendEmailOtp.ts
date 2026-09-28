@@ -10,11 +10,6 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export const sendEmailOtp = onCall({ cors: true }, async (request) => {
-  if (!request.auth || !request.auth.uid) {
-    throw new HttpsError("unauthenticated", "You must be signed in to request a verification code.");
-  }
-  const uid = request.auth.uid;
-
   const { purpose, targetEmail } = request.data || {};
   if (!purpose || !["signup", "change_password", "change_email"].includes(purpose)) {
     throw new HttpsError(
@@ -23,18 +18,35 @@ export const sendEmailOtp = onCall({ cors: true }, async (request) => {
     );
   }
 
+  const isSignup = purpose === "signup";
+  if (!isSignup && (!request.auth || !request.auth.uid)) {
+    throw new HttpsError("unauthenticated", "You must be signed in to request a verification code.");
+  }
+  const uid = request.auth?.uid;
+
   let recipientEmail: string | undefined = targetEmail;
 
   if (purpose === "change_email") {
     if (!recipientEmail || !recipientEmail.includes("@")) {
       throw new HttpsError("invalid-argument", "A valid target email is required for email changes.");
     }
-  } else {
-    // For signup or change_password, default to current user's email if not provided
+  } else if (purpose === "signup") {
     if (!recipientEmail) {
-      recipientEmail = request.auth.token.email;
+      recipientEmail = request.auth?.token.email;
     }
+    if (!recipientEmail && uid) {
+      const userRecord = await admin.auth().getUser(uid);
+      recipientEmail = userRecord.email;
+    }
+    if (!recipientEmail || !recipientEmail.includes("@")) {
+      throw new HttpsError("invalid-argument", "A valid email is required for sign-up verification.");
+    }
+  } else {
+    // change_password
     if (!recipientEmail) {
+      recipientEmail = request.auth?.token.email;
+    }
+    if (!recipientEmail && uid) {
       // Fallback: fetch from Firebase Auth
       const userRecord = await admin.auth().getUser(uid);
       recipientEmail = userRecord.email;
@@ -47,7 +59,36 @@ export const sendEmailOtp = onCall({ cors: true }, async (request) => {
 
   recipientEmail = recipientEmail.trim().toLowerCase();
 
-  const docId = `${uid}_${purpose}`;
+  // If this is a new signup (not signed in), verify that the email is not already registered
+  if (isSignup && !uid) {
+    try {
+      const existingUser = await admin.auth().getUserByEmail(recipientEmail);
+      if (existingUser) {
+        throw new HttpsError(
+          "already-exists",
+          "The email address is already in use by another account."
+        );
+      }
+    } catch (err: any) {
+      if (err.code === "auth/user-not-found") {
+        // Email is available, proceed
+      } else if (err instanceof HttpsError) {
+        throw err;
+      } else {
+        console.error("[sendEmailOtp] Error checking email availability:", err);
+      }
+    }
+  }
+
+  // Key by email hash for signup so it is consistent before/after auth
+  let docId: string;
+  if (isSignup) {
+    const emailHash = crypto.createHash("sha256").update(recipientEmail).digest("hex");
+    docId = `signup_${emailHash}`;
+  } else {
+    docId = `${uid}_${purpose}`;
+  }
+
   const otpRef = db.collection("otp_verifications").doc(docId);
   const otpDoc = await otpRef.get();
 
@@ -76,7 +117,7 @@ export const sendEmailOtp = onCall({ cors: true }, async (request) => {
 
   // Save to Firestore with 10-minute expiry
   await otpRef.set({
-    uid,
+    uid: uid || null,
     email: recipientEmail,
     purpose,
     otpHash,
@@ -88,7 +129,15 @@ export const sendEmailOtp = onCall({ cors: true }, async (request) => {
   });
 
   // Dispatch email via Resend
-  await sendVerificationEmail(recipientEmail, code, purpose);
+  try {
+    await sendVerificationEmail(recipientEmail, code, purpose);
+  } catch (err: any) {
+    console.error("[sendEmailOtp] Failed to dispatch email via Resend:", err);
+    throw new HttpsError(
+      "internal",
+      err?.message || "Failed to deliver verification email. Please check your email address and try again."
+    );
+  }
 
   return {
     success: true,
