@@ -291,7 +291,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               controller: _nameController,
               focusNode: _nameFocus,
               label: 'Full name',
-              hint: 'Juan Dela Cruz',
+              hint: 'Enter your full name',
               prefixIcon: Icons.person_outline,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,

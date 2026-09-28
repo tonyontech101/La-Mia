@@ -9,14 +9,21 @@ import 'fade_in_view.dart';
 /// a vertical dark scrim and the "La Mia" wordmark. Sits behind the floating
 /// auth card, which overlaps its bottom edge.
 class HeroHeader extends StatelessWidget {
-  const HeroHeader({super.key, required this.height});
+  const HeroHeader({
+    super.key,
+    required this.height,
+    this.compact = false,
+  });
 
   final double height;
+  final bool compact;
 
   static const String _asset = 'assets/images/l-intro-1725652895.jpg';
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = height < 220;
+
     // Decode the large photo at roughly device width to save memory.
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final cacheWidth = (MediaQuery.sizeOf(context).width * dpr).round().clamp(
@@ -68,7 +75,7 @@ class HeroHeader extends StatelessWidget {
           Positioned(
             left: AppSpacing.screenH,
             right: AppSpacing.screenH,
-            bottom: AppSpacing.xl + 28,
+            bottom: isCompact ? 24.0 : 36.0,
             child: FadeInView(
               delay: const Duration(milliseconds: 120),
               duration: const Duration(milliseconds: 600),
@@ -77,13 +84,17 @@ class HeroHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const _Wordmark(),
-                  const SizedBox(height: AppSpacing.xs),
+                  _Wordmark(compact: isCompact),
+                  SizedBox(height: isCompact ? 4 : AppSpacing.xs),
                   Text(
                     'Discover, Cook, and Share Delicious Recipes.',
                     style: AppTypography.label(
                       color: AppColors.onPrimary.withValues(alpha: 0.85),
+                    ).copyWith(
+                      fontSize: isCompact ? 11.5 : 13,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -96,10 +107,14 @@ class HeroHeader extends StatelessWidget {
 }
 
 class _Wordmark extends StatelessWidget {
-  const _Wordmark();
+  const _Wordmark({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final logoSize = compact ? 34.0 : 44.0;
+
     return Semantics(
       header: true,
       label: 'La Mia',
@@ -109,11 +124,11 @@ class _Wordmark extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(compact ? 8 : 10),
               child: Image.asset(
                 'assets/images/logo.png',
-                width: 44,
-                height: 44,
+                width: logoSize,
+                height: logoSize,
                 fit: BoxFit.contain,
               ),
             ),
@@ -122,12 +137,17 @@ class _Wordmark extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('La Mia', style: AppTypography.wordmark()),
+                Text(
+                  'La Mia',
+                  style: compact
+                      ? AppTypography.wordmark().copyWith(fontSize: 24)
+                      : AppTypography.wordmark(),
+                ),
                 const SizedBox(height: AppSpacing.xxs),
                 // Short amber underline stroke under the wordmark.
                 Container(
-                  width: 32,
-                  height: 4,
+                  width: compact ? 26 : 32,
+                  height: compact ? 3 : 4,
                   decoration: BoxDecoration(
                     color: AppColors.accent,
                     borderRadius: BorderRadius.circular(AppRadii.pill),

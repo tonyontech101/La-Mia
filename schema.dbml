@@ -1,0 +1,327 @@
+// ==============================================================================
+// La Mia — Cloud Firestore Database Schema in DBML
+// Tool: https://dbml.dbdiagram.io
+// Architecture: Flutter + Cloud Firestore + Firebase Cloud Functions
+// ==============================================================================
+
+// ── CORE RECIPES & CONTENT ───────────────────────────────────────────────────
+
+Table recipes {
+  id varchar [primary key, note: 'Unique recipe slug (e.g. ulam-chicken-adobo) or UUID']
+  name varchar [not null, note: 'Dish name']
+  description text [note: 'Background story and dish summary']
+  category varchar [not null, note: 'Almusal | Ulam | Sabaw | Merienda | Panghimagas | Gulay | Inihaw | Lamang Dagat | Pulutan']
+  region varchar [note: 'Tagalog, Ilocos, Kapampangan, Bicol, Visayas, Mindanao']
+  prep_time varchar [note: 'Display string: ~ 15 mins']
+  cook_time varchar [note: 'Display string: ~ 45-60 mins']
+  prep_time_min integer [note: 'Normalized minutes for query filters']
+  cook_time_min integer [note: 'Normalized minutes for query filters']
+  servings integer [default: 4]
+  difficulty varchar [note: 'Easy | Medium | Hard']
+  budget varchar [note: 'e.g. < ₱150 (Budget friendly)']
+  ingredients json [note: 'Array of ingredient strings or {display, id}']
+  instructions json [note: 'Ordered array of preparation steps']
+  chefs_tips json [note: 'Pro tips and culinary techniques']
+  tags json [note: 'Array of search keywords e.g. ["adobo", "chicken", "classic"]']
+  cover_photo_url varchar [not null, note: 'Public Cloud Storage image URL']
+  source varchar [note: 'Provenance attribution']
+  author_id varchar [note: 'User UID (null for system curated recipes)']
+  author_name varchar [default: 'La Mia']
+  author_photo_url varchar
+  is_system_recipe boolean [default: true, note: 'True for curated cold-start dishes']
+  is_featured boolean [default: false, note: 'Hero carousel display flag']
+  like_count integer [default: 0, note: 'Denormalized counter (±1 increments)']
+  comment_count integer [default: 0, note: 'Denormalized counter (±1 increments)']
+  favorite_count integer [default: 0, note: 'Denormalized counter (±1 increments)']
+  rating_avg float [default: 0.0, note: 'Server-authoritative average (0.0 - 5.0)']
+  rating_count integer [default: 0, note: 'Server-authoritative total ratings count']
+  trending_score integer [default: 0, note: 'Hourly cron computed popularity score']
+  status varchar [default: 'approved', note: 'approved | pending | rejected | hidden']
+  rejection_reason text [note: 'AI moderation or admin feedback']
+  approved_at timestamp
+  created_at timestamp [default: `now()`]
+}
+
+Table comments {
+  id varchar [primary key, note: 'Auto-generated Firestore document ID']
+  recipe_id varchar [not null, note: 'Parent recipe document reference']
+  user_id varchar [not null, note: 'Comment author UID']
+  user_name varchar [not null, default: 'Foodie']
+  user_photo_url varchar
+  text text [not null, note: 'Comment content (1 - 1000 characters)']
+  is_reply boolean [default: false, note: 'True if replying to another comment']
+  parent_comment_id varchar [note: 'ID of parent comment (enables nested threads)']
+  reply_count integer [default: 0, note: 'Denormalized direct child reply counter']
+  liked_by json [note: 'Array of user UIDs who liked this comment']
+  created_at timestamp [default: `now()`]
+}
+
+Table ratings {
+  recipe_id varchar [not null]
+  user_id varchar [not null]
+  rating integer [not null, note: '1 to 5 stars (strictly 1 rating per user per recipe)']
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (recipe_id, user_id) [pk]
+  }
+}
+
+Table ingredient_catalog {
+  name_slug varchar [primary key, note: 'Lowercased trimmed slug (e.g. sibuyas)']
+  name varchar [not null, note: 'Display name']
+  package_price decimal [note: 'Estimated retail price in Philippine Pesos (PHP)']
+  package_size decimal [note: 'Standard packaging quantity']
+  package_unit varchar [note: 'g | kg | ml | L | pcs | bundle']
+  last_updated timestamp [default: `now()`]
+}
+
+// ── USER PROFILES & SOCIAL GRAPH ─────────────────────────────────────────────
+
+Table users {
+  id varchar [primary key, note: 'Firebase Auth UID']
+  display_name varchar [not null]
+  bio text
+  photo_url varchar
+  recipe_count integer [default: 0, note: 'Server-managed total published recipes']
+  total_likes_received integer [default: 0, note: 'Aggregate likes received across recipes']
+  follower_count integer [default: 0, note: 'Total followers count (±1 rules)']
+  following_count integer [default: 0, note: 'Total following count (±1 rules)']
+  saved_count integer [default: 0, note: 'Total saved/bookmarked recipes']
+  unread_notification_count integer [default: 0]
+  role varchar [default: 'user', note: 'user | trusted | admin']
+  featured_achievement_id varchar [note: 'Displayed badge on public profile']
+  notification_preferences json [note: '{likes, comments, followers, mealReminders, etc.}']
+  created_at timestamp [default: `now()`]
+}
+
+Table follows {
+  follower_user_id varchar [not null, note: 'User who initiated follow']
+  followed_user_id varchar [not null, note: 'Target chef being followed']
+  followed_at timestamp [default: `now()`]
+
+  indexes {
+    (follower_user_id, followed_user_id) [pk]
+  }
+}
+
+Table likes {
+  recipe_id varchar [not null]
+  user_id varchar [not null]
+  liked_at timestamp [default: `now()`]
+
+  indexes {
+    (recipe_id, user_id) [pk]
+  }
+}
+
+Table favorites {
+  user_id varchar [not null]
+  recipe_id varchar [not null]
+  saved_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, recipe_id) [pk]
+  }
+}
+
+// ── MEAL PLANNER & GROCERY LIST ──────────────────────────────────────────────
+
+Table meal_plans {
+  id varchar [primary key, note: 'Composite: user_id + "_" + week_YYYY_MM_DD']
+  user_id varchar [not null, note: 'Owner of the weekly planner']
+  week_id varchar [not null, note: 'Deterministic key: week_YYYY_MM_DD (Monday)']
+  start_date date [not null, note: 'Monday calendar date']
+  days json [not null, note: '7-day map with breakfast, lunch, dinner, snack slots']
+  updated_at timestamp [default: `now()`]
+}
+
+Table grocery_items {
+  id varchar [primary key, note: 'Auto-generated Firestore document ID']
+  user_id varchar [not null, note: 'Owner of the pantry checklist']
+  name varchar [not null, note: 'Ingredient name (e.g. 500g Pork Belly)']
+  recipe_id varchar [note: 'Source recipe if imported from planner/recipe']
+  recipe_name varchar [note: 'Cached source recipe title']
+  checked boolean [default: false, note: 'Checked off while shopping']
+  added_at timestamp [default: `now()`]
+}
+
+// ── PLATFORM SERVICES, AUDIT & SECURITY ──────────────────────────────────────
+
+Table notifications {
+  id varchar [primary key, note: 'Auto-generated Firestore document ID']
+  user_id varchar [not null, note: 'Recipient user UID']
+  sender_id varchar [note: 'Actor user UID who triggered the notification']
+  sender_name varchar
+  sender_photo_url varchar
+  type varchar [not null, note: 'recipe_like | recipe_comment | comment_reply | new_follower | recipe_approved | meal_reminder']
+  title varchar [not null]
+  body text [not null]
+  target_id varchar [note: 'Referenced entity ID (recipeId, userId, weekId)']
+  target_type varchar [note: 'recipe | user | planner | achievement | url | custom']
+  target_route varchar [note: 'In-app GoRouter navigation deep link']
+  image_url varchar
+  metadata json
+  is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+}
+
+Table moderation_logs {
+  id varchar [primary key, note: 'Auto-generated audit log ID']
+  recipe_id varchar [not null, note: 'Submitted recipe under review']
+  author_id varchar [note: 'Recipe submitter UID']
+  text_validation json [note: 'Gemini 1.5 Flash validation output: {isRecipe, confidence, reason}']
+  image_validation json [note: 'Google Cloud Vision API output: {isFood, labels, safeSearch}']
+  final_status varchar [note: 'approved | rejected | flagged | pending']
+  rejection_reason text
+  moderated_at timestamp [default: `now()`]
+}
+
+Table otp_verifications {
+  id varchar [primary key, note: 'Deterministic doc: email + "_" + purpose']
+  user_id varchar [note: 'UID if authenticated user']
+  email varchar [not null, note: 'Normalized lowercase target email']
+  purpose varchar [not null, note: 'signup | change_password | change_email']
+  otp_hash varchar [not null, note: 'HMAC-SHA256 hash of the 6-digit code']
+  salt varchar [not null, note: 'Cryptographic random salt']
+  attempts integer [default: 0, note: 'Failed verification attempts (max 5)']
+  expires_at timestamp [not null, note: '10-minute expiry deadline']
+  last_sent_at timestamp [not null, note: '60-second cooldown rate limit anchor']
+  created_at timestamp [default: `now()`]
+}
+
+Table reports {
+  id varchar [primary key]
+  reporter_id varchar [not null, note: 'User UID filing the abuse report']
+  target_type varchar [not null, note: 'recipe | comment']
+  target_id varchar [not null, note: 'ID of flagged recipe or comment']
+  reason text [not null, note: 'Explanation of abuse/inappropriateness']
+  created_at timestamp [default: `now()`]
+}
+
+// ── RELATIONSHIPS ─────────────────────────────────────────────────────────────
+
+Ref: recipes.author_id > users.id
+Ref: comments.recipe_id > recipes.id
+Ref: comments.user_id > users.id
+Ref: comments.parent_comment_id > comments.id
+Ref: ratings.recipe_id > recipes.id
+Ref: ratings.user_id > users.id
+Ref: follows.follower_user_id > users.id
+Ref: follows.followed_user_id > users.id
+Ref: likes.recipe_id > recipes.id
+Ref: likes.user_id > users.id
+Ref: favorites.user_id > users.id
+Ref: favorites.recipe_id > recipes.id
+Ref: meal_plans.user_id > users.id
+Ref: grocery_items.user_id > users.id
+Ref: grocery_items.recipe_id > recipes.id
+Ref: notifications.user_id > users.id
+Ref: notifications.sender_id > users.id
+Ref: moderation_logs.recipe_id > recipes.id
+Ref: moderation_logs.author_id > users.id
+Ref: otp_verifications.user_id > users.id
+Ref: reports.reporter_id > users.id
+
+// ── TABLE GROUPS ─────────────────────────────────────────────────────────────
+
+TableGroup Core_Recipes {
+  recipes
+  comments
+  ratings
+  ingredient_catalog
+}
+
+TableGroup User_Social {
+  users
+  follows
+  likes
+  favorites
+}
+
+TableGroup Meal_Planner {
+  meal_plans
+  grocery_items
+}
+
+TableGroup Platform_Security {
+  notifications
+  moderation_logs
+  otp_verifications
+  reports
+}
+
+// ── SAMPLE RECORDS (Authentic La Mia Filipino App Data) ───────────────────────
+
+Records users(id, display_name, role, recipe_count, total_likes_received, follower_count) {
+  'usr_admin_01', 'La Mia Admin', 'admin', 50, 4820, 1540
+  'usr_chef_juan', 'Chef Juan Dela Cruz', 'trusted', 12, 1280, 430
+  'usr_maria_s', 'Maria Santos', 'user', 4, 320, 85
+  'usr_ana_r', 'Ana Reyes', 'user', 1, 45, 18
+}
+
+Records recipes(id, name, category, region, difficulty, servings, author_id, like_count, rating_avg, status) {
+  'ulam-chicken-adobo', 'Classic Chicken Adobo', 'Ulam', 'Luzon', 'Easy', 4, 'usr_admin_01', 482, 4.8, 'approved'
+  'sabaw-beef-sinigang', 'Sinigang na Baka sa Sampalok', 'Sabaw', 'Tagalog', 'Medium', 6, 'usr_admin_01', 437, 4.7, 'approved'
+  'panghimagas-halo-halo', 'Special Halo-Halo', 'Panghimagas', 'Nationwide', 'Easy', 2, 'usr_chef_juan', 420, 4.8, 'approved'
+  'ulam-kare-kare', 'Authentic Oxtail Kare-Kare', 'Ulam', 'Pampanga', 'Hard', 6, 'usr_chef_juan', 356, 4.6, 'approved'
+  'almusal-beef-tapa', 'Homemade Beef Tapa (Silog)', 'Almusal', 'Luzon', 'Easy', 4, 'usr_maria_s', 275, 4.5, 'approved'
+}
+
+Records follows(follower_user_id, followed_user_id, followed_at) {
+  'usr_maria_s', 'usr_chef_juan', '2026-08-15 08:30:00'
+  'usr_ana_r', 'usr_chef_juan', '2026-08-20 14:12:00'
+  'usr_ana_r', 'usr_maria_s', '2026-09-02 19:45:00'
+}
+
+Records comments(id, recipe_id, user_id, user_name, text, is_reply, parent_comment_id) {
+  'cmt_101', 'ulam-chicken-adobo', 'usr_maria_s', 'Maria Santos', 'This is exactly how my lola made it! The cane vinegar balance is perfection.', false, null
+  'cmt_102', 'ulam-chicken-adobo', 'usr_chef_juan', 'Chef Juan Dela Cruz', 'Pro tip: Sear the chicken pieces in garlic oil until golden before pouring in the sauce!', true, 'cmt_101'
+  'cmt_103', 'sabaw-beef-sinigang', 'usr_ana_r', 'Ana Reyes', 'Perfect sourness! Made this for Sunday family lunch.', false, null
+}
+
+Records ratings(recipe_id, user_id, rating) {
+  'ulam-chicken-adobo', 'usr_maria_s', 5
+  'ulam-chicken-adobo', 'usr_ana_r', 5
+  'sabaw-beef-sinigang', 'usr_maria_s', 5
+  'ulam-kare-kare', 'usr_ana_r', 4
+}
+
+Records likes(recipe_id, user_id) {
+  'ulam-chicken-adobo', 'usr_maria_s'
+  'ulam-chicken-adobo', 'usr_ana_r'
+  'sabaw-beef-sinigang', 'usr_maria_s'
+}
+
+Records favorites(user_id, recipe_id) {
+  'usr_maria_s', 'ulam-chicken-adobo'
+  'usr_ana_r', 'ulam-chicken-adobo'
+  'usr_ana_r', 'sabaw-beef-sinigang'
+}
+
+Records ingredient_catalog(name_slug, name, package_price, package_size, package_unit) {
+  'chicken-thigh', 'Chicken Thigh / Leg Quarter', 220.00, 1000, 'g'
+  'datu-puti-vinegar', 'Cane Vinegar (Datu Puti)', 36.50, 350, 'ml'
+  'silver-swan-soy', 'Soy Sauce (Silver Swan)', 38.00, 385, 'ml'
+  'garlic-bawang', 'Native Garlic (Bawang)', 25.00, 100, 'g'
+  'beef-shank', 'Beef Shank with Marrow (Bulalo/Sinigang)', 420.00, 1000, 'g'
+}
+
+Records meal_plans(id, user_id, week_id, start_date) {
+  'mp_usr_maria_s_2026_09_28', 'usr_maria_s', 'week_2026_09_28', '2026-09-28'
+}
+
+Records grocery_items(id, user_id, name, recipe_id, recipe_name, checked) {
+  'gro_001', 'usr_maria_s', '1 kg Chicken thigh', 'ulam-chicken-adobo', 'Classic Chicken Adobo', true
+  'gro_002', 'usr_maria_s', '1 head Garlic (minced)', 'ulam-chicken-adobo', 'Classic Chicken Adobo', false
+  'gro_003', 'usr_maria_s', '1 pack Sinigang mix (gabi)', 'sabaw-beef-sinigang', 'Sinigang na Baka sa Sampalok', false
+}
+
+Records notifications(id, user_id, sender_id, sender_name, type, title, body, is_read) {
+  'notif_001', 'usr_admin_01', 'usr_maria_s', 'Maria Santos', 'recipe_like', 'New Recipe Like', 'Maria Santos liked your recipe "Classic Chicken Adobo".', false
+  'notif_002', 'usr_maria_s', 'usr_chef_juan', 'Chef Juan Dela Cruz', 'comment_reply', 'New Reply to Your Comment', 'Chef Juan Dela Cruz replied to your comment on Classic Chicken Adobo.', true
+}
+
+Records moderation_logs(id, recipe_id, author_id, final_status, rejection_reason) {
+  'mod_log_01', 'almusal-beef-tapa', 'usr_maria_s', 'approved', null
+}
