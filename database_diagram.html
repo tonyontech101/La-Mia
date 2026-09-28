@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Mia — Firestore Database Diagram & Data Dictionary</title>
+  <style>
+    /* ==========================================================================
+       A4 LANDSCAPE PRINT & PRESENTATION STYLESHEET
+       Bond Paper standard: 297mm x 210mm
+       ========================================================================== */
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --border-subtle: #e2e8f0;
+      --border-card: #cbd5e1;
+
+      /* Domain colors */
+      --domain-user: #2563eb;
+      --domain-user-header: #1d4ed8;
+      --domain-user-bg: #eff6ff;
+
+      --domain-planner: #059669;
+      --domain-planner-header: #047857;
+      --domain-planner-bg: #ecfdf5;
+
+      --domain-recipe: #ea580c;
+      --domain-recipe-header: #c2410c;
+      --domain-recipe-bg: #fff7ed;
+
+      --domain-system: #7c3aed;
+      --domain-system-header: #6d28d9;
+      --domain-system-bg: #f5f3ff;
+
+      /* Badges */
+      --badge-pk-bg: #fef3c7;
+      --badge-pk-color: #92400e;
+      --badge-fk-bg: #e0f2fe;
+      --badge-fk-color: #0369a1;
+      --badge-sub-bg: #ede9fe;
+      --badge-sub-color: #6d28d9;
+      --badge-ctr-bg: #dcfce7;
+      --badge-ctr-color: #15803d;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* Screen Toolbar */
+    .screen-toolbar {
+      width: 297mm;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #f8fafc;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar-title span {
+      background: #ea580c;
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* A4 Sheet Container */
+    .a4-page {
+      width: 297mm;
+      height: 210mm;
+      max-height: 210mm;
+      background: #ffffff;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+      padding: 8mm 9mm 6mm 9mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3);
+    }
+
+    .title-block h1 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+      line-height: 1.1;
+    }
+
+    .title-block p {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .meta-badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .pill-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .pill-badge.accent {
+      background: #fff7ed;
+      border-color: #fdba74;
+      color: #c2410c;
+    }
+
+    /* Diagram Legend Bar */
+    .legend-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      padding: 4px 10px;
+      margin-bottom: 7px;
+      font-size: 9.5px;
+    }
+
+    .legend-items {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .legend-color-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+    }
+
+    .legend-notations {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: #64748b;
+      font-size: 9px;
+    }
+
+    .key-tag {
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .key-pk { background: var(--badge-pk-bg); color: var(--badge-pk-color); }
+    .key-fk { background: var(--badge-fk-bg); color: var(--badge-fk-color); }
+    .key-sub { background: var(--badge-sub-bg); color: var(--badge-sub-color); }
+    .key-ctr { background: var(--badge-ctr-bg); color: var(--badge-ctr-color); }
+
+    /* Canvas Area (Page 1) */
+    .diagram-canvas {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 167mm;
+      max-height: 167mm;
+      display: grid;
+      grid-template-columns: 66mm 63mm 74mm 66mm;
+      gap: 7mm;
+      overflow: hidden;
+    }
+
+    /* SVG Relationship Connector Overlay */
+    .diagram-svg-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .relation-line {
+      fill: none;
+      stroke-width: 1.3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.85;
+    }
+
+    .relation-user { stroke: #2563eb; }
+    .relation-recipe { stroke: #ea580c; }
+    .relation-planner { stroke: #059669; }
+    .relation-system { stroke: #7c3aed; }
+    .relation-dashed { stroke-dasharray: 3, 2.5; }
+
+    /* Column Stack */
+    .diagram-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 20;
+    }
+
+    /* Entity Cards */
+    .entity-card {
+      background: #ffffff;
+      border: 1px solid var(--border-card);
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      font-size: 8.5px;
+    }
+
+    .entity-header {
+      padding: 3.5px 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      font-weight: 700;
+      font-size: 9px;
+      letter-spacing: 0.2px;
+    }
+
+    .entity-header .collection-path {
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-size: 8.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .entity-header .card-type-tag {
+      font-size: 7.5px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.25);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    /* Domain Theming for Cards */
+    .theme-user .entity-header { background: var(--domain-user-header); }
+    .theme-user { border-color: #93c5fd; }
+
+    .theme-planner .entity-header { background: var(--domain-planner-header); }
+    .theme-planner { border-color: #6ee7b7; }
+
+    .theme-recipe .entity-header { background: var(--domain-recipe-header); }
+    .theme-recipe { border-color: #fdba74; }
+
+    .theme-system .entity-header { background: var(--domain-system-header); }
+    .theme-system { border-color: #c4b5fd; }
+
+    .entity-body {
+      background: #ffffff;
+    }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.8px 7px;
+      border-bottom: 1px solid #f1f5f9;
+      line-height: 1.25;
+    }
+
+    .field-row:nth-child(even) {
+      background: #fbfcfe;
+    }
+
+    .field-row:last-child {
+      border-bottom: none;
+    }
+
+    .field-left {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .field-right {
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-size: 7.5px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .field-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 7.5px;
+      color: #94a3b8;
+      margin-left: 2px;
+      font-style: italic;
+    }
+
+    /* Bottom Page Footer */
+    .page-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5px;
+      color: var(--text-muted);
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .footer-right {
+      font-weight: 700;
+      color: #334155;
+    }
+
+    /* ==========================================================================
+       PAGE 2: DATA DICTIONARY & SPECIFICATION
+       ========================================================================== */
+    .dictionary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 6mm;
+      flex: 1;
+      height: 168mm;
+      max-height: 168mm;
+      overflow: hidden;
+    }
+
+    .dict-panel {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .dict-panel-header {
+      padding: 4px 8px;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dict-panel-content {
+      padding: 6px;
+      overflow-y: auto;
+      font-size: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dict-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.8px;
+    }
+
+    .dict-table th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 2.5px 5px;
+      border: 1px solid #e2e8f0;
+      font-size: 8px;
+    }
+
+    .dict-table td {
+      padding: 2px 5px;
+      border: 1px solid #f1f5f9;
+      color: #1e293b;
+      vertical-align: top;
+    }
+
+    .dict-table tr:nth-child(even) td {
+      background: #fafcff;
+    }
+
+    .dict-table td.col-field {
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    .dict-table td.col-type {
+      font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+      color: #2563eb;
+      white-space: nowrap;
+    }
+
+    .badge-rule {
+      display: inline-block;
+      font-size: 7px;
+      font-weight: 700;
+      padding: 1px 3px;
+      border-radius: 2px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge-auth {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+
+    .badge-index {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fcd34d;
+    }
+
+    /* Print Media Queries */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+        gap: 0;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .a4-page {
+        width: 297mm;
+        height: 210mm;
+        max-height: 210mm;
+        margin: 0;
+        padding: 8mm 9mm 6mm 9mm;
+        box-shadow: none;
+        border-radius: 0;
+        page-break-after: always;
+        page-break-inside: avoid;
+        overflow: hidden;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen-Only Toolbar -->
+  <div class="screen-toolbar no-print">
+    <div class="toolbar-title">
+      <span>La Mia</span> Database Diagram & Specification (A4 Bond Paper Layout)
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-secondary" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Page 1: ER Diagram</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('page-2').scrollIntoView({behavior: 'smooth'})">Page 2: Data Dictionary</button>
+      <button class="btn" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / Save as PDF (A4)
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       PAGE 1: VISUAL ENTITY-RELATIONSHIP (ER) DIAGRAM
+       ========================================================================= -->
+  <div class="a4-page" id="page-1">
+    
+    <!-- Header -->
+    <header class="page-header">
+      <div class="brand-group">
+        <div class="logo-badge">LM</div>
+        <div class="title-block">
+          <h1>La Mia — Cloud Firestore Entity-Relationship Diagram</h1>
+          <p>Production NoSQL Database Schema · Flutter + Cloud Functions Architecture · Clean Layered Pattern</p>
+        </div>
+      </div>
+      <div class="meta-badges">
+        <span class="pill-badge accent">A4 Landscape</span>
+        <span class="pill-badge">v1.2 Schema</span>
+        <span class="pill-badge">Cloud Firestore</span>
+      </div>
+    </header>
+
+    <!-- Legend -->
+    <div class="legend-bar">
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color-dot" style="background: var(--domain-recipe);"></div>
+          <span>Core Content & Recipes</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color-dot" style="background: var(--domain-user);"></div>
+          <span>User Profiles & Social Graph</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color-dot" style="background: var(--domain-planner);"></div>
+          <span>Meal Planner & Grocery List</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color-dot" style="background: var(--domain-system);"></div>
+          <span>Platform Services & Security</span>
+        </div>
+      </div>
+      <div class="legend-notations">
+        <span><span class="key-tag key-pk">PK</span> Doc ID</span>
+        <span><span class="key-tag key-fk">FK</span> Reference</span>
+        <span><span class="key-tag key-sub">SUB</span> Subcollection</span>
+        <span><span class="key-tag key-ctr">CTR</span> Denormalized (±1)</span>
+        <span>── 1:N Parent/Child</span>
+        <span>╌╌ Direct Lookup / FK Ref</span>
+      </div>
+    </div>
+
+    <!-- Canvas Area with 4 Columns + SVG Connectors -->
+    <div class="diagram-canvas">
+
+      <!-- SVG Overlay for precise relationship vectors -->
+      <svg class="diagram-svg-overlay" viewBox="0 0 1060 635" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrow-user" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#2563eb" />
+          </marker>
+          <marker id="arrow-recipe" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#ea580c" />
+          </marker>
+          <marker id="arrow-planner" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#059669" />
+          </marker>
+          <marker id="arrow-system" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#7c3aed" />
+          </marker>
+          <marker id="circle-marker" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5">
+            <circle cx="4" cy="4" r="3" fill="#64748b" />
+          </marker>
+        </defs>
+
+        <!-- 1. users [uid] -> recipes [authorId] -->
+        <path d="M 250 85 C 380 85, 480 80, 520 80" class="relation-line relation-user relation-dashed" marker-start="url(#circle-marker)" marker-end="url(#arrow-user)" />
+        <text x="360" y="78" fill="#2563eb" font-size="9" font-family="sans-serif" font-weight="600">1:N authors</text>
+
+        <!-- 2. recipes [id] -> comments [recipeId] -->
+        <path d="M 660 380 L 660 405" class="relation-line relation-recipe" marker-start="url(#circle-marker)" marker-end="url(#arrow-recipe)" />
+        <text x="668" y="396" fill="#ea580c" font-size="8.5" font-family="sans-serif" font-weight="600">1:N subcol</text>
+
+        <!-- 3. recipes [id] -> ratings [recipeId] -->
+        <path d="M 640 380 C 640 480, 600 560, 560 560" class="relation-line relation-recipe relation-dashed" marker-end="url(#arrow-recipe)" />
+
+        <!-- 4. recipes [id] -> mealPlans [recipeId] -->
+        <path d="M 520 180 C 470 180, 460 170, 400 170" class="relation-line relation-planner relation-dashed" marker-end="url(#arrow-planner)" />
+        <text x="430" y="165" fill="#059669" font-size="8.5" font-family="sans-serif" font-weight="600">schedules</text>
+
+        <!-- 5. recipes [id] -> grocery_items [recipeId] -->
+        <path d="M 520 250 C 460 250, 460 340, 400 340" class="relation-line relation-planner relation-dashed" marker-end="url(#arrow-planner)" />
+        <text x="425" y="325" fill="#059669" font-size="8.5" font-family="sans-serif" font-weight="600">adds items</text>
+
+        <!-- 6. users [uid] -> notifications [userId] -->
+        <path d="M 250 50 C 400 15, 700 15, 805 50" class="relation-line relation-system relation-dashed" marker-start="url(#circle-marker)" marker-end="url(#arrow-system)" />
+        <text x="500" y="22" fill="#7c3aed" font-size="8.5" font-family="sans-serif" font-weight="600">1:N receives notifications</text>
+
+        <!-- 7. recipes [id] -> moderationLogs [recipeId] -->
+        <path d="M 790 140 C 800 140, 800 280, 805 280" class="relation-line relation-system relation-dashed" marker-end="url(#arrow-system)" />
+        <text x="750" y="210" fill="#7c3aed" font-size="8" font-family="sans-serif" font-weight="600">AI audit</text>
+      </svg>
+
+      <!-- COLUMN 1: USER PROFILES & SOCIAL GRAPH -->
+      <div class="diagram-col">
+        
+        <!-- users -->
+        <div class="entity-card theme-user">
+          <div class="entity-header">
+            <span class="collection-path">users/{uid}</span>
+            <span class="card-type-tag">Root Doc</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> uid</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">displayName</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">bio, photoUrl</span>
+              <span class="field-right">string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> recipeCount</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> totalLikesReceived</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> followerCount</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> followingCount</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> savedCount</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> unreadNotifCount</span>
+              <span class="field-right">int</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">role</span>
+              <span class="field-right">"user"|"admin"</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">featuredAchievement</span>
+              <span class="field-right">string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">notificationPreferences</span>
+              <span class="field-right">map</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- following & followers -->
+        <div class="entity-card theme-user">
+          <div class="entity-header">
+            <span class="collection-path">following & followers</span>
+            <span class="card-type-tag">Graph Indices</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row" style="background:#f1f5f9; font-weight:700;">
+              <span class="field-left">following/{uid}/users/{targetUid}</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> targetUid</span>
+              <span class="field-right">string [PK]</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">followedAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+            <div class="field-row" style="background:#f1f5f9; font-weight:700;">
+              <span class="field-left">followers/{uid}/users/{followerUid}</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> followerUid</span>
+              <span class="field-right">string [PK]</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">followedAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- User subcollections: likes & saved -->
+        <div class="entity-card theme-user">
+          <div class="entity-header">
+            <span class="collection-path">users/{uid}/likes & saved</span>
+            <span class="card-type-tag">Subcollections</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row" style="background:#f1f5f9;">
+              <span class="field-left"><span class="key-tag key-sub">SUB</span> likes/{recipeId}</span>
+              <span class="field-right">doc=recipeId</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> recipeId, likedAt</span>
+              <span class="field-right">str, ts</span>
+            </div>
+            <div class="field-row" style="background:#f1f5f9;">
+              <span class="field-left"><span class="key-tag key-sub">SUB</span> saved/{recipeId}</span>
+              <span class="field-right">favorites item</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> recipeId, savedAt</span>
+              <span class="field-right">str, ts</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 2: MEAL PLANNER & GROCERY LIST -->
+      <div class="diagram-col">
+        
+        <!-- mealPlans -->
+        <div class="entity-card theme-planner">
+          <div class="entity-header">
+            <span class="collection-path">users/{uid}/mealPlans/{weekId}</span>
+            <span class="card-type-tag">Planner</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> weekId</span>
+              <span class="field-right">"week_YYYY_MM_DD"</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">startDate</span>
+              <span class="field-right">timestamp (Mon)</span>
+            </div>
+            <div class="field-row" style="background: #f0fdf4; font-weight:700;">
+              <span class="field-left">days [Map&lt;dateKey, MealPlanDay&gt;]</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left" style="padding-left:6px;">↳ dateKey, dayOfWeek</span>
+              <span class="field-right">"2026-09-28"</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left" style="padding-left:6px;">↳ breakfast: MealPlanItem?</span>
+              <span class="field-right">map</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left" style="padding-left:6px;">↳ lunch: MealPlanItem?</span>
+              <span class="field-right">map</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left" style="padding-left:6px;">↳ dinner: MealPlanItem?</span>
+              <span class="field-right">map</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left" style="padding-left:6px;">↳ snack: MealPlanItem?</span>
+              <span class="field-right">map</span>
+            </div>
+            <div class="field-row" style="background:#f8fafc;">
+              <span class="field-left" style="padding-left:12px;"><span class="key-tag key-fk">FK</span> recipeId, recipeName</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row" style="background:#f8fafc;">
+              <span class="field-left" style="padding-left:12px;">category, prepTime, cookTime</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row" style="background:#f8fafc;">
+              <span class="field-left" style="padding-left:12px;">servings, ingredients[], notes</span>
+              <span class="field-right">int, list, str</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">updatedAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- grocery_items -->
+        <div class="entity-card theme-planner">
+          <div class="entity-header">
+            <span class="collection-path">users/{uid}/grocery_items</span>
+            <span class="card-type-tag">Pantry Sync</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> itemId</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">name</span>
+              <span class="field-right">string (ingredient)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> recipeId</span>
+              <span class="field-right">string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">recipeName</span>
+              <span class="field-right">string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">checked</span>
+              <span class="field-right">boolean</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">addedAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ingredientCatalog -->
+        <div class="entity-card theme-planner">
+          <div class="entity-header">
+            <span class="collection-path">ingredientCatalog/{slug}</span>
+            <span class="card-type-tag">Market Index</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> nameSlug</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">name</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">package_price, package_size</span>
+              <span class="field-right">number, number</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">package_unit</span>
+              <span class="field-right">string ("g", "ml", "pcs")</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 3: CORE RECIPES & ENGAGEMENT -->
+      <div class="diagram-col">
+        
+        <!-- recipes -->
+        <div class="entity-card theme-recipe">
+          <div class="entity-header">
+            <span class="collection-path">recipes/{recipeId}</span>
+            <span class="card-type-tag">Primary Entity</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> recipeId / id</span>
+              <span class="field-right">string (slug or uuid)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">name, description</span>
+              <span class="field-right">string, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">category</span>
+              <span class="field-right">"Ulam"|"Sabaw"|"Gulay"|...</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">region, budget</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">prepTime, cookTime</span>
+              <span class="field-right">string (display)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">prepTimeMin, cookTimeMin</span>
+              <span class="field-right">int, int (parsed)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">servings, difficulty</span>
+              <span class="field-right">int, "Easy"|"Medium"|"Hard"</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">ingredients[]</span>
+              <span class="field-right">list&lt;string&gt;</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">instructions[], chefsTips[]</span>
+              <span class="field-right">list&lt;string&gt;, list</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">tags[], coverPhotoUrl</span>
+              <span class="field-right">list&lt;str&gt;, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> authorId</span>
+              <span class="field-right">string? (null = system)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">authorName, authorPhotoUrl</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">isSystemRecipe, isFeatured</span>
+              <span class="field-right">boolean, boolean</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> likeCount, commentCount</span>
+              <span class="field-right">int (±1), int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> favoriteCount</span>
+              <span class="field-right">int (±1)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">ratingAvg, ratingCount</span>
+              <span class="field-right">double, int (Server)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">trendingScore</span>
+              <span class="field-right">int (hourly cron)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">status</span>
+              <span class="field-right">"approved"|"pending"|...</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">rejectionReason, approvedAt</span>
+              <span class="field-right">string?, timestamp?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- comments subcollection -->
+        <div class="entity-card theme-recipe">
+          <div class="entity-header">
+            <span class="collection-path">recipes/{id}/comments/{commentId}</span>
+            <span class="card-type-tag">Subcollection</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> commentId</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> recipeId, <span class="key-tag key-fk">FK</span> userId</span>
+              <span class="field-right">string, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">userName, userPhotoUrl</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">text (1-1000 chars)</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">isReply, <span class="key-tag key-fk">FK</span> parentCommentId</span>
+              <span class="field-right">bool, string? (threaded)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-ctr">CTR</span> replyCount, likedBy[]</span>
+              <span class="field-right">int, list&lt;uid&gt;</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ratings reverse lookup -->
+        <div class="entity-card theme-recipe">
+          <div class="entity-header">
+            <span class="collection-path">ratings/{recipeId}/users/{userId}</span>
+            <span class="card-type-tag">1 Rating / User</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> userId</span>
+              <span class="field-right">rating: int (1 - 5)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">updatedAt / createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 4: PLATFORM SERVICES, NOTIFICATIONS & AUDIT -->
+      <div class="diagram-col">
+        
+        <!-- notifications -->
+        <div class="entity-card theme-system">
+          <div class="entity-header">
+            <span class="collection-path">users/{uid}/notifications/{id}</span>
+            <span class="card-type-tag">FCM Trigger</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> notifId</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> userId, <span class="key-tag key-fk">FK</span> senderId</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">senderName, senderPhotoUrl</span>
+              <span class="field-right">string?, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">type (enum)</span>
+              <span class="field-right">recipe_like, comment, ...</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">title, body</span>
+              <span class="field-right">string, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> targetId, targetType</span>
+              <span class="field-right">str?, "recipe"|"user"|...</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">targetRoute, imageUrl</span>
+              <span class="field-right">string?, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">metadata, isRead</span>
+              <span class="field-right">map?, boolean</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- moderationLogs -->
+        <div class="entity-card theme-system">
+          <div class="entity-header">
+            <span class="collection-path">moderationLogs/{logId}</span>
+            <span class="card-type-tag">Admin Audit</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> logId</span>
+              <span class="field-right">string (auto-id)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> recipeId, <span class="key-tag key-fk">FK</span> authorId</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">textValidation (Gemini)</span>
+              <span class="field-right">map {isRecipe, reason}</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">imageValidation (Vision)</span>
+              <span class="field-right">map {isFood, labels}</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">finalStatus, rejectionReason</span>
+              <span class="field-right">string, string?</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">moderatedAt</span>
+              <span class="field-right">timestamp (admin-only)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- otp_verifications -->
+        <div class="entity-card theme-system">
+          <div class="entity-header">
+            <span class="collection-path">otp_verifications/{docId}</span>
+            <span class="card-type-tag">Server-Auth</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> docId (email_purpose)</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-fk">FK</span> uid, email</span>
+              <span class="field-right">string?, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">purpose</span>
+              <span class="field-right">"signup"|"change_pw"|...</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">otpHash, salt</span>
+              <span class="field-right">SHA-256 HMAC, hex</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">attempts (max 5)</span>
+              <span class="field-right">int</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">expiresAt (10 min)</span>
+              <span class="field-right">timestamp</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">lastSentAt (60s cooldown)</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- reports -->
+        <div class="entity-card theme-system">
+          <div class="entity-header">
+            <span class="collection-path">reports/{reportId}</span>
+            <span class="card-type-tag">Abuse Flag</span>
+          </div>
+          <div class="entity-body">
+            <div class="field-row">
+              <span class="field-left"><span class="key-tag key-pk">PK</span> reportId</span>
+              <span class="field-right">string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">targetType, <span class="key-tag key-fk">FK</span> targetId</span>
+              <span class="field-right">"recipe"|"comment", str</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">reason, <span class="key-tag key-fk">FK</span> reporterId</span>
+              <span class="field-right">string, string</span>
+            </div>
+            <div class="field-row">
+              <span class="field-left">createdAt</span>
+              <span class="field-right">timestamp</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+      <div class="footer-left">
+        <span><strong>Database:</strong> Google Cloud Firestore (NoSQL Document Store)</span>
+        <span><strong>Triggers:</strong> Cloud Functions for Firebase v2 (Node.js/TypeScript)</span>
+        <span><strong>Client SDK:</strong> Flutter 3.x / cloud_firestore 5.x</span>
+      </div>
+      <div class="footer-right">
+        Page 1 of 2 · Entity-Relationship Diagram
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- =========================================================================
+       PAGE 2: DATA DICTIONARY & SECURITY SPECIFICATIONS
+       ========================================================================= -->
+  <div class="a4-page" id="page-2">
+    
+    <!-- Header -->
+    <header class="page-header">
+      <div class="brand-group">
+        <div class="logo-badge">LM</div>
+        <div class="title-block">
+          <h1>La Mia — Firestore Data Dictionary & Security Rules Specification</h1>
+          <p>Field-Level Constraints · Access Control Rules · Denormalization Policies · Composite Index Specifications</p>
+        </div>
+      </div>
+      <div class="meta-badges">
+        <span class="pill-badge accent">A4 Landscape</span>
+        <span class="pill-badge">Data Dictionary</span>
+        <span class="pill-badge">Security Rules v2</span>
+      </div>
+    </header>
+
+    <!-- 4-Quadrant Dictionary Grid -->
+    <div class="dictionary-grid">
+
+      <!-- Quadrant 1: RECIPES & REVIEWS SPECIFICATION -->
+      <div class="dict-panel theme-recipe">
+        <div class="dict-panel-header" style="background: var(--domain-recipe-header);">
+          <span>1. Core Content: recipes, comments, ratings</span>
+          <span class="badge-rule">Cloud Functions + Security Rules</span>
+        </div>
+        <div class="dict-panel-content">
+          <table class="dict-table">
+            <thead>
+              <tr>
+                <th>Collection / Field</th>
+                <th>Type</th>
+                <th>Constraints & Security Rule</th>
+                <th>Authoritative Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-field">recipes/{id}.status</td>
+                <td class="col-type">string</td>
+                <td><span class="badge-rule badge-auth">Server Auth</span> 'pending' | 'approved' | 'rejected' | 'hidden'. Client create forces 'pending'.</td>
+                <td>Cloud Functions (AI Moderation)</td>
+              </tr>
+              <tr>
+                <td class="col-field">recipes/{id}.category</td>
+                <td class="col-type">string</td>
+                <td>Enforced in rules: ['Almusal', 'Ulam', 'Sabaw', 'Merienda', 'Panghimagas', 'Gulay', 'Inihaw', 'Lamang Dagat', 'Pulutan']</td>
+                <td>Client Form / Seed Script</td>
+              </tr>
+              <tr>
+                <td class="col-field">recipes/{id}.likeCount</td>
+                <td class="col-type">int</td>
+                <td><span class="badge-rule">±1 Only</span> Incremented / decremented via batch write. Bounded to prevent spoofing.</td>
+                <td>Client Batch / Cloud Function</td>
+              </tr>
+              <tr>
+                <td class="col-field">recipes/{id}.ratingAvg / Count</td>
+                <td class="col-type">double, int</td>
+                <td><span class="badge-rule badge-auth">Server Auth</span> Computed from transaction over ratings subcollection. ratingAvg ∈ [0.0, 5.0].</td>
+                <td>Transaction / Cloud Function</td>
+              </tr>
+              <tr>
+                <td class="col-field">recipes/{id}.trendingScore</td>
+                <td class="col-type">int</td>
+                <td><span class="badge-rule badge-auth">Server Auth</span> Recalculated hourly via cron function from 7-day velocity.</td>
+                <td>updateTrendingScores (Pub/Sub)</td>
+              </tr>
+              <tr>
+                <td class="col-field">comments/{commentId}.isReply</td>
+                <td class="col-type">boolean</td>
+                <td>Enforced: isReply == (parentCommentId != null). Arbitrary threading supported.</td>
+                <td>Client (CommentRepository)</td>
+              </tr>
+              <tr>
+                <td class="col-field">ratings/{recipeId}/users/{uid}</td>
+                <td class="col-type">int</td>
+                <td>Value restricted to 1..5. Enforces strictly 1 rating per user per recipe document.</td>
+                <td>Client (RatingRepository)</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:7.5px; color:#64748b; line-height:1.2; margin-top:2px;">
+            <strong>Composite Indexes:</strong> (1) `category` ASC, `status` ASC, `ratingAvg` DESC; (2) `status` ASC, `trendingScore` DESC; (3) `authorId` ASC, `createdAt` DESC.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quadrant 2: USER PROFILE & SOCIAL GRAPH SPECIFICATION -->
+      <div class="dict-panel theme-user">
+        <div class="dict-panel-header" style="background: var(--domain-user-header);">
+          <span>2. User Profiles & Social Graph: users, following, likes</span>
+          <span class="badge-rule">±1 Counter Protection</span>
+        </div>
+        <div class="dict-panel-content">
+          <table class="dict-table">
+            <thead>
+              <tr>
+                <th>Collection / Field</th>
+                <th>Type</th>
+                <th>Constraints & Security Rule</th>
+                <th>Authoritative Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-field">users/{uid}.role</td>
+                <td class="col-type">string</td>
+                <td><span class="badge-rule badge-auth">Admin Guarded</span> 'user' | 'trusted' | 'admin'. Clients cannot elevate on create or update.</td>
+                <td>AuthService / Admin Console</td>
+              </tr>
+              <tr>
+                <td class="col-field">users/{uid}.recipeCount</td>
+                <td class="col-type">int</td>
+                <td><span class="badge-rule badge-auth">Immutable</span> Blocked from client update. Bumper on recipe approval.</td>
+                <td>onRecipeApproved Function</td>
+              </tr>
+              <tr>
+                <td class="col-field">users/{uid}.follower/ingCount</td>
+                <td class="col-type">int</td>
+                <td><span class="badge-rule">±1 Only</span> Batched with following/{uid}/users/{targetUid} write.</td>
+                <td>FollowRepository Batch</td>
+              </tr>
+              <tr>
+                <td class="col-field">users/{uid}.totalLikesReceived</td>
+                <td class="col-type">int</td>
+                <td><span class="badge-rule">±1 Only</span> Incremented when another user likes author's recipe.</td>
+                <td>LikeRepository Batch</td>
+              </tr>
+              <tr>
+                <td class="col-field">users/{uid}/likes/{recipeId}</td>
+                <td class="col-type">map</td>
+                <td>Per-user index for profile Likes tab. Mirror written to `likes/{recipeId}/users/{uid}`.</td>
+                <td>LikeRepository Batch</td>
+              </tr>
+              <tr>
+                <td class="col-field">users/{uid}/saved/{recipeId}</td>
+                <td class="col-type">map</td>
+                <td>Offline-synced recipe bookmarked by user. Mirrors `favorites/{uid}/items/{recipeId}`.</td>
+                <td>FavoritesRepository Batch</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:7.5px; color:#64748b; line-height:1.2; margin-top:2px;">
+            <strong>Read Visibility:</strong> `users/{uid}` profiles are publicly readable to allow chef search, recipe attribution, and followers screen for guest users.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quadrant 3: MEAL PLANNER & GROCERY LIST SPECIFICATION -->
+      <div class="dict-panel theme-planner">
+        <div class="dict-panel-header" style="background: var(--domain-planner-header);">
+          <span>3. Planner & Pantry: users/{uid}/mealPlans, grocery_items</span>
+          <span class="badge-rule">Private Subcollections</span>
+        </div>
+        <div class="dict-panel-content">
+          <table class="dict-table">
+            <thead>
+              <tr>
+                <th>Collection / Field</th>
+                <th>Type</th>
+                <th>Constraints & Security Rule</th>
+                <th>Lifecycle / Sync Behavior</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-field">mealPlans/{weekId}.weekId</td>
+                <td class="col-type">string</td>
+                <td>Format: `week_YYYY_MM_DD` (deterministic Monday anchor). One document per week.</td>
+                <td>WeeklyMealPlanModel</td>
+              </tr>
+              <tr>
+                <td class="col-field">mealPlans/{weekId}.days</td>
+                <td class="col-type">map</td>
+                <td>Keyed by ISO date `YYYY-MM-DD`. Contains slots: breakfast, lunch, dinner, snack.</td>
+                <td>Client weekly planner state</td>
+              </tr>
+              <tr>
+                <td class="col-field">days.*.MealPlanItem</td>
+                <td class="col-type">map</td>
+                <td>Snapshot: {recipeId, recipeName, coverPhotoUrl, servings, prepTime, cookTime, ingredients[]}.</td>
+                <td>Embedded snapshot prevents stale refs</td>
+              </tr>
+              <tr>
+                <td class="col-field">grocery_items/{itemId}</td>
+                <td class="col-type">document</td>
+                <td>Fields: name (string), checked (bool), recipeId? (FK), recipeName? (string), addedAt (ts).</td>
+                <td>Batch added from recipe ingredients</td>
+              </tr>
+              <tr>
+                <td class="col-field">ingredientCatalog/{nameSlug}</td>
+                <td class="col-type">document</td>
+                <td>Canonical ingredient pricing catalog. Merged by ingredient name across seed recipes.</td>
+                <td>tools/seed_recipes.js (Admin SDK)</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:7.5px; color:#64748b; line-height:1.2; margin-top:2px;">
+            <strong>Privacy Guard:</strong> `mealPlans` and `grocery_items` can only be read or written by the authenticated owner (`request.auth.uid == userId`).
+          </div>
+        </div>
+      </div>
+
+      <!-- Quadrant 4: PLATFORM SERVICES, NOTIFICATIONS & SECURITY SPECIFICATION -->
+      <div class="dict-panel theme-system">
+        <div class="dict-panel-header" style="background: var(--domain-system-header);">
+          <span>4. System & Security: notifications, moderationLogs, OTP</span>
+          <span class="badge-rule">Cloud Functions Admin SDK</span>
+        </div>
+        <div class="dict-panel-content">
+          <table class="dict-table">
+            <thead>
+              <tr>
+                <th>Collection / Field</th>
+                <th>Type</th>
+                <th>Constraints & Security Rule</th>
+                <th>Handler / Policy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-field">notifications/{notifId}</td>
+                <td class="col-type">document</td>
+                <td>Created by Cloud Functions or signed-in users on social events. Read/update/delete by recipient only.</td>
+                <td>onNotificationCreate (FCM Push)</td>
+              </tr>
+              <tr>
+                <td class="col-field">notifications.type</td>
+                <td class="col-type">string</td>
+                <td>recipe_like | recipe_comment | comment_like | comment_reply | new_follower | following_new_recipe | recipe_approved | meal_reminder | daily_suggestion.</td>
+                <td>NotificationType enum</td>
+              </tr>
+              <tr>
+                <td class="col-field">moderationLogs/{logId}</td>
+                <td class="col-type">document</td>
+                <td><span class="badge-rule badge-auth">Admin Read Only</span> Direct client write forbidden (`allow write: if false`).</td>
+                <td>onRecipeCreate (Gemini + Vision)</td>
+              </tr>
+              <tr>
+                <td class="col-field">otp_verifications/{docId}</td>
+                <td class="col-type">document</td>
+                <td><span class="badge-rule badge-auth">Locked to Admin SDK</span> Client direct access completely blocked (`allow read, write: if false`).</td>
+                <td>sendEmailOtp / verifyEmailOtp</td>
+              </tr>
+              <tr>
+                <td class="col-field">otp_verifications.security</td>
+                <td class="col-type">SHA-256</td>
+                <td>6-digit code salted and HMAC-hashed. 60-second cooldown per request, 10-minute expiry, max 5 attempts.</td>
+                <td>Resend API Email Dispatcher</td>
+              </tr>
+              <tr>
+                <td class="col-field">reports/{reportId}</td>
+                <td class="col-type">document</td>
+                <td>Any signed-in user can submit a report. Content exceeding threshold triggers automatic quarantine.</td>
+                <td>onReportThreshold (Cloud Function)</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:7.5px; color:#64748b; line-height:1.2; margin-top:2px;">
+            <strong>Zero Trust Invariant:</strong> Popularity counters, moderation approval, and authentication secrets can never be forged from mobile clients.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+      <div class="footer-left">
+        <span><strong>Security Invariants:</strong> Server-Authoritative Status & Counters</span>
+        <span><strong>Data Validation:</strong> Firestore Rules regex & size bounds</span>
+        <span><strong>Auth Protection:</strong> Cryptographic HMAC OTP + Firebase Auth</span>
+      </div>
+      <div class="footer-right">
+        Page 2 of 2 · Data Dictionary & Security Rules
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>
