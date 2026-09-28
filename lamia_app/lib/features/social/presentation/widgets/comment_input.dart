@@ -63,11 +63,17 @@ class _CommentInputState extends State<CommentInput> {
     _internalController = TextEditingController();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
+    if (widget.variant == CommentInputVariant.inlineReply) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
+    _focusNode.unfocus();
     _focusNode.dispose();
     if (widget.controller == null) {
       _internalController.dispose();
@@ -77,6 +83,16 @@ class _CommentInputState extends State<CommentInput> {
 
   void _onFocusChange() {
     setState(() => _focused = _focusNode.hasFocus);
+  }
+
+  void _handleCancel() {
+    _focusNode.unfocus();
+    widget.onCancel?.call();
+  }
+
+  void _handleSubmit() {
+    _focusNode.unfocus();
+    widget.onSubmit?.call(_effectiveController.text);
   }
 
   @override
@@ -165,7 +181,7 @@ class _CommentInputState extends State<CommentInput> {
               return ElevatedButton.icon(
                 onPressed: widget.isSubmitting || isBlank
                     ? null
-                    : () => widget.onSubmit?.call(_effectiveController.text),
+                    : _handleSubmit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   disabledBackgroundColor: AppColors.primaryDisabled,
@@ -207,33 +223,51 @@ class _CommentInputState extends State<CommentInput> {
   // ── Inline reply ───────────────────────────────────────────────────────
 
   Widget _buildInlineReply() {
+    final replyName = (widget.replyingToName?.trim().isNotEmpty == true)
+        ? widget.replyingToName!.trim()
+        : 'comment';
+
     return AnimatedSize(
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOutCubic,
       child: Container(
-        margin: const EdgeInsets.only(top: AppSpacing.xs),
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(AppRadii.field),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: _focused ? AppColors.borderFocus : AppColors.border,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                Icon(
+                  Icons.reply_rounded,
+                  size: 14,
+                  color: _focused ? AppColors.primary : AppColors.textSecondary,
+                ),
+                const SizedBox(width: AppSpacing.xxs),
                 Expanded(
                   child: Text(
-                    'Replying to ${widget.replyingToName ?? "comment"}',
-                    style: AppTypography.caption(color: AppColors.textSecondary),
+                    'Replying to @$replyName',
+                    style: AppTypography.caption(
+                      color: _focused ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 GestureDetector(
-                  onTap: widget.onCancel,
+                  onTap: widget.isSubmitting ? null : _handleCancel,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.xxs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: AppSpacing.xs,
+                    ),
                     child: Text(
                       'Cancel',
                       style: AppTypography.label(
@@ -258,8 +292,9 @@ class _CommentInputState extends State<CommentInput> {
               decoration: InputDecoration(
                 hintText: 'Write a reply...',
                 hintStyle: AppTypography.caption(color: AppColors.textSecondary),
+                isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
+                  horizontal: AppSpacing.xs,
                   vertical: AppSpacing.xs,
                 ),
                 border: InputBorder.none,
@@ -275,7 +310,7 @@ class _CommentInputState extends State<CommentInput> {
                   return ElevatedButton.icon(
                     onPressed: widget.isSubmitting || isBlank
                         ? null
-                        : () => widget.onSubmit?.call(_effectiveController.text),
+                        : _handleSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       disabledBackgroundColor: AppColors.primaryDisabled,

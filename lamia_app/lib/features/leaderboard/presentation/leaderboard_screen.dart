@@ -41,6 +41,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
   List<UserModel> _topContributors = [];
   List<UserModel> _mostCooked = [];
+  List<TrendingCook> _trendingCooks = [];
   _ChefOfMonthData? _chefOfMonth;
   bool _isLoading = true;
 
@@ -67,12 +68,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         _userRepo.mostCookedByUploadedRecipes(limit: 10),
         _computeChefOfMonth(),
         _getCurrentUserRanking(),
+        _userRepo.trendingCooks(limit: 6),
       ]);
       if (mounted && generation == _loadGeneration) {
         setState(() {
           _topContributors = results[0] as List<UserModel>;
           _mostCooked = results[1] as List<UserModel>;
           _chefOfMonth = results[2] as _ChefOfMonthData?;
+          _trendingCooks = results[4] as List<TrendingCook>;
           _isLoading = false;
         });
       }
@@ -122,8 +125,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       final contributorRank = _rankForUser(
         rankings[0],
         currentUserId,
+        isEligible: (u) => u.followerCount > 0,
       );
-      final cookedRank = _rankForUser(rankings[1], currentUserId);
+      final cookedRank = _rankForUser(
+        rankings[1],
+        currentUserId,
+        isEligible: (u) => u.recipeCount > 0,
+      );
 
       if (mounted) {
         setState(() {
@@ -134,17 +142,32 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     } catch (_) {}
   }
 
-  int _rankForUser(List<UserModel> users, String uid) {
-    final index = users.indexWhere((user) => user.uid == uid);
+  int _rankForUser(
+    List<UserModel> users,
+    String uid, {
+    bool Function(UserModel user)? isEligible,
+  }) {
+    final eligibleUsers = isEligible == null
+        ? users
+        : users.where(isEligible).toList();
+    final index = eligibleUsers.indexWhere((user) => user.uid == uid);
     return index == -1 ? 0 : index + 1;
   }
 
   void _showOptionsMenu(BuildContext context) {
+    final ranks = [_topContributorRank, _mostCookedRank]
+        .where((r) => r != null && r! > 0)
+        .cast<int>()
+        .toList();
+    ranks.sort();
+    final bestRank = ranks.isNotEmpty ? ranks.first : null;
+
     showAppRightSidebar(
       context: context,
       onNavigateToTab: widget.onNavigateHome != null
           ? (_) => widget.onNavigateHome!()
           : null,
+      rank: bestRank,
     );
   }
 
@@ -169,7 +192,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     }
 
     final top3 = data.take(3).toList();
-    final trending = data.skip(3).toList();
+    final trending = _trendingCooks;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -370,8 +393,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => FullRankingScreen(
-                                              initialTab: _activeTab,
+                                            builder: (_) =>
+                                                const FullRankingScreen(
+                                              initialTab: 2,
                                             ),
                                           ),
                                         );
@@ -397,28 +421,24 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                   color: AppColors.border,
                                 ),
 
-                                // 6. Trending Cooks rows (4, 5, 6...)
+                                // 6. Trending Cooks rows — real engagement ranks
                                 for (int i = 0; i < trending.length; i++)
                                   RankedChefTile(
-                                    rank: i + 4,
-                                    chefName: trending[i].name,
-                                    recipesShared: trending[i].count,
+                                    rank: i + 1,
+                                    chefName: trending[i].user.displayName,
+                                    recipesShared: trending[i].score,
                                     isTopThree: false,
-                                    metricLabel: _activeTab == 0
-                                        ? 'followers'
-                                        : 'recipes uploaded',
-                                    photoUrl: trending[i].photoUrl,
+                                    metricLabel: 'engagement',
+                                    photoUrl: trending[i].user.photoUrl,
                                     onTap: () {
-                                      if (trending[i].uid != null) {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => ProfileScreen(
-                                              targetUserId: trending[i].uid!,
-                                            ),
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProfileScreen(
+                                            targetUserId: trending[i].user.uid,
                                           ),
-                                        );
-                                      }
+                                        ),
+                                      );
                                     },
                                   ),
                               ],
@@ -640,7 +660,6 @@ class _ChefData {
   final String? uid;
   final String? photoUrl;
 }
-
 /// Data class for the Chef of the Month computation result.
 class _ChefOfMonthData {
   const _ChefOfMonthData({

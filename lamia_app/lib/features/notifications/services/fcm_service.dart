@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import '../../../core/utils/app_logger.dart';
 import '../data/notification_repository.dart';
 import 'local_notification_service.dart';
 import 'notification_router.dart';
@@ -12,13 +14,73 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 class FCMService {
-  FCMService._internal();
-  static final FCMService instance = FCMService._internal();
+  FCMService._internal({
+    FirebaseMessaging? fcm,
+    NotificationRepository? notifRepo,
+    FirebaseAuth? auth,
+  })  : _customFcm = fcm,
+        _customNotifRepo = notifRepo,
+        _customAuth = auth;
 
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final NotificationRepository _notifRepo = NotificationRepository();
+  static FCMService instance = FCMService._internal();
+
+  final FirebaseMessaging? _customFcm;
+  final NotificationRepository? _customNotifRepo;
+  final FirebaseAuth? _customAuth;
+
+  FirebaseMessaging get _fcm => _customFcm ?? FirebaseMessaging.instance;
+  NotificationRepository get _notifRepo =>
+      _customNotifRepo ?? NotificationRepository();
+  FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
 
   bool _initialized = false;
+  String? _lastSyncedUserId;
+  StreamSubscription<User?>? _authSubscription;
+
+  @visibleForTesting
+  static void setMockInstance(FCMService customInstance) {
+    instance = customInstance;
+  }
+
+  @visibleForTesting
+  static void resetInstance() {
+    instance = FCMService._internal();
+  }
+
+  @visibleForTesting
+  factory FCMService.custom({
+    FirebaseMessaging? fcm,
+    NotificationRepository? notifRepo,
+    FirebaseAuth? auth,
+  }) {
+    return FCMService._internal(
+      fcm: fcm,
+      notifRepo: notifRepo,
+      auth: auth,
+    );
+  }
+
+  /// Sets up a listener to auth state changes to sync token immediately when user signs in.
+  @visibleForTesting
+  StreamSubscription<User?> setupAuthListener() {
+    _authSubscription?.cancel();
+    _authSubscription = _auth.authStateChanges().listen((user) async {
+      if (user != null) {
+        _lastSyncedUserId = user.uid;
+        await syncToken(user.uid);
+      } else if (_lastSyncedUserId != null) {
+        await clearTokenOnLogout(_lastSyncedUserId);
+        _lastSyncedUserId = null;
+      }
+    });
+    return _authSubscription!;
+  }
+
+  @visibleForTesting
+  void dispose() {
+    _authSubscription?.cancel();
+    _authSubscription = null;
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -37,13 +99,23 @@ class FCMService {
       // Load initial token
       await syncToken();
 
+      // Listen to auth state changes to sync token immediately when user signs in
+      setupAuthListener();
+
       // Listen to token refresh
       _fcm.onTokenRefresh.listen((token) async {
-        final user = FirebaseAuth.instance.currentUser;
+        final user = _auth.currentUser;
         if (user != null) {
           try {
             await _notifRepo.saveFcmToken(user.uid, token);
-          } catch (_) {}
+          } catch (e, stackTrace) {
+            AppLogger.error(
+              'Failed to save refreshed FCM token',
+              error: e,
+              stackTrace: stackTrace,
+              category: 'FCMService',
+            );
+          }
         }
       });
 
@@ -93,28 +165,46 @@ class FCMService {
   }
 
   /// Syncs current device FCM token to Firestore under user document.
-  Future<void> syncToken() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+  Future<void> syncToken([String? userId]) async {
+    final uid = userId ?? _auth.currentUser?.uid;
+    if (uid != null) {
+      _lastSyncedUserId = uid;
       try {
         final token = await _fcm.getToken();
         if (token != null) {
-          await _notifRepo.saveFcmToken(user.uid, token);
+          await _notifRepo.saveFcmToken(uid, token);
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to sync FCM token',
+          error: e,
+          stackTrace: stackTrace,
+          category: 'FCMService',
+        );
+      }
     }
   }
 
   /// Clears token from database during user sign out.
-  Future<void> clearTokenOnLogout() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+  Future<void> clearTokenOnLogout([String? userId]) async {
+    final uid = userId ?? _auth.currentUser?.uid;
+    if (uid != null) {
       try {
         final token = await _fcm.getToken();
         if (token != null) {
-          await _notifRepo.removeFcmToken(user.uid, token);
+          await _notifRepo.removeFcmToken(uid, token);
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to clear FCM token on logout',
+          error: e,
+          stackTrace: stackTrace,
+          category: 'FCMService',
+        );
+      }
+      if (_lastSyncedUserId == uid) {
+        _lastSyncedUserId = null;
+      }
     }
   }
 }

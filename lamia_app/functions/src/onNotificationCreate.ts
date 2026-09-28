@@ -133,6 +133,23 @@ export const onNotificationCreate = onDocumentCreated(
         ...(notifData.imageUrl ? { imageUrl: String(notifData.imageUrl) } : {}),
       },
       data: dataPayload,
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "system_updates",
+          sound: "default",
+          priority: "high",
+          clickAction: "FLUTTER_NOTIFICATION_CLICK",
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+          },
+        },
+      },
     };
 
     try {

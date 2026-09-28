@@ -7,9 +7,14 @@ import '../../app/theme/app_typography.dart';
 /// "Just browsing? Continue as guest →" affordance. Stays enabled even while
 /// an auth action is loading, so browse-first users are never blocked.
 class GuestLink extends StatelessWidget {
-  const GuestLink({super.key, required this.onTap});
+  const GuestLink({
+    super.key,
+    required this.onTap,
+    this.compact = false,
+  });
 
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +25,10 @@ class GuestLink extends StatelessWidget {
         child: TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(
-            minimumSize: const Size(48, 48),
+            minimumSize: Size(48, compact ? 32 : 48),
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2)
+                : null,
             foregroundColor: AppColors.textPrimary,
           ),
           child: Text.rich(
@@ -52,11 +60,13 @@ class PromptLink extends StatelessWidget {
     required this.prompt,
     required this.linkText,
     required this.onTap,
+    this.compact = false,
   });
 
   final String prompt;
   final String linkText;
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +78,7 @@ class PromptLink extends StatelessWidget {
         TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(
-            minimumSize: const Size(48, 44),
+            minimumSize: Size(48, compact ? 32 : 44),
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             foregroundColor: AppColors.secondary,
           ),

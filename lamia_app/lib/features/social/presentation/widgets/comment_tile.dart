@@ -6,16 +6,20 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../data/comment_model.dart';
 
-/// A single comment bubble — used for both top-level comments and replies.
+/// A single comment bubble — used for both top-level comments and replies
+/// at any depth (TikTok/Facebook-style threading).
 ///
 /// When [isTopLevel] is false the tile renders a lighter, indented style
 /// (no shadow, surfaceAlt fill, smaller avatar/body text).
+/// [replyingToName], when set, shows a "Replying to @name" line (used for
+/// replies-to-replies so context is clear).
 class CommentTile extends StatelessWidget {
   const CommentTile({
     super.key,
     required this.comment,
     required this.currentUserUid,
     this.isTopLevel = true,
+    this.replyingToName,
     this.onToggleLike,
     this.onReply,
     this.onDelete,
@@ -25,6 +29,7 @@ class CommentTile extends StatelessWidget {
   final CommentModel comment;
   final String? currentUserUid;
   final bool isTopLevel;
+  final String? replyingToName;
   final VoidCallback? onToggleLike;
   final VoidCallback? onReply;
   final VoidCallback? onDelete;
@@ -38,7 +43,7 @@ class CommentTile extends StatelessWidget {
     final avatarSize = isTopLevel ? 34.0 : 28.0;
     final bodyFontSize = isTopLevel ? 13.0 : 12.5;
     final horizontalPad = isTopLevel ? AppSpacing.md : AppSpacing.sm;
-    final verticalPad = isTopLevel ? AppSpacing.md : AppSpacing.xs;
+    final verticalPad = isTopLevel ? AppSpacing.md : AppSpacing.sm;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,16 +62,14 @@ class CommentTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: isTopLevel ? AppColors.surface : AppColors.surfaceAlt,
               borderRadius: BorderRadius.circular(AppRadii.field),
-              border: isTopLevel ? Border.all(color: AppColors.border) : null,
-              boxShadow: isTopLevel
-                  ? [
-                      BoxShadow(
-                        color: AppColors.cardShadow,
-                        offset: const Offset(0, 1),
-                        blurRadius: 6,
-                      ),
-                    ]
-                  : null,
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.cardShadow,
+                  offset: const Offset(0, 1),
+                  blurRadius: isTopLevel ? 6 : 3,
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,6 +110,20 @@ class CommentTile extends StatelessWidget {
                 ),
                 SizedBox(height: isTopLevel ? AppSpacing.xxs : 2),
 
+                // Reply context (depth ≥ 2): "Replying to @name"
+                if (replyingToName != null &&
+                    replyingToName!.trim().isNotEmpty) ...[
+                  Text(
+                    'Replying to @$replyingToName',
+                    style: AppTypography.caption(
+                      color: AppColors.primary,
+                    ).copyWith(fontSize: isTopLevel ? 12 : 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: isTopLevel ? 2 : 1),
+                ],
+
                 // Body
                 Text(
                   comment.text,
@@ -125,55 +142,67 @@ class CommentTile extends StatelessWidget {
                     GestureDetector(
                       onTap: isLikeInFlight ? null : onToggleLike,
                       behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isLiked
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            size: isTopLevel ? 15 : 13,
-                            color: _isLiked
-                                ? AppColors.error
-                                : AppColors.textSecondary,
-                          ),
-                          if (comment.likeCount > 0) ...[
-                            const SizedBox(width: AppSpacing.xxs),
-                            Text(
-                              '${comment.likeCount}',
-                              style: AppTypography.label(
-                                color: _isLiked
-                                    ? AppColors.error
-                                    : AppColors.textSecondary,
-                              ).copyWith(fontSize: isTopLevel ? 12 : 11),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Reply (top-level only)
-                    if (isTopLevel && onReply != null) ...[
-                      const SizedBox(width: AppSpacing.md),
-                      GestureDetector(
-                        onTap: onReply,
-                        behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xxs,
+                          vertical: AppSpacing.xs,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.reply_rounded,
-                              size: 14,
-                              color: AppColors.textSecondary,
+                            Icon(
+                              _isLiked
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: isTopLevel ? 16 : 14,
+                              color: _isLiked
+                                  ? AppColors.error
+                                  : AppColors.textSecondary,
                             ),
-                            const SizedBox(width: AppSpacing.xxs),
-                            Text(
-                              'Reply',
-                              style: AppTypography.label(
-                                color: AppColors.textSecondary,
+                            if (comment.likeCount > 0) ...[
+                              const SizedBox(width: AppSpacing.xxs),
+                              Text(
+                                '${comment.likeCount}',
+                                style: AppTypography.label(
+                                  color: _isLiked
+                                      ? AppColors.error
+                                      : AppColors.textSecondary,
+                                ).copyWith(fontSize: isTopLevel ? 12 : 11),
                               ),
-                            ),
+                            ],
                           ],
+                        ),
+                      ),
+                    ),
+
+                    // Reply — available on every depth (TikTok/Facebook)
+                    if (onReply != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      GestureDetector(
+                        onTap: onReply,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xxs,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.reply_rounded,
+                                size: isTopLevel ? 16 : 14,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: AppSpacing.xxs),
+                              Text(
+                                'Reply',
+                                style: AppTypography.label(
+                                  color: AppColors.primary,
+                                ).copyWith(fontSize: isTopLevel ? 13 : 12),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -202,7 +231,8 @@ class CommentTile extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppColors.primary.withValues(alpha: 0.12),
       ),
-      child: comment.userPhotoUrl != null
+      child: (comment.userPhotoUrl != null &&
+              comment.userPhotoUrl!.trim().isNotEmpty)
           ? ClipRRect(
               borderRadius: BorderRadius.circular(radius),
               child: CachedNetworkImage(

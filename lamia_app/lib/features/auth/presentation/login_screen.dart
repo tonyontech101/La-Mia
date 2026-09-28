@@ -16,7 +16,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'sign_up_screen.dart';
-import 'email_verification_screen.dart';
+import 'email_otp_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 
@@ -121,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         MaterialPageRoute(
           builder: (_) => isVerified
               ? const HomePlaceholderScreen()
-              : const EmailVerificationScreen(),
+              : const EmailOtpVerificationScreen(purpose: 'signup'),
         ),
         (_) => false,
       );
@@ -198,18 +198,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
+      compact: true,
       child: AutofillGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Welcome back', style: AppTypography.headline()),
-            const SizedBox(height: AppSpacing.xxs),
+            const SizedBox(height: 2),
             Text(
               'Sign in to share recipes, save favorites, and join the kitchen.',
               style: AppTypography.body(color: AppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.sm),
             AuthTextField(
               controller: _emailController,
               focusNode: _emailFocus,
@@ -218,6 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               prefixIcon: Icons.mail_outline,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
+              compact: true,
               autofillHints: const [
                 AutofillHints.username,
                 AutofillHints.email,
@@ -227,6 +231,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onChanged: (_) => _validateEmail(),
               onSubmitted: (_) => _passwordFocus.requestFocus(),
             ),
+            const SizedBox(height: 2),
             AuthTextField(
               controller: _passwordController,
               focusNode: _passwordFocus,
@@ -234,6 +239,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               hint: 'Enter your password',
               prefixIcon: Icons.lock_outline,
               isPassword: true,
+              compact: true,
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.password],
               enabled: !_busy,
@@ -246,7 +252,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: TextButton(
                 onPressed: _busy ? null : _onForgotPassword,
                 style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 40),
+                  minimumSize: const Size(48, 28),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: 2,
+                  ),
                   foregroundColor: AppColors.secondary,
                 ),
                 child: Text(
@@ -255,27 +265,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 2),
             PrimaryButton(
               label: 'Log In',
+              height: 48,
               isLoading: _loggingIn,
               onPressed: _busy ? null : _onLogin,
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xs),
             const OrDivider(),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xs),
             GoogleButton(
               label: 'Continue with Google',
+              height: 48,
               isLoading: _googleLoading,
               onPressed: _busy ? null : _onGoogle,
             ),
-            const SizedBox(height: AppSpacing.md),
-            GuestLink(onTap: _onGuest),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xs),
+            GuestLink(onTap: _onGuest, compact: true),
+            const SizedBox(height: 2),
             PromptLink(
               prompt: 'New here?',
               linkText: 'Create an account',
               onTap: _goToSignUp,
+              compact: true,
             ),
           ],
         ),

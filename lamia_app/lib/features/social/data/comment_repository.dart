@@ -7,8 +7,10 @@ import '../../notifications/data/notification_repository.dart';
 
 /// Repository for handling recipe comments against Firestore.
 ///
-/// Supports top-level comments and threaded replies. Replies are nested
-/// one level deep — replies cannot have replies (UI policy, not data constraint).
+/// Supports TikTok/Facebook-style threading: top-level comments plus
+/// replies at any depth (a reply may have its own replies). Nesting is
+/// driven by [CommentModel.parentCommentId]; the UI builds the tree
+/// client-side from a single all-comments stream.
 class CommentRepository {
   CommentRepository({
     FirebaseFirestore? firestore,
@@ -22,8 +24,9 @@ class CommentRepository {
   CollectionReference<Map<String, dynamic>> _commentsRef(String recipeId) =>
       _firestore.collection('recipes').doc(recipeId).collection('comments');
 
-  /// Real-time stream of top-level comments for a given recipe, newest first.
-  Stream<List<CommentModel>> getCommentsStream(String recipeId) {
+  /// Real-time stream of every comment (top-level + replies) for a recipe,
+  /// newest first. Callers filter/build the tree as needed.
+  Stream<List<CommentModel>> getAllCommentsStream(String recipeId) {
     return _commentsRef(recipeId)
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -41,9 +44,14 @@ class CommentRepository {
             }
           })
           .whereType<CommentModel>()
-          .where((comment) => comment.isTopLevel)
           .toList();
     });
+  }
+
+  /// Real-time stream of top-level comments only (no replies).
+  Stream<List<CommentModel>> getCommentsStream(String recipeId) {
+    return getAllCommentsStream(recipeId)
+        .map((comments) => comments.where((c) => c.isTopLevel).toList());
   }
 
   /// Real-time stream of replies for a given parent comment, oldest first.
@@ -177,13 +185,17 @@ class CommentRepository {
       parentCommentId: parentCommentId,
     );
 
-    // Write reply + increment parent replyCount atomically.
+    // Write reply + increment parent replyCount + recipe commentCount atomically.
     final batch = _firestore.batch();
     final replyRef = _commentsRef(recipeId).doc();
     batch.set(replyRef, reply.toFirestore());
     batch.update(_commentsRef(recipeId).doc(parentCommentId), {
       'replyCount': FieldValue.increment(1),
     });
+    batch.update(
+      _firestore.collection('recipes').doc(recipeId),
+      {'commentCount': FieldValue.increment(1)},
+    );
     await batch.commit();
 
     // Notify parent comment author (skip self).
@@ -206,44 +218,66 @@ class CommentRepository {
     }
   }
 
-  /// Deletes a comment by ID.
+  /// Deletes a comment or reply by ID, cascading to all descendants.
   ///
-  /// For top-level comments, also cascade-deletes all replies and decrements
-  /// the recipe's [commentCount] accordingly. For replies, decrements the
-  /// parent's [replyCount].
+  /// Top-level: deletes the comment and its full reply tree, then
+  /// decrements the recipe's [commentCount] by the number of docs removed.
+  /// Reply: deletes the reply and its descendants, decrements the parent's
+  /// [replyCount] by 1 (one direct child), and decrements [commentCount]
+  /// for every doc removed.
   Future<void> deleteComment({
     required String recipeId,
     required String commentId,
     bool isTopLevel = true,
   }) async {
-    if (isTopLevel) {
-      // Cascade: delete all replies, then the comment, then decrement recipe count.
-      final repliesSnap = await _commentsRef(recipeId)
-          .where('parentCommentId', isEqualTo: commentId)
-          .get();
-      final batch = _firestore.batch();
-      for (final doc in repliesSnap.docs) {
-        batch.delete(doc.reference);
-      }
-      batch.delete(_commentsRef(recipeId).doc(commentId));
-      batch.update(
-        _firestore.collection('recipes').doc(recipeId),
-        {'commentCount': FieldValue.increment(-(1 + repliesSnap.size))},
-      );
-      await batch.commit();
-    } else {
-      // Reply deletion: delete and decrement parent replyCount.
+    final deletedIds = await _collectSubtreeIds(recipeId, commentId);
+    final batch = _firestore.batch();
+
+    for (final id in deletedIds) {
+      batch.delete(_commentsRef(recipeId).doc(id));
+    }
+
+    if (!isTopLevel) {
       final replyDoc = await _commentsRef(recipeId).doc(commentId).get();
       final parentId = replyDoc.data()?['parentCommentId'] as String?;
-      final batch = _firestore.batch();
-      batch.delete(_commentsRef(recipeId).doc(commentId));
       if (parentId != null) {
         batch.update(_commentsRef(recipeId).doc(parentId), {
           'replyCount': FieldValue.increment(-1),
         });
       }
-      await batch.commit();
     }
+
+    if (deletedIds.isNotEmpty) {
+      batch.update(
+        _firestore.collection('recipes').doc(recipeId),
+        {'commentCount': FieldValue.increment(-deletedIds.length)},
+      );
+    }
+
+    await batch.commit();
+  }
+
+  /// Collects [commentId] plus every descendant id (BFS over parentCommentId).
+  Future<List<String>> _collectSubtreeIds(
+    String recipeId,
+    String commentId,
+  ) async {
+    final ids = <String>[commentId];
+    var frontier = <String>[commentId];
+    while (frontier.isNotEmpty) {
+      final next = <String>[];
+      for (final parentId in frontier) {
+        final snap = await _commentsRef(recipeId)
+            .where('parentCommentId', isEqualTo: parentId)
+            .get();
+        for (final doc in snap.docs) {
+          ids.add(doc.id);
+          next.add(doc.id);
+        }
+      }
+      frontier = next;
+    }
+    return ids;
   }
 
   /// Toggles like for a specific comment by [userId].

@@ -18,7 +18,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
-import 'email_verification_screen.dart';
+import 'email_otp_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import '../../legal/presentation/legal_document_screen.dart';
 import 'widgets/auth_scaffold.dart';
@@ -182,28 +182,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
     setState(() => _creating = true);
     try {
-      await _authService.createAccountWithEmail(
-        email: _emailController.text,
-        password: _passwordController.text,
-        displayName: _nameController.text,
+      final signupEmail = _emailController.text.trim();
+      final signupPassword = _passwordController.text;
+      final signupDisplayName = _nameController.text.trim();
+
+      // Request the OTP verification code via Resend.
+      // NOTE: We DO NOT create the account in Firebase Auth or Firestore yet.
+      // The account will only be created AFTER the user successfully verifies the OTP.
+      await _authService.sendEmailOtp(
+        purpose: 'signup',
+        targetEmail: signupEmail,
       );
       if (!mounted) return;
 
-      // Send the Firebase verification email before navigating.
-      await _authService.sendEmailVerification();
-      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: 'Verification code sent! Please check your email.',
+      );
 
-      // Show a success message while still on this screen.
-      AppSnackbar.show(context, message: 'Account created! Please log in.');
-      // Small delay so the user can read the snackbar before navigating.
-      await Future<void>.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-
-      // Navigate to the verification screen -- the user stays signed in
-      // so the verification link works correctly.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
-        (_) => false,
+      // Navigate to the OTP verification screen with pending registration info.
+      Navigator.of(context).push(
+        fadePageRoute(
+          EmailOtpVerificationScreen(
+            purpose: 'signup',
+            targetEmail: signupEmail,
+            signupPassword: signupPassword,
+            signupDisplayName: signupDisplayName,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -285,7 +291,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               controller: _nameController,
               focusNode: _nameFocus,
               label: 'Full name',
-              hint: 'Juan Dela Cruz',
+              hint: 'Enter your full name',
               prefixIcon: Icons.person_outline,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,

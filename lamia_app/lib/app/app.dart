@@ -10,7 +10,7 @@ import 'theme/app_typography.dart';
 import '../core/providers/current_user_provider.dart';
 import '../core/widgets/fade_in_view.dart';
 import '../features/auth/presentation/login_screen.dart';
-import '../features/auth/presentation/email_verification_screen.dart';
+import '../features/auth/presentation/email_otp_verification_screen.dart';
 import '../features/home/presentation/home_placeholder_screen.dart';
 
 /// Root application widget.
@@ -82,7 +82,7 @@ class _LaMiaAppState extends ConsumerState<LaMiaApp> {
                 if (isGoogleUser || user.emailVerified) {
                   return const HomePlaceholderScreen();
                 }
-                return const EmailVerificationScreen();
+                return const EmailOtpVerificationScreen(purpose: 'signup');
               },
             );
           },

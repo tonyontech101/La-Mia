@@ -1821,29 +1821,26 @@ class _RecipeCreatingScreenState extends ConsumerState<RecipeCreatingScreen> {
 
       case 2:
         // Tab 3: Chef's Tips
-        final tips = recipe.chefsTips.isNotEmpty
-            ? recipe.chefsTips
-            : const [
-                'Use fresh, high-quality ingredients for optimal taste and aroma.',
-                'Adjust seasoning gradually to suit your personal preference.',
-                'Let the dish rest for 5 minutes before serving to allow flavors to meld together.',
-              ];
+        if (recipe.chefsTips.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+            child: Center(
+              child: Text(
+                'No chef\'s tips added yet.',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (recipe.chefsTips.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Default Chef\'s Tips (None added yet):',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-              ),
-            ...tips.map((tip) {
+            ...recipe.chefsTips.map((tip) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(

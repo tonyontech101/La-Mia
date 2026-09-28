@@ -106,7 +106,7 @@ class _VerticalPoppingButtonState extends State<VerticalPoppingButton>
                       widget.isActive ? widget.activeColor : widget.inactiveColor,
                 ),
               ),
-            ] else if (widget.showCount) ...[
+            ] else if (widget.showCount && widget.count > 0) ...[
               const SizedBox(height: 6),
               Text(
                 '${widget.count}',

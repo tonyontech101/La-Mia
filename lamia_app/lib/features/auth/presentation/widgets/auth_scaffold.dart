@@ -9,24 +9,59 @@ import '../../../../core/widgets/hero_header.dart';
 /// content card overlapping its bottom edge. Handles the keyboard, scrolling,
 /// responsive hero height, and tablet max-width centering.
 class AuthScaffold extends StatelessWidget {
-  const AuthScaffold({super.key, required this.child});
+  const AuthScaffold({
+    super.key,
+    required this.child,
+    this.compact = false,
+    this.cardPadding,
+  });
 
   /// The card body (title, fields, buttons, links).
   final Widget child;
 
+  /// If true, scales the hero height and card padding to fit compact / single-viewport screens.
+  final bool compact;
+
+  /// Optional override for card padding.
+  final EdgeInsetsGeometry? cardPadding;
+
   static const double _cardOverlap = 28;
+  static const double _compactCardOverlap = 20;
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final size = media.size;
-    // Hero is ~38% of height, clamped so small phones keep the first fields
-    // visible and large screens don't over-crop the photo.
-    final heroHeight = (size.height * 0.38).clamp(260.0, 360.0);
-    final cardTop = heroHeight - _cardOverlap;
+    final isSmallScreen = size.height < 700;
+    final isTallScreen = size.height >= 880;
+    final overlap = compact
+        ? (isSmallScreen ? _compactCardOverlap : 24.0)
+        : _cardOverlap;
+
+    // Responsive hero height:
+    // If compact on small phones (<700, e.g. iPhone SE): ~18% (115..130) so all fields fit without scrolling.
+    // If compact on standard phones (700..880): ~38% (300..330).
+    // If compact on tall phones (>=880, e.g. Pixel/modern Android): ~40% (350..385).
+    // Otherwise standard ~38% (clamped 260..360).
+    final heroHeight = compact
+        ? (isSmallScreen
+            ? (size.height * 0.18).clamp(115.0, 130.0)
+            : (isTallScreen
+                ? (size.height * 0.40).clamp(350.0, 385.0)
+                : (size.height * 0.38).clamp(300.0, 335.0)))
+        : (size.height * 0.38).clamp(260.0, 360.0);
+    final cardTop = heroHeight - overlap;
     // Let the card fill at least the rest of the viewport so its cream surface
     // reaches the bottom even when the form is short.
     final cardMinHeight = (size.height - cardTop).clamp(0.0, double.infinity);
+
+    final resolvedCardPadding = cardPadding ??
+        EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          compact ? 10.0 : AppSpacing.xxl,
+          AppSpacing.screenH,
+          compact ? AppSpacing.sm : AppSpacing.xl,
+        );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -34,13 +69,17 @@ class AuthScaffold extends StatelessWidget {
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
           child: Stack(
             children: [
-              HeroHeader(height: heroHeight),
+              HeroHeader(
+                height: heroHeight,
+                compact: compact,
+              ),
               if (Navigator.of(context).canPop())
                 Positioned(
-                  top: media.padding.top + 8,
+                  top: media.padding.top + (compact ? 4 : 8),
                   left: 12,
                   child: Container(
                     decoration: BoxDecoration(
@@ -87,12 +126,7 @@ class AuthScaffold extends StatelessWidget {
                             maxWidth: AppSpacing.contentMaxWidth,
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.screenH,
-                              AppSpacing.xxl,
-                              AppSpacing.screenH,
-                              AppSpacing.xl,
-                            ),
+                            padding: resolvedCardPadding,
                             child: child,
                           ),
                         ),

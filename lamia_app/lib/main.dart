@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,11 +9,15 @@ import 'features/notifications/services/local_notification_service.dart';
 import 'features/notifications/services/fcm_service.dart';
 import 'core/services/deep_link_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+class _ErrorScreen extends StatelessWidget {
+  const _ErrorScreen({required this.title, this.exception, this.stackTrace});
 
-  // Show detailed error screen even in release mode to diagnose the crash
-  ErrorWidget.builder = (FlutterErrorDetails details) {
+  final String title;
+  final Object? exception;
+  final StackTrace? stackTrace;
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
@@ -23,37 +28,53 @@ void main() async {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Application Error',
-                  style: TextStyle(
+                Text(
+                  title,
+                  style: const TextStyle(
                     color: Colors.red,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Exception:\n${details.exception}',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                if (!kReleaseMode && exception != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Exception:\n$exception',
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Stack Trace:\n${details.stack}',
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
+                ],
+                if (!kReleaseMode && stackTrace != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Stack Trace:\n$stackTrace',
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return _ErrorScreen(
+      title: 'Application Error',
+      exception: details.exception,
+      stackTrace: details.stack,
     );
   };
 
@@ -62,47 +83,10 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e, stackTrace) {
-    runApp(MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Firebase Initialization Failed',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Exception:\n$e',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Stack Trace:\n$stackTrace',
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    runApp(_ErrorScreen(
+      title: 'Firebase Initialization Failed',
+      exception: e,
+      stackTrace: stackTrace,
     ));
     return;
   }

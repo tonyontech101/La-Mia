@@ -25,6 +25,7 @@ class AuthTextField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.onEditingComplete,
+    this.compact = false,
   });
 
   final TextEditingController controller;
@@ -42,6 +43,7 @@ class AuthTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onEditingComplete;
+  final bool compact;
 
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
@@ -87,7 +89,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(widget.label, style: AppTypography.label()),
-        const SizedBox(height: 6),
+        SizedBox(height: widget.compact ? 3 : 6),
         Semantics(
           label: widget.label,
           textField: true,
@@ -116,7 +118,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                 onSubmitted: widget.onSubmitted,
                 onEditingComplete: widget.onEditingComplete,
                 decoration: InputDecoration(
-                  isDense: false,
+                  isDense: widget.compact,
                   filled: true,
                   fillColor: animatedFill,
                   hintText: widget.hint,
@@ -146,9 +148,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
                               : 'Hide password',
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: AppSpacing.md,
+                    vertical: widget.compact ? 10 : AppSpacing.md,
                   ),
                   enabledBorder: _border(AppColors.border, 1),
                   focusedBorder: _border(AppColors.primary, 1.5),
@@ -163,7 +165,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
         // Reserved error line (scales with text size) to avoid layout jumps.
         ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: MediaQuery.textScalerOf(context).scale(16) + 2,
+            minHeight: widget.compact
+                ? (hasError ? MediaQuery.textScalerOf(context).scale(14) + 2 : 4)
+                : MediaQuery.textScalerOf(context).scale(16) + 2,
           ),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),

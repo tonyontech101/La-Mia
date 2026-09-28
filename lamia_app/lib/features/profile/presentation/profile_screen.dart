@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
@@ -11,6 +12,7 @@ import '../../../core/providers/auth_service_provider.dart';
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/page_transitions.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_loading_dialog.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -80,6 +82,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _followsYou = false;
   int? _topContributorRank;
   int? _mostCookedRank;
+  bool _ranksLoaded = false;
   bool _isChefOfMonth = false;
   int? _followingCount;
   int? _followerCount;
@@ -129,8 +132,23 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     final generation = ++_profileLoadGeneration;
     final uid = _displayedUid;
     if (uid == null) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _ranksLoaded = true;
+        });
+      }
       return;
+    }
+
+    // Clear ranks from any previously viewed profile so they never flash
+    // under the new user's header while the fresh queries are in flight.
+    if (mounted) {
+      setState(() {
+        _topContributorRank = null;
+        _mostCookedRank = null;
+        _ranksLoaded = false;
+      });
     }
 
     try {
@@ -178,6 +196,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       int? topContributorRank;
       int? mostCookedRank;
       bool isChefOfMonth = false;
+      bool ranksLoaded = false;
       try {
         final rankings = await Future.wait([
           _userRepo.topContributorsByFollowers(limit: 100),
@@ -187,12 +206,22 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         topContributorRank = _rankForUser(
           rankings[0] as List<UserModel>,
           uid,
+          isEligible: (u) => u.followerCount > 0,
         );
-        mostCookedRank = _rankForUser(rankings[1] as List<UserModel>, uid);
+        mostCookedRank = _rankForUser(
+          rankings[1] as List<UserModel>,
+          uid,
+          isEligible: (u) => u.recipeCount > 0,
+        );
         final monthRecipes = rankings[2] as List<RecipeModel>;
         isChefOfMonth =
             monthRecipes.isNotEmpty && monthRecipes.first.authorId == uid;
-      } catch (_) {}
+        ranksLoaded = true;
+      } catch (_) {
+        // Mark ranks as resolved even on failure so the header does not
+        // fall back to a fake level-as-ranking label.
+        ranksLoaded = true;
+      }
 
       // Fetch real-time count of following and followers directly from subcollections
       int? followingCount;
@@ -224,6 +253,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           _followsYou = followsYou;
           _topContributorRank = topContributorRank;
           _mostCookedRank = mostCookedRank;
+          _ranksLoaded = ranksLoaded;
           _isChefOfMonth = isChefOfMonth;
           _followingCount = followingCount;
           _followerCount = followerCount;
@@ -248,13 +278,23 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (_) {
       if (mounted && generation == _profileLoadGeneration) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _ranksLoaded = true;
+        });
       }
     }
   }
 
-  int? _rankForUser(List<UserModel> users, String uid) {
-    final index = users.indexWhere((user) => user.uid == uid);
+  int? _rankForUser(
+    List<UserModel> users,
+    String uid, {
+    bool Function(UserModel user)? isEligible,
+  }) {
+    final eligibleUsers = isEligible == null
+        ? users
+        : users.where(isEligible).toList();
+    final index = eligibleUsers.indexWhere((user) => user.uid == uid);
     return index == -1 ? null : index + 1;
   }
 
@@ -333,9 +373,25 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showOptionsMenu(BuildContext context) {
+    final achievements = AchievementCatalog.forUser(
+      _userModel,
+      isChefOfMonth: _isChefOfMonth,
+    );
+    final unlockedBadgesCount = achievements.where((a) => a.isUnlocked).length;
+    final ranks = [_topContributorRank, _mostCookedRank]
+        .where((r) => r != null && r! > 0)
+        .cast<int>()
+        .toList();
+    ranks.sort();
+    final bestRank = ranks.isNotEmpty ? ranks.first : null;
+
     showAppRightSidebar(
       context: context,
       isGuest: widget.isGuest,
+      rank: bestRank,
+      unlockedBadgesCount: unlockedBadgesCount,
+      user: _userModel,
+      isChefOfMonth: _isChefOfMonth,
     );
   }
 
@@ -685,7 +741,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                           iconColor: AppColors.accent,
                           title: 'Earn Chef Rankings',
                           subtitle:
-                              'Receive likes from fellow foodies and get featured on the community leaderboard.',
+                              'Receive likes from fellow chefs and get featured on the community leaderboard.',
                         ),
 
                         const SizedBox(height: 28),
@@ -810,15 +866,28 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       return _buildGuestView(context);
     }
 
-    final user = ref.read(authServiceProvider).currentUser;
+    final user = ref.watch(authStateChangesProvider).valueOrNull ??
+        ref.read(authServiceProvider).currentUser;
+
+    if (_isOwnProfile && !widget.isGuest && user == null) {
+      // Session has been terminated; redirect to Login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        rootNavigatorKey.currentState?.pushAndRemoveUntil(
+          fadePageRoute(const LoginScreen()),
+          (_) => false,
+        );
+      });
+      return const Scaffold(backgroundColor: AppColors.background);
+    }
+
     final displayName =
         _isOwnProfile
             ? (_userModel?.displayName ??
                   (widget.isGuest
-                      ? 'Guest Foodie'
+                      ? 'Guest'
                       : (user?.displayName ??
                             user?.email?.split('@').first ??
-                            'Chef Foodie')))
+                            'Chef')))
             : (_userModel?.displayName ?? 'Chef');
     // When viewing another user, never fall back to the logged-in user's photo.
     final photoUrl =
@@ -830,7 +899,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
         _isOwnProfile
             ? (_userModel?.bio ??
                   (widget.isGuest
-                      ? 'Browsing as guest foodie. Sign in to post family recipes!'
+                      ? 'Browsing as guest. Sign in to post family recipes!'
                       : null))
             : _userModel?.bio;
     final achievements = AchievementCatalog.forUser(
@@ -937,15 +1006,16 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   user?.email?.split('@').first),
                           photoUrl: photoUrl,
                           bio: bio,
-                          rankingLabel: _topContributorRank != null
-                              ? '#$_topContributorRank ranking'
-                              : (_mostCookedRank != null
-                                  ? '#$_mostCookedRank ranking'
-                                  : (achievementLevel != null
-                                      ? '#Level ${achievementLevel.number} ranking'
-                                      : (_userRecipes.isNotEmpty
-                                          ? '#${_userRecipes.length} ranking'
-                                          : '#24 ranking'))),
+                          // Leaderboard rank only — never substitute chef
+                          // level (or a dummy #24) while ranks are loading
+                          // or when the user is unranked.
+                          rankingLabel: !_ranksLoaded
+                              ? null
+                              : (_topContributorRank != null
+                                  ? '#$_topContributorRank ranking'
+                                  : (_mostCookedRank != null
+                                      ? '#$_mostCookedRank ranking'
+                                      : 'Unranked')),
                           achievementLevelLabel: achievementLevel == null
                               ? null
                               : 'Level ${achievementLevel.number} ${achievementLevel.title}',
@@ -984,23 +1054,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 detail: '#$_topContributorRank',
                                 icon: Icons.people_alt_rounded,
                                 color: AppColors.secondary,
-                              )
-                            else
-                              const ProfileRecognition(
-                                label: 'Top Contributor',
-                                icon: Icons.people_alt_rounded,
-                                color: AppColors.secondary,
                               ),
                             if (_mostCookedRank != null)
                               ProfileRecognition(
                                 label: 'Most Cooked',
                                 detail: '#$_mostCookedRank',
-                                icon: Icons.restaurant_menu_rounded,
-                                color: AppColors.primary,
-                              )
-                            else
-                              const ProfileRecognition(
-                                label: 'Most Cooked',
                                 icon: Icons.restaurant_menu_rounded,
                                 color: AppColors.primary,
                               ),

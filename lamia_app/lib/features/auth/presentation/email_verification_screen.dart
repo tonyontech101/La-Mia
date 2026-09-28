@@ -24,6 +24,7 @@ import 'widgets/auth_scaffold.dart';
 ///
 /// Can also be used for sensitive action verification (password/email change)
 /// by passing [onVerified] and [verificationTitle].
+@Deprecated('Use EmailOtpVerificationScreen instead')
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({
     super.key,

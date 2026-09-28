@@ -24,7 +24,7 @@ class ViewRepliesToggle extends StatelessWidget {
       onTap: onToggle,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
+          horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
         child: Row(
@@ -33,13 +33,14 @@ class ViewRepliesToggle extends StatelessWidget {
             AnimatedRotation(
               turns: isExpanded ? 0.5 : 0,
               duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
               child: const Icon(
                 Icons.expand_more_rounded,
-                size: 18,
+                size: 20,
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
+            const SizedBox(width: AppSpacing.xxs),
             Text(
               isExpanded
                   ? 'Hide replies'

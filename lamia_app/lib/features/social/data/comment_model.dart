@@ -2,9 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Data model for a comment on a recipe.
 ///
-/// Supports threading via [parentCommentId] — null means top-level, a real
-/// id means it's a reply. [replyCount] is a best-effort denormalized hint
-/// managed via `FieldValue.increment` in [CommentRepository].
+/// Supports arbitrary-depth threading via [parentCommentId] — null means
+/// top-level; a real id is the immediate parent (comment or reply).
+/// [replyCount] is a denormalized count of **direct** children, managed
+/// via `FieldValue.increment` in [CommentRepository].
 class CommentModel {
   const CommentModel({
     required this.id,

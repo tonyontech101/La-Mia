@@ -397,7 +397,7 @@ class HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         : (_currentUserModel?.displayName ??
             user?.displayName ??
             user?.email?.split('@').first ??
-            'Foodie');
+            'Chef');
     final photoUrl = widget.isGuest
         ? null
         : (_currentUserModel?.photoUrl ?? user?.photoURL);
