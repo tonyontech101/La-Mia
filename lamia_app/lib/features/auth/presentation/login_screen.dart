@@ -16,7 +16,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'sign_up_screen.dart';
-import 'email_verification_screen.dart';
+import 'email_otp_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import 'widgets/auth_scaffold.dart';
 
@@ -121,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         MaterialPageRoute(
           builder: (_) => isVerified
               ? const HomePlaceholderScreen()
-              : const EmailVerificationScreen(),
+              : const EmailOtpVerificationScreen(purpose: 'signup'),
         ),
         (_) => false,
       );

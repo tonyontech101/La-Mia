@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -20,13 +21,16 @@ class AuthService {
     FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
   }) : _authArg = auth,
        _googleArg = googleSignIn,
-       _firestoreArg = firestore;
+       _firestoreArg = firestore,
+       _functionsArg = functions;
 
   final FirebaseAuth? _authArg;
   final GoogleSignIn? _googleArg;
   final FirebaseFirestore? _firestoreArg;
+  final FirebaseFunctions? _functionsArg;
 
   /// Resolves the [FirebaseAuth] instance, preferring an injected one.
   FirebaseAuth get _auth => _authArg ?? FirebaseAuth.instance;
@@ -37,6 +41,10 @@ class AuthService {
   /// Resolves the [FirebaseFirestore] instance, preferring an injected one.
   FirebaseFirestore get _firestore =>
       _firestoreArg ?? FirebaseFirestore.instance;
+
+  /// Resolves the [FirebaseFunctions] instance, preferring an injected one.
+  FirebaseFunctions get _functions =>
+      _functionsArg ?? FirebaseFunctions.instance;
 
   /// The currently signed-in user, or `null`.
   User? get currentUser => _auth.currentUser;
@@ -197,6 +205,61 @@ class AuthService {
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(AuthErrorMessages.fromCode(e.code));
+    }
+  }
+
+  /// Sends a 6-digit verification code to [targetEmail] (or current user's email)
+  /// for the specified [purpose] ('signup', 'change_password', 'change_email').
+  Future<void> sendEmailOtp({
+    required String purpose,
+    String? targetEmail,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('sendEmailOtp');
+      await callable.call({
+        'purpose': purpose,
+        if (targetEmail != null && targetEmail.isNotEmpty)
+          'targetEmail': targetEmail.trim(),
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(e.message ?? 'Failed to send verification code.');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to send verification code: $e');
+    }
+  }
+
+  /// Verifies the 6-digit [code] for [purpose] ('signup', 'change_password', 'change_email').
+  ///
+  /// On successful signup/change_email verification, reloads the user so
+  /// [isEmailVerified] and [User.email] reflect the updated Firebase state.
+  Future<bool> verifyEmailOtp({
+    required String code,
+    required String purpose,
+    String? newEmail,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('verifyEmailOtp');
+      final result = await callable.call({
+        'code': code.trim(),
+        'purpose': purpose,
+        if (newEmail != null && newEmail.isNotEmpty)
+          'newEmail': newEmail.trim(),
+      });
+
+      // Reload user to sync updated Firebase Auth state (e.g. emailVerified = true)
+      await reloadUser();
+
+      final data = result.data;
+      if (data is Map) {
+        return data['success'] == true;
+      }
+      return false;
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(e.message ?? 'Invalid verification code.');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Verification failed: $e');
     }
   }
 

@@ -18,7 +18,7 @@ import '../../../core/widgets/guest_link.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
-import 'email_verification_screen.dart';
+import 'email_otp_verification_screen.dart';
 import '../../home/presentation/home_placeholder_screen.dart';
 import '../../legal/presentation/legal_document_screen.dart';
 import 'widgets/auth_scaffold.dart';
@@ -189,20 +189,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
       );
       if (!mounted) return;
 
-      // Send the Firebase verification email before navigating.
-      await _authService.sendEmailVerification();
+      // Send the OTP verification code via Resend before navigating.
+      final signupEmail = _emailController.text.trim();
+      bool otpSent = true;
+      try {
+        await _authService.sendEmailOtp(
+          purpose: 'signup',
+          targetEmail: signupEmail,
+        );
+      } catch (_) {
+        otpSent = false;
+      }
       if (!mounted) return;
 
-      // Show a success message while still on this screen.
-      AppSnackbar.show(context, message: 'Account created! Please log in.');
-      // Small delay so the user can read the snackbar before navigating.
-      await Future<void>.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: otpSent
+            ? 'Account created! Enter the verification code sent to your email.'
+            : 'Account created! Tap "Resend Code" to receive your verification code.',
+      );
 
-      // Navigate to the verification screen -- the user stays signed in
-      // so the verification link works correctly.
+      // Navigate to the OTP verification screen
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const EmailVerificationScreen()),
+        MaterialPageRoute(
+          builder: (_) => EmailOtpVerificationScreen(
+            purpose: 'signup',
+            targetEmail: signupEmail,
+          ),
+        ),
         (_) => false,
       );
     } catch (e) {

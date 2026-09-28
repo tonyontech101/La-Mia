@@ -11,7 +11,7 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../auth/data/user_repository.dart';
-import '../../auth/presentation/email_verification_screen.dart';
+import '../../auth/presentation/email_otp_verification_screen.dart';
 import '../../notifications/data/notification_preference_model.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/services/local_notification_service.dart';
@@ -172,20 +172,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         password: currentPassword,
       );
 
-      // Step 2: Send verification email to current email
-      await authService.sendEmailVerification();
+      // Step 2: Send OTP verification email to current email
+      await authService.sendEmailOtp(
+        purpose: 'change_password',
+      );
 
       if (!mounted) return;
 
-      // Step 3: Navigate to verification screen
-      await Navigator.of(context).push<bool>(
+      // Step 3: Navigate to OTP verification screen
+      final verified = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
-          builder: (_) => EmailVerificationScreen(
-            verificationTitle: 'Verify to change password',
-            verificationSubtitle:
-                'We sent a verification link to your current email. '
-                'Click the link, then tap Done below to complete your password change.',
-            requireManualConfirm: true,
+          builder: (_) => EmailOtpVerificationScreen(
+            purpose: 'change_password',
             onVerified: (ctx) async {
               // Step 4: After verification, update the password
               await authService.changePassword(newPassword);
@@ -194,7 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       );
 
-      if (mounted) {
+      if (verified == true && mounted) {
         _clearPasswordFields();
         AppSnackbar.show(
           context,
@@ -251,43 +249,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _isUpdatingEmail = true);
 
     try {
-      // Step 1: Reauthenticate and send verification to new email
-      await authService.changeEmail(
-        newEmail: newEmail,
-        currentPassword: currentPassword,
+      // Step 1: Reauthenticate with current password
+      await authService.reauthenticateWithEmail(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      // Step 2: Send verification OTP code to the new email address
+      await authService.sendEmailOtp(
+        purpose: 'change_email',
+        targetEmail: newEmail,
       );
 
       if (!mounted) return;
 
-      // Step 2: Navigate to verification screen
-      await Navigator.of(context).push<bool>(
+      // Step 3: Navigate to OTP verification screen
+      final verified = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
-          builder: (_) => EmailVerificationScreen(
-            verificationTitle: 'Verify your new email',
-            verificationSubtitle:
-                'We sent a verification link to $newEmail. '
-                'Click the link, then tap Done below to complete your email change.',
-            requireManualConfirm: true,
+          builder: (_) => EmailOtpVerificationScreen(
+            purpose: 'change_email',
+            newEmail: newEmail,
             onVerified: (ctx) async {
-              // Verify the email was actually updated by Firebase after
-              // the user clicked the verification link.
-              final currentUser = authService.currentUser;
-              if (currentUser == null) {
-                throw Exception('User session lost. Please sign in again.');
-              }
-              await currentUser.reload();
-              if (currentUser.email != newEmail) {
-                throw Exception(
-                  'Email has not been updated yet. '
-                  'Please click the verification link first.',
-                );
-              }
+              // verifyEmailOtp Cloud Function updates the email in Firebase Auth
+              // and Firestore.
+              await authService.reloadUser();
             },
           ),
         ),
       );
 
-      if (mounted) {
+      if (verified == true && mounted) {
         _clearEmailFields();
         AppSnackbar.show(
           context,

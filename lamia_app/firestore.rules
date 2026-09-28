@@ -316,6 +316,14 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions can write
     }
 
+    // ── OTP Verifications (Cloud Functions Admin SDK only) ───────────────────
+
+    match /otp_verifications/{document} {
+      // One-time verification codes are generated and verified exclusively
+      // by Cloud Functions (Admin SDK). Clients are forbidden from direct access.
+      allow read, write: if false;
+    }
+
     // ── Everything else: deny by default ─────────────────────────────────────
 
     // Collections not explicitly named above are inaccessible to clients.

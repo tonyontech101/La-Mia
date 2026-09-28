@@ -11,6 +11,8 @@ import { onRecipeLikeWrite } from "./onRecipeLikeWrite";
 import { onFavoriteWrite } from "./onFavoriteWrite";
 import { updateTrendingScores } from "./updateTrendingScores";
 import { onNotificationCreate } from "./onNotificationCreate";
+import { sendEmailOtp } from "./sendEmailOtp";
+import { verifyEmailOtp } from "./verifyEmailOtp";
 
 export {
   onRecipeCreate,
@@ -18,5 +20,7 @@ export {
   onFavoriteWrite,
   updateTrendingScores,
   onNotificationCreate,
+  sendEmailOtp,
+  verifyEmailOtp,
 };
 
