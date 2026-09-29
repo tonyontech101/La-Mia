@@ -95,10 +95,18 @@ class _UniversalSearchScreenState extends ConsumerState<UniversalSearchScreen> {
       final recipes = results[0] as List<RecipeModel>;
       final chefs = results[1] as List<UserModel>;
 
+      final seenChefIds = <String>{};
+      final uniqueChefs = chefs.where((c) => seenChefIds.add(c.uid)).toList();
+
+      final seenRecipeIds = <String>{};
+      final uniqueRecipes = recipes
+          .where((r) => r.id == null || seenRecipeIds.add(r.id!))
+          .toList();
+
       if (mounted) {
         setState(() {
-          _matchingRecipes = recipes;
-          _matchingChefs = chefs;
+          _matchingRecipes = uniqueRecipes;
+          _matchingChefs = uniqueChefs;
           _isLoading = false;
         });
       }

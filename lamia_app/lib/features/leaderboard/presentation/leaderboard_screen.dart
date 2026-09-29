@@ -156,8 +156,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
   void _showOptionsMenu(BuildContext context) {
     final ranks = [_topContributorRank, _mostCookedRank]
-        .where((r) => r != null && r! > 0)
-        .cast<int>()
+        .where((r) => r > 0)
         .toList();
     ranks.sort();
     final bestRank = ranks.isNotEmpty ? ranks.first : null;

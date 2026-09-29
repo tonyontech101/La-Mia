@@ -379,7 +379,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     final unlockedBadgesCount = achievements.where((a) => a.isUnlocked).length;
     final ranks = [_topContributorRank, _mostCookedRank]
-        .where((r) => r != null && r! > 0)
+        .where((r) => r != null && r > 0)
         .cast<int>()
         .toList();
     ranks.sort();

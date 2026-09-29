@@ -190,6 +190,22 @@ async function main() {
       }
     }
 
+    // Also sweep for any orphaned documents in Firestore (users whose Auth account was previously deleted)
+    const remainingFirestoreSnap = await db.collection('users').get();
+    const remainingAuthUsers = await auth.listUsers();
+    const activeAuthUids = new Set(remainingAuthUsers.users.map((u) => u.uid));
+    for (const doc of remainingFirestoreSnap.docs) {
+      if (!activeAuthUids.has(doc.id)) {
+        try {
+          await db.recursiveDelete(doc.ref);
+          firestoreDeleted++;
+          console.log(`  ✓ Cleaned up orphaned Firestore user doc: ${doc.id}`);
+        } catch (err) {
+          console.warn(`  ⚠️ Could not delete orphaned doc for ${doc.id}: ${err.message}`);
+        }
+      }
+    }
+
     console.log(`✅ Firestore: Cleaned up ${firestoreDeleted} document(s) in 'users' collection.`);
   }
 

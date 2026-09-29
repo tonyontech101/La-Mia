@@ -270,10 +270,12 @@ class UserRepository {
         }
       }
 
+      final seenUids = <String>{};
       final results = users
           .where((u) =>
-              u.displayName.toLowerCase().contains(q) ||
-              (u.bio?.toLowerCase().contains(q) == true))
+              seenUids.add(u.uid) &&
+              (u.displayName.toLowerCase().contains(q) ||
+                  (u.bio?.toLowerCase().contains(q) == true)))
           .take(limit)
           .toList();
 
