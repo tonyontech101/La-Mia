@@ -546,7 +546,7 @@ class _CookByIngredientsScreenState extends ConsumerState<CookByIngredientsScree
               const SectionEmptyState(
                 message: 'No matching recipes found',
                 subtitle:
-                    'Try adding more common ingredients like Garlic, Onion, Pork, or Rice.',
+                    'Try removing an ingredient or searching with fewer items to see more recipes.',
               ),
             ],
           );

@@ -5,35 +5,65 @@ import 'ingredient_matched_recipe.dart';
 /// `CookByIngredientsScreen._computeMatches` so the algorithm can be
 /// unit-tested in isolation (no widget tree, no Firebase).
 ///
-/// Matching strategy:
+/// Matching strategy (AND logic):
+///   - Every selected user ingredient tag MUST be present in the recipe.
+///     If any selected ingredient is missing from a recipe, that recipe is excluded.
 ///   - Recipe ingredients and user-supplied tags are both normalized
-///     (lowercased + trimmed) then split into whitespace/punctuation tokens.
-///   - A tag matches an ingredient when a strict majority of the tag's
-///     tokens are present in the ingredient's token set (see [_matches] for
-///     the precise rule). Single-token tags therefore require that exact
-///     token to be present (so "rice" matches "rice flour" — recipe uses
-///     rice — but NOT "price", which tokenizes to a different token).
-///   - Substring contains is never used, eliminating false positives such
-///     as "egg" matching "eggplant" (different tokens).
-///
-/// Until the canonical ingredient dictionary + Cloud Function ships
-/// (architecture §4), this is a defensive client-side best-effort matcher.
+///     (lowercased, trimmed, stemmed for singular/plural, and mapped for
+///     common Filipino culinary synonyms).
+///   - Token-based matching prevents substring false positives (e.g. "egg"
+///     does not match "eggplant", "rice" does not match "price").
+///   - Multi-token tags ("soy sauce", "cooking oil") match when the core
+///     ingredient is present in the recipe item.
 List<IngredientMatchedRecipe> computeIngredientMatches(
   List<RecipeModel> recipes,
   List<String> selectedTags,
 ) {
-  if (selectedTags.isEmpty) return const [];
+  if (selectedTags.isEmpty || recipes.isEmpty) return const [];
+
+  // Deduplicate and clean selected tags
+  final cleanTags = <String>[];
+  final seenTags = <String>{};
+  for (final tag in selectedTags) {
+    final t = _normalize(tag);
+    if (t.isNotEmpty && seenTags.add(t)) {
+      cleanTags.add(t);
+    }
+  }
+
+  if (cleanTags.isEmpty) return const [];
 
   // Pre-tokenize each tag once so we don't repeat the work per ingredient.
-  final tagTokensList = selectedTags.map(_normalize).map(_tokens).toList();
+  final tagTokensList = cleanTags.map(_tokens).toList();
   final matches = <IngredientMatchedRecipe>[];
 
   for (final recipe in recipes) {
+    if (recipe.ingredients.isEmpty) continue;
+
+    // Pre-tokenize all ingredients in this recipe
+    final recipeIngredientTokens = recipe.ingredients.map(_tokens).toList();
+
+    // AND LOGIC:
+    // Every selected tag MUST match at least one ingredient in this recipe.
+    var allTagsPresent = true;
+    for (final tagTokens in tagTokensList) {
+      final tagFoundInRecipe = recipeIngredientTokens.any(
+        (ingTokens) => _matches(ingTokens, tagTokens),
+      );
+      if (!tagFoundInRecipe) {
+        allTagsPresent = false;
+        break;
+      }
+    }
+
+    // Only dishes that have ALL the selected ingredients present are kept
+    if (!allTagsPresent) continue;
+
     var matchedCount = 0;
     final missing = <String>[];
 
-    for (final ingredient in recipe.ingredients) {
-      final ingTokens = _tokens(ingredient);
+    for (var i = 0; i < recipe.ingredients.length; i++) {
+      final ingTokens = recipeIngredientTokens[i];
       final isMatched = tagTokensList.any(
         (tagTokens) => _matches(ingTokens, tagTokens),
       );
@@ -41,31 +71,23 @@ List<IngredientMatchedRecipe> computeIngredientMatches(
       if (isMatched) {
         matchedCount++;
       } else {
-        missing.add(ingredient);
+        missing.add(recipe.ingredients[i]);
       }
     }
 
-    if (matchedCount > 0) {
-      final totalCount = recipe.ingredients.isEmpty
-          ? 1
-          : recipe.ingredients.length;
-      // Limits the match range to [1, 100] so partial matches don't show 0%
-      // (matching nothing is filtered out above) or > 100% by arithmetic.
-      final matchPct = ((matchedCount / totalCount) * 100).round().clamp(
-        1,
-        100,
-      );
+    final totalCount = recipe.ingredients.length;
+    // Limits the match range to [1, 100]
+    final matchPct = ((matchedCount / totalCount) * 100).round().clamp(1, 100);
 
-      matches.add(
-        IngredientMatchedRecipe(
-          recipe: recipe,
-          matchPercentage: matchPct,
-          matchedCount: matchedCount,
-          totalIngredients: totalCount,
-          missingIngredients: missing,
-        ),
-      );
-    }
+    matches.add(
+      IngredientMatchedRecipe(
+        recipe: recipe,
+        matchPercentage: matchPct,
+        matchedCount: matchedCount,
+        totalIngredients: totalCount,
+        missingIngredients: missing,
+      ),
+    );
   }
 
   // Highest match percentage first; ties broken by raw matched count so
@@ -81,38 +103,115 @@ List<IngredientMatchedRecipe> computeIngredientMatches(
 
 String _normalize(String s) => s.trim().toLowerCase();
 
+String _normalizeToken(String token) {
+  var t = token.trim().toLowerCase();
+  if (t.isEmpty) return t;
+
+  // Singularize common plural endings
+  if (t.length > 4 && t.endsWith('ies')) {
+    return '${t.substring(0, t.length - 3)}y';
+  }
+  if (t == 'leaves' || t == 'leaf') {
+    return 'leaf';
+  }
+  if (t.length > 4 && t.endsWith('es')) {
+    final base = t.substring(0, t.length - 2);
+    if (base.endsWith('o') ||
+        base.endsWith('ch') ||
+        base.endsWith('sh') ||
+        base.endsWith('x') ||
+        base.endsWith('s')) {
+      return base; // tomatoes -> tomato, potatoes -> potato
+    }
+    return t.substring(0, t.length - 1); // cloves -> clove
+  }
+  if (t.length > 3 && t.endsWith('s') && !t.endsWith('ss')) {
+    return t.substring(0, t.length - 1); // eggs -> egg, onions -> onion
+  }
+
+  return t;
+}
+
 Set<String> _tokens(String s) {
   // Split on whitespace and common list punctuation; drop empties.
-  return s
+  final rawTokens = s
       .toLowerCase()
-      .split(RegExp(r'[\s,/&]+'))
+      .split(RegExp(r'[\s,/&()\-]+'))
       .map((t) => t.trim())
-      .where((t) => t.isNotEmpty)
-      .toSet();
+      .where((t) => t.isNotEmpty);
+
+  final tokens = <String>{};
+  for (final raw in rawTokens) {
+    final t = _normalizeToken(raw);
+    tokens.add(t);
+
+    // Expand known Filipino culinary terms into English equivalents
+    switch (t) {
+      case 'toyo':
+        tokens.addAll(['soy', 'sauce']);
+        break;
+      case 'patis':
+        tokens.addAll(['fish', 'sauce']);
+        break;
+      case 'mantika':
+        tokens.addAll(['cooking', 'oil']);
+        break;
+      case 'bawang':
+        tokens.add('garlic');
+        break;
+      case 'sibuyas':
+        tokens.add('onion');
+        break;
+      case 'itlog':
+        tokens.add('egg');
+        break;
+      case 'manok':
+        tokens.add('chicken');
+        break;
+      case 'baboy':
+        tokens.add('pork');
+        break;
+      case 'baka':
+        tokens.add('beef');
+        break;
+      case 'suka':
+        tokens.add('vinegar');
+        break;
+      case 'paminta':
+        tokens.add('pepper');
+        break;
+      case 'luya':
+        tokens.add('ginger');
+        break;
+      case 'kanin':
+      case 'sinangag':
+        tokens.add('rice');
+        break;
+    }
+  }
+
+  return tokens;
 }
 
 /// Returns true if [ingredientTokens] matches the [tagTokens] set.
-///
-/// Single-token tags (the common case: "rice", "egg") match when the tag's
-/// token is present anywhere in the ingredient's token set — so "chicken"
-/// matches both "chicken" and "chicken thigh". This portion-of-ingredient
-/// match is intentional for the La Mia pantry use-case: a user choosing
-/// "chicken" wants recipes that use chicken, regardless of cut.
-///
-/// Multi-token tags ("soy sauce", "cooking oil") require a *strict*
-/// majority of the tag's tokens to be present in the ingredient — strictly
-/// more than half — so "soy sauce" does NOT match "soy vinegar" (only "soy"
-/// is shared) but "rice vinegar" matches "rice vinegar".
-///
-/// Substring matching is never used, fixing false positives like "rice"
-/// matching "price", or "egg" matching "eggplant" (which tokenizes to a
-/// single token "eggplant" with no "egg" element).
 bool _matches(Set<String> ingredientTokens, Set<String> tagTokens) {
-  if (tagTokens.isEmpty) return false;
+  if (tagTokens.isEmpty || ingredientTokens.isEmpty) return false;
+
+  // "cooking oil" / "oil" synonym rule: any oil ingredient matches cooking oil tag
+  if (tagTokens.contains('oil') && ingredientTokens.contains('oil')) {
+    return true;
+  }
+
   var shared = 0;
   for (final t in tagTokens) {
     if (ingredientTokens.contains(t)) shared++;
   }
-  // Strict majority: shared must be strictly more than half the tag tokens.
+
+  // Single-token tag: present in ingredient tokens
+  if (tagTokens.length == 1) {
+    return shared >= 1;
+  }
+
+  // Multi-token tag: strict majority of tag's tokens
   return shared * 2 > tagTokens.length;
 }

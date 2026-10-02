@@ -168,6 +168,95 @@ void main() {
         hasLength(1),
       );
     });
+
+    test('AND logic: only returns dishes containing ALL selected ingredients', () {
+      final recipes = [
+        _recipe(
+          name: 'Arroz Caldo',
+          ingredients: ['chicken', 'garlic', 'rice', 'ginger'],
+        ),
+        _recipe(
+          name: 'Chicken Adobo',
+          ingredients: ['chicken', 'garlic', 'vinegar', 'soy sauce'],
+        ),
+        _recipe(
+          name: 'Garlic Rice',
+          ingredients: ['garlic', 'rice', 'oil'],
+        ),
+        _recipe(
+          name: 'Plain Rice',
+          ingredients: ['rice'],
+        ),
+      ];
+
+      // Requires Chicken AND Garlic AND Rice
+      final results = computeIngredientMatches(
+        recipes,
+        ['Chicken', 'Garlic', 'Rice'],
+      );
+
+      // Only Arroz Caldo has all three!
+      expect(results, hasLength(1));
+      expect(results.first.recipe.name, 'Arroz Caldo');
+      expect(results.first.matchedCount, 3);
+      expect(results.first.missingIngredients, ['ginger']);
+    });
+
+    test('AND logic: excludes recipe missing even one selected ingredient', () {
+      final recipes = [
+        _recipe(
+          name: 'Pork Adobo',
+          ingredients: ['pork', 'garlic', 'soy sauce', 'vinegar'],
+        ),
+      ];
+
+      // User has Pork, Garlic, and Eggs -> Pork Adobo has no eggs!
+      final results = computeIngredientMatches(
+        recipes,
+        ['Pork', 'Garlic', 'Eggs'],
+      );
+
+      expect(results, isEmpty);
+    });
+
+    test('matches singular and plural variations of ingredient names', () {
+      final recipes = [
+        _recipe(name: 'Egg Dish', ingredients: ['1 egg']),
+        _recipe(name: 'Eggs Dish', ingredients: ['4 eggs']),
+        _recipe(name: 'Tomato Dish', ingredients: ['1 tomato']),
+        _recipe(name: 'Tomatoes Dish', ingredients: ['3 tomatoes']),
+      ];
+
+      // Tag 'Eggs' matches both '1 egg' and '4 eggs'
+      final eggResults = computeIngredientMatches(recipes, ['Eggs']);
+      expect(eggResults.map((r) => r.recipe.name).toSet(), {
+        'Egg Dish',
+        'Eggs Dish',
+      });
+
+      // Tag 'Tomato' matches both '1 tomato' and '3 tomatoes'
+      final tomatoResults = computeIngredientMatches(recipes, ['Tomato']);
+      expect(tomatoResults.map((r) => r.recipe.name).toSet(), {
+        'Tomato Dish',
+        'Tomatoes Dish',
+      });
+    });
+
+    test('matches common Filipino culinary synonyms', () {
+      final recipes = [
+        _recipe(name: 'Fried Egg Tagalog', ingredients: ['itlog', 'mantika']),
+        _recipe(name: 'Adobo Tagalog', ingredients: ['manok', 'bawang', 'toyo', 'suka']),
+      ];
+
+      // English tags match Tagalog ingredients
+      final eggMatches = computeIngredientMatches(recipes, ['Egg', 'Cooking Oil']);
+      expect(eggMatches, hasLength(1));
+      expect(eggMatches.first.recipe.name, 'Fried Egg Tagalog');
+
+      final adoboMatches = computeIngredientMatches(recipes, ['Chicken', 'Garlic']);
+      expect(adoboMatches, hasLength(1));
+      expect(adoboMatches.first.recipe.name, 'Adobo Tagalog');
+    });
   });
 
   group('IngredientMatchedRecipe', () {
