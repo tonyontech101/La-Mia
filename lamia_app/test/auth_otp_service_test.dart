@@ -228,5 +228,14 @@ void main() {
       expect(capturedParams['password'], 'Password123!');
       expect(capturedParams['displayName'], 'Test User');
     });
+
+    test('signInWithEmail ensures user document exists in Firestore', () async {
+      final user = await authService.signInWithEmail(
+        email: 'test@example.com',
+        password: 'Password123!',
+      );
+
+      expect(user.uid, 'user_123');
+    });
   });
 }

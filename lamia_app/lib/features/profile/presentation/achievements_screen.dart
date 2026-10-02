@@ -242,7 +242,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       ? 0
       : _achievements
           .where((a) => a.isUnlocked)
-          .fold<int>(0, (sum, a) => sum + a.xpReward);
+          .fold<int>(0, (total, a) => total + a.xpReward);
 
   @override
   Widget build(BuildContext context) {

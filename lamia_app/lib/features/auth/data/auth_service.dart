@@ -95,6 +95,7 @@ class AuthService {
       );
       final user = credential.user;
       if (user == null) throw Exception('Sign-in succeeded but user is null.');
+      await _ensureUserDocument(user);
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(AuthErrorMessages.fromCode(e.code));

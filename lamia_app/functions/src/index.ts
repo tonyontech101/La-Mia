@@ -13,6 +13,7 @@ import { updateTrendingScores } from "./updateTrendingScores";
 import { onNotificationCreate } from "./onNotificationCreate";
 import { sendEmailOtp } from "./sendEmailOtp";
 import { verifyEmailOtp } from "./verifyEmailOtp";
+import { onUserDelete } from "./onUserDelete";
 
 export {
   onRecipeCreate,
@@ -22,5 +23,6 @@ export {
   onNotificationCreate,
   sendEmailOtp,
   verifyEmailOtp,
+  onUserDelete,
 };
 

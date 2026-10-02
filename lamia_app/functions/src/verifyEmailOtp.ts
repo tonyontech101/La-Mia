@@ -125,6 +125,25 @@ export const verifyEmailOtp = onCall({ cors: true }, async (request) => {
         emailVerified: true,
       });
 
+      // Atomically create the Firestore user document with Admin SDK
+      const initialDisplayName = displayName ? String(displayName).trim() : (recipientEmail ? recipientEmail.split("@")[0] : "User");
+      try {
+        await db.collection("users").doc(newUser.uid).set({
+          displayName: initialDisplayName,
+          bio: null,
+          photoUrl: null,
+          recipeCount: 0,
+          totalLikesReceived: 0,
+          followerCount: 0,
+          followingCount: 0,
+          savedCount: 0,
+          role: "user",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (docErr) {
+        console.warn(`[verifyEmailOtp] Failed to create initial user document in Firestore: ${docErr}`);
+      }
+
       return {
         success: true,
         emailVerified: true,

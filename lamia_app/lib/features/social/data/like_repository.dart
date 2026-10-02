@@ -70,15 +70,17 @@ class LikeRepository {
         ? _firestore.collection('users').doc(targetAuthorId)
         : null;
 
+    final authorDoc = authorRef != null ? await authorRef.get() : null;
+    final authorExists = authorDoc?.exists ?? false;
+
     if (isCurrentlyLiked) {
       batch.delete(userLikeRef);
       batch.delete(likeRef);
       batch.update(recipeRef, {'likeCount': FieldValue.increment(-1)});
-      if (authorRef != null) {
-        batch.set(
+      if (authorRef != null && authorExists) {
+        batch.update(
           authorRef,
           {'totalLikesReceived': FieldValue.increment(-1)},
-          SetOptions(merge: true),
         );
       }
     } else {
@@ -89,11 +91,10 @@ class LikeRepository {
         {'recipeId': recipeId, 'userId': userId, 'likedAt': now},
       );
       batch.update(recipeRef, {'likeCount': FieldValue.increment(1)});
-      if (authorRef != null) {
-        batch.set(
+      if (authorRef != null && authorExists) {
+        batch.update(
           authorRef,
           {'totalLikesReceived': FieldValue.increment(1)},
-          SetOptions(merge: true),
         );
       }
     }

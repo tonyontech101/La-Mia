@@ -1,28 +1,115 @@
-# La Mia — Discover, Cook, and Share Authentic Filipino Recipes 🍲
+# 🍽️ La Mia — Discover, Cook, and Share Authentic Filipino Recipes
 
-**La Mia** is a modern Flutter mobile application built to celebrate and explore authentic Filipino cuisine. Designed with rich Material 3 UI aesthetics and real-time backend synchronization via Firebase, **La Mia** empowers home cooks, food enthusiasts, and culinary explorers to discover traditional dishes, match recipes based on available pantry ingredients, decide daily meals, and connect with a community of passion-driven chefs.
+<div align="center">
+  <img src="lamia_app/assets/images/logo.png" alt="La Mia Logo" width="200" />
+
+  ### *"Discover, Cook, and Share Delicious Filipino Recipes"*
+
+  [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
+  [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev/)
+  [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Functions-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+  [![Riverpod](https://img.shields.io/badge/State-Riverpod%20v2-blue)](https://riverpod.dev/)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+</div>
 
 ---
 
 ## 📱 What is La Mia?
 
-Finding what to cook or managing kitchen ingredients can be challenging. **La Mia** solves this by combining rich culinary content with smart utility tools:
+**La Mia** is a modern, community-driven mobile culinary ecosystem built specifically for Filipino cuisine. More than just a recipe archive, La Mia acts as an everyday kitchen companion designed to solve the two most common cooking dilemmas in Filipino households:
+1. **"Ano pong ulam?"** (What should I cook today?)
+2. **"What can I cook with what I already have?"**
 
-- 🍳 **200+ Authentic Filipino Recipes**: Access a rich, curated dataset spanning 13 traditional dish categories—including *Almusal*, *Ulam*, *Sabaw*, *Merienda*, *Pang-himagas*, *Pulutan*, and regional specialties.
-- 🛒 **Cook-by-Ingredients (Pantry Matcher)**: Enter ingredients you currently have at home to instantly discover recipes you can make, complete with ingredient matching percentages and estimated market costs.
-- 🎲 **"Ano Pong Ulam?" Meal Decision Helper**: Can't decide what to eat today? Use the interactive decision tool to get instant meal suggestions tailored to your mood or preferences.
-- 🏆 **Community & Chef Leaderboard**: Celebrate top home chefs and discover community-favorite recipes through rankings and monthly featured chefs.
-- 👤 **User Profiles & Bookmarks**: Save your favorite dishes, track your cooking history, and manage your culinary profile.
+By combining pantry-based ingredient matching, structured weekly meal planning, an interactive grocery checklist, and community recognition for home cooks, La Mia transforms everyday cooking from a stressful chore into a creative, culturally rich journey.
 
 ---
 
-## 🏗️ Tech Stack & Architecture
+## 🌟 Key Features
 
-- **Frontend Framework**: [Flutter](https://flutter.dev/) (Dart 3.x) with Material 3 styling and custom design tokens.
-- **Backend & Database**: [Cloud Firestore](https://firebase.google.com/docs/firestore) for real-time recipe and user data storage.
-- **Media Storage**: [Firebase Cloud Storage](https://firebase.google.com/docs/storage) for hosted high-resolution recipe cover photos.
-- **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (Email/Password & Google Sign-In support).
-- **Data Seeding Utilities**: [Node.js](https://nodejs.org/) script runner using `firebase-admin` SDK for uploading recipes and ingredient catalogs.
+| Feature | Description |
+|---|---|
+| 🍳 **Cook by Ingredients** | Enter ingredients on hand in your pantry to instantly find matching recipes, calculated match percentages, missing item alerts, and smart Pinoy substitutions (*e.g., calamansi ↔ lemon*). |
+| 🍽️ **"Ano Pong Ulam?" Engine** | One-tap decision helper delivering curated meal suggestions filtered by budget, cooking time, difficulty, servings, and dish category. |
+| 📅 **Weekly Meal Planner** | Schedule meals for Breakfast, Lunch, Dinner, and Snacks across a 7-day cyclical calendar (Monday–Sunday). |
+| 🛒 **Smart Grocery Checklist** | Categorized shopping checklist that auto-imports ingredients directly from your weekly meal plan or favorite recipes. |
+| 🏆 **Chef Leaderboards & Community** | Climb rankings through recipe contributions, earn likes, receive 5-star ratings, and follow your favorite home chefs. |
+| 💬 **Social Hub & Threaded Comments** | Community recipe reviews with 1–5 star ratings, rich comments, and nested replies. |
+| 🔐 **Hybrid Authentication** | Frictionless Guest Mode for instant recipe browsing, Google OAuth, and secure 6-digit Email OTP registration powered by Cloud Functions and Resend API. |
+| 📱 **Offline-Ready Favorites** | Saved recipes are cached locally on device via SQLite (`sqflite`), allowing uninterrupted cooking in kitchens with poor reception. |
+
+---
+
+## 🎨 Design System & Color Palette
+
+La Mia’s UI blends warm Filipino culinary "appetite" tones with accents inspired by the Philippine flag and traditional *banig* woven motifs:
+
+* 🧱 **Primary (Terracotta) — `#C4462B`**: Call-to-actions, buttons, and active tabs. Inspired by traditional clay cooking pots (*palayok*) and rich stews (*afritada*, *kaldereta*).
+* 🥥 **Canvas (Warm Cream) — `#FBF6EF`**: Soft, non-glare coconut milk (*gata*) background tone that reduces eye strain in bright kitchen lighting.
+* 🔵 **Secondary (Royal Blue) — `#1B3B8B`**: Inspired by the Philippine flag; used for the *"Ano Pong Ulam?"* card gradient and trust badges.
+* ☀️ **Accent (Warm Amber) — `#F2A03D`**: Golden sun amber used for 5-star review ratings and culinary badges.
+* 🍈 **Success (Calamansi Green) — `#3E8E5A`**: Completed checklist items and 100% pantry match indicators.
+
+---
+
+## 🏗️ System Architecture & Tech Stack
+
+La Mia adheres to **Clean Layered Architecture** with strict inward dependency flow (Presentation → Domain ← Data):
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   CLIENT (FLUTTER)                     │
+│   • Presentation: Riverpod Notifiers + UI Widgets      │
+│   • Domain: Pure Entities & Repository Interfaces      │
+│   • Data Layer: Firebase Data Sources + Local SQLite   │
+└──────────────────────────┬─────────────────────────────┘
+                           │ HTTPS / WebSockets
+┌──────────────────────────▼─────────────────────────────┐
+│                 BACKEND (GOOGLE FIREBASE)              │
+│   • Firebase Authentication (Email/Password & Google)  │
+│   • Cloud Functions (Node.js/TS): Algorithmic Logic    │
+│   • Cloud Storage: High-Resolution Food Photography    │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Secure API
+┌──────────────────────────▼─────────────────────────────┐
+│            DATABASE & EXTERNAL INTEGRATIONS            │
+│   • Cloud Firestore (NoSQL Scalable Document DB)       │
+│   • Resend API (Transactional 6-Digit Email OTP)       │
+└────────────────────────────────────────────────────────┘
+```
+
+* **Mobile SDK**: [Flutter](https://flutter.dev/) (Dart 3.x, stable channel)
+* **State Management**: [Riverpod v2](https://riverpod.dev/) (`flutter_riverpod`, `riverpod_annotation`)
+* **Navigation**: [go_router](https://pub.dev/packages/go_router) with deep linking and auth guards
+* **Cloud Database**: [Cloud Firestore](https://firebase.google.com/docs/firestore) (distributed real-time NoSQL)
+* **Local Storage**: [sqflite](https://pub.dev/packages/sqflite) (offline recipe caching)
+* **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) + Google Sign-In
+* **Backend Compute**: [Firebase Cloud Functions](https://firebase.google.com/docs/functions) (Node.js / TypeScript)
+* **Transactional Email**: [Resend API](https://resend.com/) for 6-digit numeric OTP delivery
+
+---
+
+## 📊 Database Architecture & Data Model
+
+The Firestore database leverages denormalized counters (`like_count`, `rating_avg`, `follower_count`) for instant single-read query performance:
+
+```mermaid
+erDiagram
+    USERS ||--o{ RECIPES : "authors"
+    USERS ||--o{ MEAL_PLANS : "schedules"
+    USERS ||--o{ GROCERY_ITEMS : "manages"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ FAVORITES : "bookmarks"
+    USERS ||--o{ FOLLOWERS : "follows"
+    
+    RECIPES ||--o{ COMMENTS : "contains"
+    RECIPES ||--o{ RATINGS : "scored_by"
+    RECIPES ||--o{ LIKES : "favorited_by"
+```
+
+* Detailed documentation:
+  * **Interactive Schema**: See [database_diagram.html](docs/database_diagram.html)
+  * **DBML Definition**: See [la_mia_schema.dbml](la_mia_schema.dbml)
+  * **Full Presentation & Architecture**: See [docs/la_mia_presentation.md](docs/la_mia_presentation.md)
 
 ---
 
@@ -30,157 +117,107 @@ Finding what to cook or managing kitchen ingredients can be challenging. **La Mi
 
 ```text
 LaMia/
-├── lamia_app/                  # Core Flutter Mobile Application
-│   ├── android/                # Android native project files
-│   ├── ios/                    # iOS native project files
-│   ├── assets/                 # Icons, static branding & app assets
+├── docs/                           # Architecture, presentation & database diagrams
+│   ├── database_diagram.html       # Visual standalone database diagram
+│   ├── la_mia_presentation.md      # Comprehensive 13-part project presentation
+│   └── schema.dbml                 # Database markup definition
+│
+├── lamia_app/                      # Core Flutter Mobile Application
+│   ├── android/                    # Android native configuration
+│   ├── ios/                        # iOS native configuration
+│   ├── assets/                     # App icons, logos, and static assets
 │   ├── lib/
-│   │   ├── app/                # App entry theme tokens & global design system
-│   │   ├── core/               # Shared constants, utilities & reusable UI widgets
+│   │   ├── app/                    # Theme tokens (AppColors, AppTypography, AppTheme)
+│   │   ├── core/                   # Shared widgets, providers, logger, validators
 │   │   ├── features/
-│   │   │   ├── auth/           # Login, Registration & Firebase AuthService
-│   │   │   ├── home/           # Main Dashboard, Feed, Search & Navigation Shell
-│   │   │   ├── recipes/        # Recipe Data Models, Firestore Repositories, Detail Screen & Pantry Matcher
-│   │   │   ├── profile/        # User Profile Screen, Saved Bookmarks & Settings
-│   │   │   └── leaderboard/    # Chef Rankings & Top Contributors
-│   │   └── main.dart           # App Entry Point & Firebase initialization
-│   ├── test/                   # Unit & Widget tests
-│   ├── firestore.rules         # Security rules for Cloud Firestore
-│   ├── firestore.indexes.json  # Composite query indexes for Firestore
-│   ├── storage.rules           # Cloud Storage security rules
-│   ├── firebase.json           # Firebase CLI configuration
-│   └── pubspec.yaml            # Flutter packages & asset configuration
+│   │   │   ├── auth/               # Sign In, Sign Up, OTP Verification, Guest Auth
+│   │   │   ├── home/               # Feed, Featured, Trending, "Ano Pong Ulam?"
+│   │   │   ├── recipes/            # Recipe Details, Creation, Cook by Ingredients
+│   │   │   ├── planner/            # Weekly Meal Planner & Smart Grocery List
+│   │   │   ├── social/             # Likes, Ratings, Threaded Comments, Follows
+│   │   │   ├── leaderboard/        # Top Chef Rankings & Contributor Badges
+│   │   │   ├── profile/            # User Profiles, Uploads, Favorites, Settings
+│   │   │   └── notifications/      # Activity & Social Notifications
+│   │   └── main.dart               # Application entry point
+│   ├── test/                       # 200+ Unit and Widget tests
+│   ├── firestore.rules             # Cloud Firestore security rules
+│   ├── firestore.indexes.json      # Firestore composite indexes
+│   └── pubspec.yaml                # Flutter dependencies
 │
-├── recipes/                    # Raw Local Recipe Dataset (200 recipes in 13 categories)
-│   ├── almusal/
-│   ├── ulam/
-│   └── ...
-│
-└── tools/                      # Node.js Database & Storage Seeding Utilities
-    ├── seed_recipes.js         # Main seeding script (Firestore + Storage upload)
-    ├── seed_featured.js        # Initial score & popularity ranking script
-    └── package.json            # Tooling dependencies (`firebase-admin`)
+├── recipes/                        # Curated Filipino staple recipe datasets
+└── tools/                          # Node.js Firebase admin seeding scripts
+    ├── seed_recipes.js             # Seeds recipes & ingredients to Firestore
+    └── seed_featured.js            # Calculates ranking scores and trending status
 ```
 
 ---
 
-## 🛠️ Prerequisites
+## 🚀 Getting Started
 
-Ensure your development environment has the following tools installed before setting up the project:
+### Prerequisites
 
-1. **Flutter SDK** (v3.12 or higher) — [Install Flutter](https://docs.flutter.dev/get-started/install)
-2. **Node.js** (v18 or higher) — [Install Node.js](https://nodejs.org/)
-3. **Firebase CLI**:
+* [Flutter SDK](https://docs.flutter.dev/get-started/install) (`>= 3.12.2`)
+* [Dart SDK](https://dart.dev/get-dart) (`>= 3.0.0`)
+* [Node.js](https://nodejs.org/) (`v18+`)
+* [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`)
+
+### Installation & Setup
+
+1. **Clone the repository:**
    ```bash
-   npm install -g firebase-tools
-   ```
-4. **FlutterFire CLI**:
-   ```bash
-   dart pub global activate flutterfire_cli
+   git clone https://github.com/tonyontech101/La-Mia.git
+   cd LaMia
    ```
 
----
-
-## 🚀 Step-by-Step Installation & Setup
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/tonyontech101/La-Mia.git
-cd LaMia
-```
-
----
-
-### Step 2: Install Flutter Dependencies
-
-Navigate into the Flutter application folder and fetch the dependencies:
-
-```bash
-cd lamia_app
-flutter pub get
-```
-
----
-
-### Step 3: Firebase Configuration
-
-
-Otherwise, set up Firebase connection using one of the options below:
-
-#### Option A: Automatic Setup via FlutterFire CLI (Recommended)
-
-1. Log in to Firebase:
+2. **Install Flutter dependencies:**
    ```bash
+   cd lamia_app
+   flutter pub get
+   ```
+
+3. **Configure Firebase:**
+   ```bash
+   # Log in to Firebase CLI
    firebase login
-   ```
-2. Run FlutterFire CLI inside `lamia_app/`:
-   ```bash
+
+   # Auto-configure FlutterFire
    flutterfire configure
    ```
-3. Select your Firebase project and target platforms (Android, iOS, Web). This generates `lib/firebase_options.dart` automatically.
+   *(Ensure `google-services.json` is in `lamia_app/android/app/` and `GoogleService-Info.plist` is in `lamia_app/ios/Runner/`).*
 
-#### Option B: Manual Setup
-
-1. **Android**: Download `google-services.json` from the Firebase Console and place it at:
-   ```text
-   lamia_app/android/app/google-services.json
-   ```
-2. **iOS**: Download `GoogleService-Info.plist` from the Firebase Console and place it at:
-   ```text
-   lamia_app/ios/Runner/GoogleService-Info.plist
-   ```
-3. **Flutter Options**: Copy the template file and fill in your keys:
-   ```bash
-   cp lib/firebase_options.dart.example lib/firebase_options.dart
-   ```
-
----
-
-### Step 4: Seed Database & Storage (`tools/`)
-
-To populate Cloud Firestore and Cloud Storage with the 200+ recipes and ingredient catalog:
-
-1. Obtain `serviceAccountKey.json` from **Firebase Console** → **Project Settings** ⚙️ → **Service accounts** → **Generate new private key**.
-2. Save the key file to `tools/serviceAccountKey.json`.
-3. Run the seed tools:
+4. **Seed Database (Optional):**
    ```bash
    cd ../tools
    npm install
-
-   # Preview mode (dry-run without modifying database)
-   npm run seed:dry
-
-   # Upload recipe data & images to Firebase
+   # Place your serviceAccountKey.json in the tools/ directory
    node seed_recipes.js
-
-   # Generate featured and popularity ranking scores
    node seed_featured.js
+   ```
+
+5. **Run the Application:**
+   ```bash
+   cd ../lamia_app
+   flutter run
    ```
 
 ---
 
-### Step 5: Run the Mobile Application
+## 🧪 Testing & Code Quality
 
-Start an emulator or connect a physical device, then launch the Flutter app:
+La Mia maintains high test coverage across all features, data repositories, and state notifiers:
 
 ```bash
-cd ../lamia_app
-flutter run
+cd lamia_app
+
+# Run all 207+ unit and widget tests
+flutter test
+
+# Run static analysis
+flutter analyze
 ```
 
 ---
 
-## 🔒 Security & Best Practices
+## 📄 License
 
-- 🛑 **Never commit secrets**: `serviceAccountKey.json`, `google-services.json`, `GoogleService-Info.plist`, and `firebase_options.dart` are ignored in `.gitignore`.
-- 🔍 **Code Quality**: Always run `flutter analyze` inside `lamia_app/` before creating pull requests.
-- 🔐 **Security Rules**: Deploy updated Firestore rules using `cd lamia_app && firebase deploy --only firestore:rules`.
-
----
-
-## 🤝 Contributing & Support
-
-Contributions are welcome! If you encounter issues or have suggestions:
-1. Open an issue on GitHub.
-2. Ensure your proposed code follows existing architecture and passes all lint checks (`flutter test` and `flutter analyze`).
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/current_user_provider.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../auth/data/user_model.dart';
 import '../../notifications/data/notification_model.dart';
 import '../../notifications/data/notification_repository.dart';
@@ -68,31 +69,65 @@ class FollowRepository {
     final followDoc = await followingRef.get();
     final isCurrentlyFollowing = followDoc.exists;
 
-    final batch = _firestore.batch();
     final currentUserRef = _firestore.collection('users').doc(currentUid);
     final targetUserRef = _firestore.collection('users').doc(targetUid);
+
+    // Check if target user document exists
+    final targetUserDoc = await targetUserRef.get();
+    if (!targetUserDoc.exists && !isCurrentlyFollowing) {
+      // Cannot follow a non-existent or deleted user
+      AppLogger.warning('Cannot follow user $targetUid: profile document does not exist.');
+      return false;
+    }
+
+    // Ensure current user profile document exists in Firestore before updating counters
+    final currentUserDoc = await currentUserRef.get();
+    if (!currentUserDoc.exists) {
+      try {
+        await currentUserRef.set({
+          'displayName': currentUserName ?? 'User',
+          'bio': null,
+          'photoUrl': currentUserPhotoUrl,
+          'recipeCount': 0,
+          'totalLikesReceived': 0,
+          'followerCount': 0,
+          'followingCount': 0,
+          'savedCount': 0,
+          'role': 'user',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        AppLogger.warning('Could not auto-create missing user doc: $err');
+      }
+    }
+
+    final batch = _firestore.batch();
 
     if (isCurrentlyFollowing) {
       // Unfollow
       batch.delete(followingRef);
       batch.delete(followerRef);
-      batch.set(currentUserRef, {
+      batch.update(currentUserRef, {
         'followingCount': FieldValue.increment(-1),
-      }, SetOptions(merge: true));
-      batch.set(targetUserRef, {
-        'followerCount': FieldValue.increment(-1),
-      }, SetOptions(merge: true));
+      });
+      if (targetUserDoc.exists) {
+        batch.update(targetUserRef, {
+          'followerCount': FieldValue.increment(-1),
+        });
+      }
     } else {
       // Follow
       final now = FieldValue.serverTimestamp();
       batch.set(followingRef, {'followedAt': now});
       batch.set(followerRef, {'followedAt': now});
-      batch.set(currentUserRef, {
+      batch.update(currentUserRef, {
         'followingCount': FieldValue.increment(1),
-      }, SetOptions(merge: true));
-      batch.set(targetUserRef, {
-        'followerCount': FieldValue.increment(1),
-      }, SetOptions(merge: true));
+      });
+      if (targetUserDoc.exists) {
+        batch.update(targetUserRef, {
+          'followerCount': FieldValue.increment(1),
+        });
+      }
     }
 
     await batch.commit();
